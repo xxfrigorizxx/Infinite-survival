@@ -339,7 +339,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
 </div><!-- wrapper -->
 
-<!-- ══ MODULE FIREBASE (séparé pour ne pas bloquer les onclick) ══ -->
+<!-- ══ MODULE FIREBASE ══ -->
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {getDatabase,ref,set,get,remove,query,orderByChild,limitToLast,onValue,child}
@@ -358,72 +358,60 @@ const _db=getDatabase(_app);
 const _lb=ref(_db,'leaderboard');
 const MAX=10;
 
-function _key(name){return(name||'Anonyme').replace(/[.#$\[\]/\s]/g,'_').substring(0,32);}
+// Nettoyer une clé pour Firebase (pas de . # $ / [ ] espaces)
+function cleanKey(s){
+  return String(s||'inconnu').replace(/[.#$\[\]/\s]/g,'_').substring(0,32)||'inconnu';
+}
 
-// Écoute temps réel — top 10 affiché automatiquement
-// IMPORTANT: on n'affiche jamais une liste vide si on avait des données avant
+// Écoute temps réel
 onValue(query(_lb,orderByChild('score'),limitToLast(MAX)),snap=>{
   const entries=[];
-  snap.forEach(c=>entries.push({...c.val(),_fbKey:c.key}));
+  snap.forEach(c=>entries.push({...c.val(),_k:c.key}));
   entries.sort((a,b)=>b.score-a.score);
-  // Ne mettre à jour que si on a vraiment des données
   if(entries.length>0){
     window._fbLbData=entries;
     if(window._renderLBData)window._renderLBData(entries);
-  } else if(!window._fbLbData||window._fbLbData.length===0){
-    // Firebase vide — afficher message
-    window._fbLbData=[];
-    if(window._renderLBData)window._renderLBData([]);
   }
-  // Si entries vide mais qu'on avait déjà des données → garder l'affichage actuel
 },{onlyOnce:false});
 
-// Est-ce un nouveau record ? — vérifie par deviceId ou nom
-window._fbIsNewRecord=async function(score,name,deviceId){
+// Vérifier si nouveau record
+window._fbIsNewRecord=async function(score,playerKey){
   try{
-    const rawKey=(deviceId&&deviceId!=='null'&&deviceId!=='undefined')?deviceId:name;
-    const k=rawKey.replace(/[.#$\[\]/]/g,'_').replace(/\s+/g,'_').substring(0,32);
-    if(!k||k==='null')return true;
-    const mySnap=await get(child(_lb,k));
-    if(mySnap.exists()) return score>mySnap.val().score;
-    const allSnap=await get(query(_lb,orderByChild('score')));
-    const entries=[];allSnap.forEach(c=>entries.push({key:c.key,...c.val()}));
+    const k=cleanKey(playerKey);
+    const snap=await get(child(_lb,k));
+    if(snap.exists()) return score > snap.val().score;
+    const all=await get(query(_lb,orderByChild('score')));
+    const entries=[];all.forEach(c=>entries.push({k:c.key,s:c.val().score}));
     if(entries.length<MAX) return true;
-    entries.sort((a,b)=>a.score-b.score);
-    return score>entries[0].score;
-  }catch{return true;}
+    entries.sort((a,b)=>a.s-b.s);
+    return score > entries[0].s;
+  }catch(e){console.error('fbIsNewRecord error',e);return true;}
 };
 
-// Sauvegarder — clé = nom sanitisé (simple et fiable)
-window._fbSaveScore=async function(name,score,wave,kills,date,deviceId){
+// Sauvegarder
+window._fbSaveScore=async function(playerKey,name,score,wave,kills,date){
   try{
-    // Nettoyer la clé — Firebase n'accepte pas . # $ / [ ] et espaces
-    const rawKey=(deviceId&&deviceId!=='null'&&deviceId!=='undefined')?deviceId:name;
-    const k=rawKey.replace(/[.#$\[\]/]/g,'_').replace(/\s+/g,'_').substring(0,32);
-    if(!k||k==='null'||k==='undefined'){console.warn('Invalid Firebase key',rawKey);return;}
-    console.log('Firebase save key:',k,'score:',score);
+    const k=cleanKey(playerKey);
+    console.log('[Firebase] Saving key='+k+' name='+name+' score='+score);
     const playerRef=child(_lb,k);
     const existing=await get(playerRef);
-    // Ne pas écraser si score existant est meilleur
     if(existing.exists()&&existing.val().score>=score){
-      if(existing.val().name!==name){
-        await set(playerRef,{...existing.val(),name});
-      }
-      console.log('Firebase: score existant meilleur, pas de mise à jour');
+      // Mettre à jour le nom si changé
+      if(existing.val().name!==name) await set(playerRef,{...existing.val(),name});
+      console.log('[Firebase] Score existant meilleur, pas de mise à jour');
       return;
     }
-    // Lire tous les joueurs
-    const allSnap=await get(query(_lb,orderByChild('score')));
-    const entries=[];allSnap.forEach(c=>entries.push({key:c.key,...c.val()}));
-    // Top 10 plein + nouveau joueur → virer le moins bon
+    // Top 10 plein → virer le moins bon
+    const all=await get(query(_lb,orderByChild('score')));
+    const entries=[];all.forEach(c=>entries.push({k:c.key,s:c.val().score}));
     if(entries.length>=MAX&&!existing.exists()){
-      entries.sort((a,b)=>a.score-b.score);
-      if(score<=entries[0].score){console.log('Firebase: score pas assez bon');return;}
-      await remove(child(_lb,entries[0].key));
+      entries.sort((a,b)=>a.s-b.s);
+      if(score<=entries[0].s){console.log('[Firebase] Pas assez bon pour top 10');return;}
+      await remove(child(_lb,entries[0].k));
     }
     await set(playerRef,{name,score,wave,kills,date,ts:Date.now()});
-    console.log('Firebase: score sauvegardé ✅');
-  }catch(e){console.warn('Firebase save failed',e);}
+    console.log('[Firebase] ✅ Sauvegardé!');
+  }catch(e){console.error('[Firebase] Save failed',e);}
 };
 
 // Refresh manuel
@@ -431,10 +419,11 @@ window._fbRefreshLB=function(){
   get(query(_lb,orderByChild('score'),limitToLast(MAX))).then(snap=>{
     const entries=[];snap.forEach(c=>entries.push(c.val()));
     entries.sort((a,b)=>b.score-a.score);
-    window._fbLbData=entries;
-    if(window._renderLBData)window._renderLBData(entries);
-  }).catch(()=>{if(window._renderLBData)window._renderLBData([]);});
+    if(entries.length>0){window._fbLbData=entries;if(window._renderLBData)window._renderLBData(entries);}
+  }).catch(e=>console.error('[Firebase] Refresh failed',e));
 };
+
+console.log('[Firebase] Module chargé ✅');
 </script>
 
 <script>
@@ -897,39 +886,50 @@ function renderCodexGrid(){
 ══════════════════════════════════════════════ */
 function calcScore(w,k,ms,lvl){return Math.floor(k*100+w*500+lvl*200+ms/1000*2);}
 
-// ID unique par appareil — persiste entre les sessions
+// ID unique par appareil
 const KID='surv_device_id';
 function getDeviceId(){
   let id=localStorage.getItem(KID);
-  if(!id){id='dev_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem(KID,id);}
+  if(!id){
+    id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    localStorage.setItem(KID,id);
+  }
   return id;
+}
+
+// Clé Firebase = deviceId si dispo, sinon nom sanitisé
+function getPlayerKey(name){
+  const did=getDeviceId();
+  return did||String(name||'joueur').replace(/[.#$\[\]/\s]/g,'_').substring(0,32);
 }
 
 async function isNewRecord(score){
   const name=getPrf()?.name||'Anonyme';
-  if(window._fbIsNewRecord)return await window._fbIsNewRecord(score,name,getDeviceId());
+  const key=getPlayerKey(name);
+  // Attendre que le module Firebase soit prêt (max 3s)
+  for(let i=0;i<30;i++){
+    if(window._fbIsNewRecord) return await window._fbIsNewRecord(score,key);
+    await new Promise(r=>setTimeout(r,100));
+  }
+  // Fallback local si Firebase pas disponible
   const lb=_loadLocalLB();
-  return lb.length<5||score>lb[lb.length-1]?.score;
+  return lb.length<5||score>(lb[lb.length-1]?.score||0);
 }
 
 let pendingScore=null;
 function openRecordSection(score,wave,kills,ms,lvl){
   pendingScore={score,wave,kills,ms,lvl};
   const p=getPrf();
-
   if(p&&p.name){
-    // A déjà un nom → sauvegarde automatique, pas besoin du formulaire
     _doSaveRecord(p.name);
-    // Afficher une confirmation discrète
     const rs=document.getElementById('record-section');
     rs.style.display='block';
-    rs.innerHTML=`<div style="text-align:center;padding:6px;">
+    rs.innerHTML=`<div style="text-align:center;padding:8px;">
       <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.9rem;margin-bottom:4px;">🏆 SCORE ENREGISTRÉ !</div>
       <div style="color:#89a;font-size:.72rem;">Sous le nom <b style="color:var(--neon);">${p.name}</b></div>
-      <div style="color:#567;font-size:.6rem;margin-top:4px;">Change ton nom dans ⚙️ Profil</div>
+      <div style="color:#567;font-size:.6rem;margin-top:3px;">Change ton nom dans Profil si besoin</div>
     </div>`;
   } else {
-    // Nouveau joueur → afficher le formulaire
     const rs=document.getElementById('record-section');
     rs.style.display='block';
     rs.innerHTML=`
@@ -944,15 +944,14 @@ function openRecordSection(score,wave,kills,ms,lvl){
 function saveRecord(){
   const inp=document.getElementById('rec-name-input');
   if(!inp||!pendingScore)return;
-  const name=inp.value.trim()||'Anonyme';
-  // Sauvegarder le nom dans le profil pour les prochaines fois
+  const name=inp.value.trim()||'Joueur';
   const p=getPrf()||{};
   setPrf({...p,name});
   renderProfileBadge();
   _doSaveRecord(name);
   const rs=document.getElementById('record-section');
-  rs.innerHTML=`<div style="text-align:center;padding:6px;">
-    <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.9rem;margin-bottom:4px;">🏆 SCORE ENREGISTRÉ !</div>
+  rs.innerHTML=`<div style="text-align:center;padding:8px;">
+    <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.9rem;margin-bottom:4px;">🏆 ENREGISTRÉ !</div>
     <div style="color:#89a;font-size:.72rem;">Bienvenue <b style="color:var(--neon);">${name}</b> !</div>
   </div>`;
 }
@@ -960,22 +959,30 @@ function saveRecord(){
 function _doSaveRecord(name){
   if(!pendingScore)return;
   const entry={name,score:pendingScore.score,wave:pendingScore.wave,kills:pendingScore.kills,date:new Date().toLocaleDateString('fr-CA')};
+  const key=getPlayerKey(name);
+  console.log('[Record] Saving: key='+key+' name='+name+' score='+entry.score);
 
-  // Sauvegarder dans Firebase — onValue va mettre à jour le classement automatiquement
-  if(window._fbSaveScore){
-    window._fbSaveScore(name,pendingScore.score,pendingScore.wave,pendingScore.kills,entry.date,getDeviceId());
-  }
+  // Firebase — attendre que le module soit prêt
+  const tryFirebase=async()=>{
+    for(let i=0;i<30;i++){
+      if(window._fbSaveScore){
+        await window._fbSaveScore(key,name,entry.score,entry.wave,entry.kills,entry.date);
+        return;
+      }
+      await new Promise(r=>setTimeout(r,100));
+    }
+    console.warn('[Record] Firebase non disponible après 3s');
+  };
+  tryFirebase();
 
-  // Mettre à jour le cache local aussi (fusion, pas écrasement)
+  // Cache local
   const lb=_loadLocalLB();
   const idx=lb.findIndex(e=>e.name===name);
   if(idx>=0){if(entry.score>lb[idx].score)lb[idx]=entry;}
-  else{lb.push(entry);}
+  else lb.push(entry);
   lb.sort((a,b)=>b.score-a.score);
   localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,10)));
-
   pendingScore=null;
-  // Ne pas appeler renderLeaderboard() ici — onValue Firebase le fait automatiquement
 }
 
 function _loadLocalLB(){try{return JSON.parse(localStorage.getItem('surv_lb'))||[];}catch(e){return[];}}
