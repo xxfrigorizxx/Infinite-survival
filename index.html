@@ -203,7 +203,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     </div>
     <div id="regen-timer"></div>
   </div>
-  <div id="leaderboard"><h3>🏆 MEILLEURS SCORES <span onclick="openLeaderboardModal()" style="font-size:.5rem;color:var(--gold);cursor:pointer;text-decoration:underline;letter-spacing:.05em;">VOIR TOUT</span></h3><div id="lb-rows"></div></div>
+  <div id="leaderboard">
+    <h3>🏆 MEILLEURS SCORES 
+      <span class="lb-loaded-indicator" onclick="openLeaderboardModal()" style="font-size:.5rem;color:#567;cursor:pointer;text-decoration:underline;letter-spacing:.05em;transition:color .5s,text-shadow .5s;">VOIR TOUT</span>
+    </h3>
+    <div id="lb-rows"></div>
+  </div>
 </div>
 
 <!-- ══ JEU ══ -->
@@ -256,7 +261,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <button id="stats-play-btn" onclick="tryStart()">↺ REJOUER (-1 ⚡)</button>
     <button id="stats-shop-btn" onclick="openShopFromStats()">🛒 DÉPENSER MES PIÈCES</button>
     <button id="stats-codex-btn" onclick="openCodexFromStats()">📖 VOIR MES DÉCOUVERTES</button>
-    <button id="stats-lb-btn" onclick="openLeaderboardModal()" style="font-family:'Orbitron',sans-serif;background:transparent;border:1px solid var(--gold);color:var(--gold);padding:8px;width:100%;cursor:pointer;font-size:clamp(.66rem,2.6vw,.8rem);font-weight:700;-webkit-appearance:none;">🏆 CLASSEMENT COMPLET</button>
+    <button id="stats-lb-btn" onclick="openLeaderboardModal()" class="lb-loaded-indicator" style="font-family:'Orbitron',sans-serif;background:transparent;border:1px solid #567;color:#567;padding:8px;width:100%;cursor:pointer;font-size:clamp(.66rem,2.6vw,.8rem);font-weight:700;-webkit-appearance:none;transition:color .5s,border-color .5s,text-shadow .5s;">🏆 CLASSEMENT COMPLET</button>
     <button id="stats-title-btn" onclick="backToTitle()">← MENU PRINCIPAL</button>
   </div>
 </div>
@@ -299,15 +304,15 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
 </div>
 
-<!-- ══ PROFIL ══ -->
+<!-- ══ PROFIL / CONNEXION ══ -->
 <div id="profile-modal">
   <div class="prof-box">
     <div class="prof-icon">🎮</div>
-    <h3>TON PROFIL</h3>
-    <p>Ton nom est sauvegardé sur cet appareil et utilisé dans le classement.</p>
-    <input id="prof-name-input" type="text" maxlength="16" placeholder="Ton nom de joueur..." autocomplete="off" spellcheck="false"/>
-    <button id="prof-save-btn" onclick="saveProfileName()">✓ SAUVEGARDER</button>
-    <div id="prof-existing">
+    <h3 id="prof-modal-title">CRÉER TON PROFIL</h3>
+    <p id="prof-modal-desc">Choisis un pseudo — il sera utilisé dans le classement mondial et restera le même peu importe d'où tu joues.</p>
+    <input id="prof-name-input" type="text" maxlength="16" placeholder="Ton pseudo..." autocomplete="off" spellcheck="false"/>
+    <button id="prof-save-btn" onclick="saveProfileName()">✓ ENTRER DANS LE JEU</button>
+    <div id="prof-existing" style="display:none;">
       <div id="prof-stats-detail"></div>
       <button id="prof-reset-btn" onclick="confirmReset()" style="margin-top:12px;font-family:'Share Tech Mono',monospace;background:transparent;border:1px solid var(--hot);color:var(--hot);padding:8px;width:100%;cursor:pointer;font-size:.72rem;-webkit-appearance:none;opacity:.7;">🗑 RÉINITIALISER TOUTES MES DONNÉES</button>
     </div>
@@ -345,7 +350,7 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase
 import {getDatabase,ref,set,get,remove,query,orderByChild,limitToLast,onValue,child}
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-const _app=initializeApp({
+const app=initializeApp({
   apiKey:'AIzaSyBHC2SckDI2LB99ij_6ZDX9Q9n3_ByTMRQ',
   authDomain:'infinite-survivor.firebaseapp.com',
   databaseURL:'https://infinite-survivor-default-rtdb.firebaseio.com',
@@ -354,89 +359,80 @@ const _app=initializeApp({
   messagingSenderId:'204461775424',
   appId:'1:204461775424:web:58a71862d911a68acadda5'
 });
-const _db=getDatabase(_app);
-const _lb=ref(_db,'leaderboard');
+const db=getDatabase(app);
+const LB=ref(db,'leaderboard');
 const MAX=10;
 
-// Nettoyer clé Firebase — enlève tous les caractères interdits
-function fkey(s){
-  const k=String(s||'x').replace(/[.#$\[\]/\s]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'').substring(0,32);
-  return k||'joueur';
+// Clé propre pour Firebase
+function key(name){
+  return String(name||'joueur')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9_-]/g,'_')
+    .replace(/_+/g,'_').replace(/^_|_$/g,'')
+    .slice(0,32)||'joueur';
 }
 
-// Écoute temps réel — met le classement à jour automatiquement
-onValue(query(_lb,orderByChild('score'),limitToLast(MAX)),snap=>{
-  const entries=[];
-  snap.forEach(c=>{ const v=c.val(); if(v&&v.name&&v.score)entries.push(v); });
-  entries.sort((a,b)=>b.score-a.score);
-  window._fbLbData=entries;
-  if(window._renderLBData)window._renderLBData(entries);
-},{onlyOnce:false});
+// Écoute temps réel — met à jour le classement automatiquement
+onValue(query(LB,orderByChild('score'),limitToLast(MAX)),snap=>{
+  const list=[];
+  snap.forEach(c=>{const v=c.val();if(v&&v.name)list.push(v);});
+  list.sort((a,b)=>b.score-a.score);
+  window._fbData=list;
+  if(typeof window._renderLBData==='function')window._renderLBData(list);
+  // Mettre le bouton en mauve quand classement chargé
+  document.querySelectorAll('.lb-loaded-indicator').forEach(el=>{
+    el.style.color='#cc88ff';
+    el.style.textShadow='0 0 8px #cc88ff';
+  });
+});
 
-// Vérifier si nouveau record
-window._fbIsNewRecord=async function(score,rawKey){
+// Sauvegarder — SIMPLE: juste un set(), pas de logique complexe
+window._fbSave=async function(name,score,wave,kills,date){
+  const k=key(name);
+  console.log('[FB] _fbSave called: k='+k+' score='+score);
   try{
-    const k=fkey(rawKey);
-    const snap=await get(child(_lb,k));
-    if(snap.exists()&&snap.val()) return score > (snap.val().score||0);
-    const all=await get(query(_lb,orderByChild('score')));
-    let cnt=0; let minScore=Infinity; let minKey='';
-    all.forEach(c=>{ cnt++; const s=c.val().score||0; if(s<minScore){minScore=s;minKey=c.key;} });
-    if(cnt<MAX) return true;
-    return score > minScore;
-  }catch(e){ console.error('[FB] isNewRecord error',e); return true; }
-};
-
-// Sauvegarder le score — logique simple et robuste
-window._fbSaveScore=async function(rawKey,name,score,wave,kills,date){
-  try{
-    const k=fkey(rawKey);
-    console.log('[FB] save -> key:"'+k+'" name:"'+name+'" score:'+score);
-
-    const playerRef=child(_lb,k);
-
-    // Lire l'entrée existante
-    const snap=await get(playerRef);
-    if(snap.exists()&&snap.val()){
-      const old=snap.val();
-      if(old.score>=score){
-        console.log('[FB] Existant meilleur ('+old.score+'), pas de màj');
-        // Mettre à jour le nom si changé
-        if(old.name!==name) await set(playerRef,{...old,name});
+    const r=child(LB,k);
+    // Lire l'existant
+    const snap=await get(r);
+    if(snap.exists()){
+      const prev=snap.val();
+      if(typeof prev.score==='number' && prev.score>=score){
+        console.log('[FB] Score existant meilleur ('+prev.score+') — skip');
         return;
       }
     } else {
-      // Nouveau joueur — vérifier si top 10 plein
-      const all=await get(query(_lb,orderByChild('score')));
-      let cnt=0; let minScore=Infinity; let minKey='';
-      all.forEach(c=>{ cnt++; const s=c.val().score||0; if(s<minScore){minScore=s;minKey=c.key;} });
-      if(cnt>=MAX){
-        if(score<=minScore){ console.log('[FB] Pas assez bon pour top 10'); return; }
-        console.log('[FB] Vire le dernier: '+minKey);
-        await remove(child(_lb,minKey));
+      // Nouveau joueur — vérifier top 10
+      const all=await get(LB);
+      if(all.exists()){
+        let cnt=0,worstKey='',worstScore=Infinity;
+        all.forEach(c=>{cnt++;const s=c.val().score||0;if(s<worstScore){worstScore=s;worstKey=c.key;}});
+        if(cnt>=MAX){
+          if(score<=worstScore){console.log('[FB] Pas dans top 10');return;}
+          await remove(child(LB,worstKey));
+          console.log('[FB] Viré '+worstKey);
+        }
       }
     }
-
-    // Écrire l'entrée
-    const data={name:String(name),score:Number(score),wave:Number(wave),kills:Number(kills),date:String(date),ts:Date.now()};
-    console.log('[FB] Writing:',JSON.stringify(data));
-    await set(playerRef,data);
-    console.log('[FB] ✅ Succès!');
-  }catch(e){ console.error('[FB] Save failed:',e.message,e.code); }
+    const data={name:String(name),score:Number(score),wave:Number(wave||0),kills:Number(kills||0),date:String(date||''),ts:Date.now()};
+    await set(r,data);
+    console.log('[FB] ✅ Score sauvegardé dans Firebase!',data);
+  }catch(err){
+    console.error('[FB] ERREUR:',err.code,err.message);
+  }
 };
 
-// Refresh
-window._fbRefreshLB=function(){
-  get(query(_lb,orderByChild('score'),limitToLast(MAX))).then(snap=>{
-    const entries=[];
-    snap.forEach(c=>{ const v=c.val(); if(v&&v.name)entries.push(v); });
-    entries.sort((a,b)=>b.score-a.score);
-    window._fbLbData=entries;
-    if(window._renderLBData)window._renderLBData(entries);
-  }).catch(e=>console.error('[FB] Refresh failed',e));
+// Refresh manuel
+window._fbRefresh=function(){
+  get(query(LB,orderByChild('score'),limitToLast(MAX))).then(snap=>{
+    const list=[];
+    snap.forEach(c=>{const v=c.val();if(v&&v.name)list.push(v);});
+    list.sort((a,b)=>b.score-a.score);
+    window._fbData=list;
+    if(typeof window._renderLBData==='function')window._renderLBData(list);
+  }).catch(e=>console.error('[FB] Refresh erreur:',e));
 };
 
-console.log('[FB] Module Firebase chargé ✅');
+console.log('[FB] Module prêt ✅');
 </script>
 
 <script>
@@ -551,7 +547,7 @@ function openLeaderboardModal(){
   const lb=window._fbLbData&&window._fbLbData.length?window._fbLbData:_loadLocalLB();
   window._renderLBData(lb);
   // Refresh Firebase
-  if(window._fbRefreshLB)window._fbRefreshLB();
+  if(typeof window._fbRefresh==='function')window._fbRefresh();
 }
 function closeLeaderboardModal(){
   const modal=document.getElementById('lb-modal');
@@ -582,12 +578,48 @@ function doReset(){
   setTimeout(openProfile, 300);
 }
 
+function openProfile(firstTime=false){
+  const p=getPrf();
+  const inp=document.getElementById('prof-name-input');
+  const ex=document.getElementById('prof-existing');
+  const det=document.getElementById('prof-stats-detail');
+  const title=document.getElementById('prof-modal-title');
+  const desc=document.getElementById('prof-modal-desc');
+  const btn=document.getElementById('prof-save-btn');
+
+  if(firstTime||!p||!p.name){
+    // Premier lancement — écran de bienvenue
+    if(title)title.textContent='BIENVENUE !';
+    if(desc)desc.textContent='Choisis un pseudo — il sera utilisé dans le classement mondial. Le même pseudo depuis n\'importe où te donne la même place.';
+    if(btn)btn.textContent='✓ ENTRER DANS LE JEU';
+    inp.value='';
+    ex.style.display='none';
+  } else {
+    // Modification du profil
+    if(title)title.textContent='TON PROFIL';
+    if(desc)desc.textContent='Modifier ton pseudo ou consulter tes stats.';
+    if(btn)btn.textContent='✓ SAUVEGARDER';
+    inp.value=p.name||'';
+    ex.style.display='block';
+    det.innerHTML=`🎮 Parties : <b>${p.gamesPlayed||0}</b><br>⚔ Meilleure vague : <b>${p.bestWave||0}</b><br>💀 Total kills : <b>${(p.totalKills||0).toLocaleString()}</b><br>🪙 Pièces totales : <b>${(p.totalCoins||0).toLocaleString()}</b>`;
+  }
+  document.getElementById('profile-modal').classList.add('show');
+  setTimeout(()=>inp.focus(),300);
+}
+
 function saveProfileName(){
   const name=document.getElementById('prof-name-input').value.trim();
-  if(!name)return;
-  const p=getPrf()||{};setPrf({...p,name});
+  if(!name){
+    document.getElementById('prof-name-input').style.border='1px solid var(--hot)';
+    return;
+  }
+  const p=getPrf()||{};
+  setPrf({...p,name});
   document.getElementById('profile-modal').classList.remove('show');
   renderProfileBadge();
+  // Permettre de jouer maintenant que le nom est défini
+  const sb=document.getElementById('start-btn');
+  if(sb)sb.classList.remove('disabled');
 }
 function renderProfileBadge(){
   const p=getPrf();
@@ -899,105 +931,88 @@ function renderCodexGrid(){
 ══════════════════════════════════════════════ */
 function calcScore(w,k,ms,lvl){return Math.floor(k*100+w*500+lvl*200+ms/1000*2);}
 
-// ID unique par appareil
-const KID='surv_device_id';
-function getDeviceId(){
-  let id=localStorage.getItem(KID);
-  if(!id){
-    id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-    localStorage.setItem(KID,id);
-  }
-  return id;
-}
 
-// Clé Firebase = deviceId si dispo, sinon nom sanitisé
+// ── CLASSEMENT ──
+// La clé Firebase = nom du joueur (identique sur tous les appareils/navigateurs)
 function getPlayerKey(name){
-  const did=getDeviceId();
-  return did||String(name||'joueur').replace(/[.#$\[\]/\s]/g,'_').substring(0,32);
-}
-
-async function isNewRecord(score){
-  const name=getPrf()?.name||'Anonyme';
-  const key=getPlayerKey(name);
-  // Attendre que le module Firebase soit prêt (max 3s)
-  for(let i=0;i<30;i++){
-    if(window._fbIsNewRecord) return await window._fbIsNewRecord(score,key);
-    await new Promise(r=>setTimeout(r,100));
-  }
-  // Fallback local si Firebase pas disponible
-  const lb=_loadLocalLB();
-  return lb.length<5||score>(lb[lb.length-1]?.score||0);
+  return String(name||'joueur').replace(/[.#$\[\]/\s]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,32)||'joueur';
 }
 
 let pendingScore=null;
+
 function openRecordSection(score,wave,kills,ms,lvl){
   pendingScore={score,wave,kills,ms,lvl};
   const p=getPrf();
+  const rs=document.getElementById('record-section');
+  rs.style.display='block';
+
   if(p&&p.name){
+    // Nom connu → sauvegarder directement, afficher confirmation
     _doSaveRecord(p.name);
-    const rs=document.getElementById('record-section');
-    rs.style.display='block';
-    rs.innerHTML=`<div style="text-align:center;padding:8px;">
-      <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.9rem;margin-bottom:4px;">🏆 SCORE ENREGISTRÉ !</div>
-      <div style="color:#89a;font-size:.72rem;">Sous le nom <b style="color:var(--neon);">${p.name}</b></div>
-      <div style="color:#567;font-size:.6rem;margin-top:3px;">Change ton nom dans Profil si besoin</div>
+    rs.innerHTML=`<div style="text-align:center;padding:10px;">
+      <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.95rem;margin-bottom:5px;">🏆 SCORE ENREGISTRÉ !</div>
+      <div style="color:#89a;font-size:.74rem;">Sous le nom <b style="color:var(--neon);">${p.name}</b></div>
+      <div style="color:#456;font-size:.6rem;margin-top:4px;">Modifiable dans ton Profil</div>
     </div>`;
   } else {
-    const rs=document.getElementById('record-section');
-    rs.style.display='block';
+    // Pas de nom → formulaire
     rs.innerHTML=`
       <h3>🏆 NOUVEAU RECORD !</h3>
-      <div style="color:#89a;font-size:.72rem;margin-bottom:8px;text-align:center;">Entre ton nom pour le classement</div>
+      <div style="color:#89a;font-size:.72rem;margin-bottom:8px;text-align:center;">Entre ton nom pour le classement mondial</div>
       <input id="rec-name-input" type="text" maxlength="16" placeholder="Ton nom..." autocomplete="off" spellcheck="false"/>
       <button id="rec-save-btn" onclick="saveRecord()">✓ ENREGISTRER</button>`;
-    setTimeout(()=>{const inp=document.getElementById('rec-name-input');if(inp)inp.focus();},200);
+    setTimeout(()=>{ const i=document.getElementById('rec-name-input'); if(i)i.focus(); },150);
   }
 }
 
 function saveRecord(){
   const inp=document.getElementById('rec-name-input');
   if(!inp||!pendingScore)return;
-  const name=inp.value.trim()||'Joueur';
+  const name=inp.value.trim();
+  if(!name)return;
+  // Sauvegarder le nom dans le profil
   const p=getPrf()||{};
   setPrf({...p,name});
   renderProfileBadge();
   _doSaveRecord(name);
   const rs=document.getElementById('record-section');
-  rs.innerHTML=`<div style="text-align:center;padding:8px;">
-    <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.9rem;margin-bottom:4px;">🏆 ENREGISTRÉ !</div>
-    <div style="color:#89a;font-size:.72rem;">Bienvenue <b style="color:var(--neon);">${name}</b> !</div>
+  rs.innerHTML=`<div style="text-align:center;padding:10px;">
+    <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.95rem;margin-bottom:5px;">🏆 ENREGISTRÉ !</div>
+    <div style="color:#89a;font-size:.74rem;">Bienvenue <b style="color:var(--neon);">${name}</b> !</div>
   </div>`;
 }
 
 function _doSaveRecord(name){
   if(!pendingScore)return;
-  // Copie locale des données pour éviter que state soit écrasé
-  const sc={...pendingScore};
-  const entry={name,score:sc.score,wave:sc.wave,kills:sc.kills,date:new Date().toLocaleDateString('fr-CA')};
-  const key=getPlayerKey(name);
-  console.log('[Record] key='+key+' name='+name+' score='+entry.score);
-  pendingScore=null;
-
-  // Firebase — attendre que le module soit prêt (max 5s)
-  const tryFirebase=async()=>{
-    for(let i=0;i<50;i++){
-      if(window._fbSaveScore){
-        await window._fbSaveScore(key,name,entry.score,entry.wave,entry.kills,entry.date);
-        return;
-      }
-      await new Promise(r=>setTimeout(r,100));
-    }
-    console.warn('[Record] Firebase pas disponible après 5s');
+  const d={
+    name:String(name),
+    score:Number(pendingScore.score),
+    wave:Number(pendingScore.wave),
+    kills:Number(pendingScore.kills),
+    date:new Date().toLocaleDateString('fr-CA')
   };
-  tryFirebase();
+  pendingScore=null;
+  console.log('[Record] _doSaveRecord',d);
 
-  // Cache local immédiatement
+  // 1. Local immédiatement
   const lb=_loadLocalLB();
-  const idx=lb.findIndex(e=>e.name===name);
-  if(idx>=0){if(entry.score>lb[idx].score)lb[idx]=entry;}
-  else lb.push(entry);
+  const idx=lb.findIndex(e=>e.name===d.name);
+  if(idx>=0){if(d.score>lb[idx].score)lb[idx]=d;}else lb.push(d);
   lb.sort((a,b)=>b.score-a.score);
   localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,10)));
+
+  // 2. Firebase — attendre que le module soit prêt, max 10s
+  let waited=0;
+  const interval=setInterval(()=>{
+    waited+=200;
+    if(typeof window._fbSave==='function'){
+      clearInterval(interval);
+      window._fbSave(d.name,d.score,d.wave,d.kills,d.date);
+    } else if(waited>=10000){
+      clearInterval(interval);
+      console.warn('[Record] Firebase pas disponible après 10s');
+    }
+  },200);
 }
 
 function _loadLocalLB(){try{return JSON.parse(localStorage.getItem('surv_lb'))||[];}catch(e){return[];}}
@@ -1008,7 +1023,7 @@ function renderLeaderboard(){
   if(local.length)_renderLBData(local);
 
   // 2. Demander un refresh Firebase — quand ça arrive ça va s'afficher via onValue
-  if(window._fbRefreshLB)window._fbRefreshLB();
+  if(typeof window._fbRefresh==='function')window._fbRefresh();
 }
 
 // _renderLBData défini au début du script
@@ -1687,7 +1702,11 @@ function spawnElite(){
 /* ══════════════════════════════════════════════
    LOGIQUE DE JEU
 ══════════════════════════════════════════════ */
-function tryStart(){if(!spendE()){openNoEnergy();return;}startGame();}
+function tryStart(){
+  if(!getPrf()?.name){openProfile(true);return;}
+  if(!spendE()){openNoEnergy();return;}
+  startGame();
+}
 function startGame(){
   resizeCanvas();
   document.getElementById('title-screen').style.display='none';
@@ -2730,7 +2749,10 @@ function closeNoEnergy(){document.getElementById('noenergy-modal').classList.rem
 updateEnergyUI();
 renderLeaderboard();
 renderProfileBadge();
-if(!getPrf())setTimeout(openProfile,700);
+// Si pas de nom → écran de connexion obligatoire
+if(!getPrf()?.name){
+  setTimeout(()=>openProfile(true),400);
+}
 </script>
 </body>
 </html>
