@@ -358,72 +358,85 @@ const _db=getDatabase(_app);
 const _lb=ref(_db,'leaderboard');
 const MAX=10;
 
-// Nettoyer une clé pour Firebase (pas de . # $ / [ ] espaces)
-function cleanKey(s){
-  return String(s||'inconnu').replace(/[.#$\[\]/\s]/g,'_').substring(0,32)||'inconnu';
+// Nettoyer clé Firebase — enlève tous les caractères interdits
+function fkey(s){
+  const k=String(s||'x').replace(/[.#$\[\]/\s]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'').substring(0,32);
+  return k||'joueur';
 }
 
-// Écoute temps réel
+// Écoute temps réel — met le classement à jour automatiquement
 onValue(query(_lb,orderByChild('score'),limitToLast(MAX)),snap=>{
   const entries=[];
-  snap.forEach(c=>entries.push({...c.val(),_k:c.key}));
+  snap.forEach(c=>{ const v=c.val(); if(v&&v.name&&v.score)entries.push(v); });
   entries.sort((a,b)=>b.score-a.score);
-  if(entries.length>0){
-    window._fbLbData=entries;
-    if(window._renderLBData)window._renderLBData(entries);
-  }
+  window._fbLbData=entries;
+  if(window._renderLBData)window._renderLBData(entries);
 },{onlyOnce:false});
 
 // Vérifier si nouveau record
-window._fbIsNewRecord=async function(score,playerKey){
+window._fbIsNewRecord=async function(score,rawKey){
   try{
-    const k=cleanKey(playerKey);
+    const k=fkey(rawKey);
     const snap=await get(child(_lb,k));
-    if(snap.exists()) return score > snap.val().score;
+    if(snap.exists()&&snap.val()) return score > (snap.val().score||0);
     const all=await get(query(_lb,orderByChild('score')));
-    const entries=[];all.forEach(c=>entries.push({k:c.key,s:c.val().score}));
-    if(entries.length<MAX) return true;
-    entries.sort((a,b)=>a.s-b.s);
-    return score > entries[0].s;
-  }catch(e){console.error('fbIsNewRecord error',e);return true;}
+    let cnt=0; let minScore=Infinity; let minKey='';
+    all.forEach(c=>{ cnt++; const s=c.val().score||0; if(s<minScore){minScore=s;minKey=c.key;} });
+    if(cnt<MAX) return true;
+    return score > minScore;
+  }catch(e){ console.error('[FB] isNewRecord error',e); return true; }
 };
 
-// Sauvegarder
-window._fbSaveScore=async function(playerKey,name,score,wave,kills,date){
+// Sauvegarder le score — logique simple et robuste
+window._fbSaveScore=async function(rawKey,name,score,wave,kills,date){
   try{
-    const k=cleanKey(playerKey);
-    console.log('[Firebase] Saving key='+k+' name='+name+' score='+score);
+    const k=fkey(rawKey);
+    console.log('[FB] save -> key:"'+k+'" name:"'+name+'" score:'+score);
+
     const playerRef=child(_lb,k);
-    const existing=await get(playerRef);
-    if(existing.exists()&&existing.val().score>=score){
-      // Mettre à jour le nom si changé
-      if(existing.val().name!==name) await set(playerRef,{...existing.val(),name});
-      console.log('[Firebase] Score existant meilleur, pas de mise à jour');
-      return;
+
+    // Lire l'entrée existante
+    const snap=await get(playerRef);
+    if(snap.exists()&&snap.val()){
+      const old=snap.val();
+      if(old.score>=score){
+        console.log('[FB] Existant meilleur ('+old.score+'), pas de màj');
+        // Mettre à jour le nom si changé
+        if(old.name!==name) await set(playerRef,{...old,name});
+        return;
+      }
+    } else {
+      // Nouveau joueur — vérifier si top 10 plein
+      const all=await get(query(_lb,orderByChild('score')));
+      let cnt=0; let minScore=Infinity; let minKey='';
+      all.forEach(c=>{ cnt++; const s=c.val().score||0; if(s<minScore){minScore=s;minKey=c.key;} });
+      if(cnt>=MAX){
+        if(score<=minScore){ console.log('[FB] Pas assez bon pour top 10'); return; }
+        console.log('[FB] Vire le dernier: '+minKey);
+        await remove(child(_lb,minKey));
+      }
     }
-    // Top 10 plein → virer le moins bon
-    const all=await get(query(_lb,orderByChild('score')));
-    const entries=[];all.forEach(c=>entries.push({k:c.key,s:c.val().score}));
-    if(entries.length>=MAX&&!existing.exists()){
-      entries.sort((a,b)=>a.s-b.s);
-      if(score<=entries[0].s){console.log('[Firebase] Pas assez bon pour top 10');return;}
-      await remove(child(_lb,entries[0].k));
-    }
-    await set(playerRef,{name,score,wave,kills,date,ts:Date.now()});
-    console.log('[Firebase] ✅ Sauvegardé!');
-  }catch(e){console.error('[Firebase] Save failed',e);}
+
+    // Écrire l'entrée
+    const data={name:String(name),score:Number(score),wave:Number(wave),kills:Number(kills),date:String(date),ts:Date.now()};
+    console.log('[FB] Writing:',JSON.stringify(data));
+    await set(playerRef,data);
+    console.log('[FB] ✅ Succès!');
+  }catch(e){ console.error('[FB] Save failed:',e.message,e.code); }
 };
 
-// Refresh manuel
+// Refresh
 window._fbRefreshLB=function(){
   get(query(_lb,orderByChild('score'),limitToLast(MAX))).then(snap=>{
-    const entries=[];snap.forEach(c=>entries.push(c.val()));
+    const entries=[];
+    snap.forEach(c=>{ const v=c.val(); if(v&&v.name)entries.push(v); });
     entries.sort((a,b)=>b.score-a.score);
-    if(entries.length>0){window._fbLbData=entries;if(window._renderLBData)window._renderLBData(entries);}
-  }).catch(e=>console.error('[Firebase] Refresh failed',e));
+    window._fbLbData=entries;
+    if(window._renderLBData)window._renderLBData(entries);
+  }).catch(e=>console.error('[FB] Refresh failed',e));
 };
 
-console.log('[Firebase] Module chargé ✅');
+console.log('[FB] Module Firebase chargé ✅');
 </script>
 
 <script>
