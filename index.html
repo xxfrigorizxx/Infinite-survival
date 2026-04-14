@@ -378,14 +378,14 @@ onValue(query(_lb,orderByChild('score'),limitToLast(MAX)),snap=>{
   // Si entries vide mais qu'on avait déjà des données → garder l'affichage actuel
 },{onlyOnce:false});
 
-// Est-ce un nouveau record ? — vérifie par deviceId
+// Est-ce un nouveau record ? — vérifie par deviceId ou nom
 window._fbIsNewRecord=async function(score,name,deviceId){
   try{
-    // Clé = deviceId (unique par appareil) ou nom en fallback
-    const k=deviceId||_key(name);
+    const rawKey=(deviceId&&deviceId!=='null'&&deviceId!=='undefined')?deviceId:name;
+    const k=rawKey.replace(/[.#$\[\]/]/g,'_').replace(/\s+/g,'_').substring(0,32);
+    if(!k||k==='null')return true;
     const mySnap=await get(child(_lb,k));
     if(mySnap.exists()) return score>mySnap.val().score;
-    // Nouveau joueur → place disponible ?
     const allSnap=await get(query(_lb,orderByChild('score')));
     const entries=[];allSnap.forEach(c=>entries.push({key:c.key,...c.val()}));
     if(entries.length<MAX) return true;
@@ -394,18 +394,22 @@ window._fbIsNewRecord=async function(score,name,deviceId){
   }catch{return true;}
 };
 
-// Sauvegarder par deviceId — 1 entrée par appareil, met à jour le nom si changé
+// Sauvegarder — clé = nom sanitisé (simple et fiable)
 window._fbSaveScore=async function(name,score,wave,kills,date,deviceId){
   try{
-    const k=deviceId||_key(name);
+    // Nettoyer la clé — Firebase n'accepte pas . # $ / [ ] et espaces
+    const rawKey=(deviceId&&deviceId!=='null'&&deviceId!=='undefined')?deviceId:name;
+    const k=rawKey.replace(/[.#$\[\]/]/g,'_').replace(/\s+/g,'_').substring(0,32);
+    if(!k||k==='null'||k==='undefined'){console.warn('Invalid Firebase key',rawKey);return;}
+    console.log('Firebase save key:',k,'score:',score);
     const playerRef=child(_lb,k);
     const existing=await get(playerRef);
     // Ne pas écraser si score existant est meilleur
     if(existing.exists()&&existing.val().score>=score){
-      // Mettre à jour le nom si changé sans changer le score
       if(existing.val().name!==name){
         await set(playerRef,{...existing.val(),name});
       }
+      console.log('Firebase: score existant meilleur, pas de mise à jour');
       return;
     }
     // Lire tous les joueurs
@@ -414,10 +418,11 @@ window._fbSaveScore=async function(name,score,wave,kills,date,deviceId){
     // Top 10 plein + nouveau joueur → virer le moins bon
     if(entries.length>=MAX&&!existing.exists()){
       entries.sort((a,b)=>a.score-b.score);
-      if(score<=entries[0].score) return;
+      if(score<=entries[0].score){console.log('Firebase: score pas assez bon');return;}
       await remove(child(_lb,entries[0].key));
     }
     await set(playerRef,{name,score,wave,kills,date,ts:Date.now()});
+    console.log('Firebase: score sauvegardé ✅');
   }catch(e){console.warn('Firebase save failed',e);}
 };
 
