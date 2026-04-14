@@ -361,12 +361,21 @@ const MAX=10;
 function _key(name){return(name||'Anonyme').replace(/[.#$\[\]/\s]/g,'_').substring(0,32);}
 
 // Écoute temps réel — top 10 affiché automatiquement
+// IMPORTANT: on n'affiche jamais une liste vide si on avait des données avant
 onValue(query(_lb,orderByChild('score'),limitToLast(MAX)),snap=>{
   const entries=[];
   snap.forEach(c=>entries.push({...c.val(),_fbKey:c.key}));
   entries.sort((a,b)=>b.score-a.score);
-  window._fbLbData=entries;
-  if(window._renderLBData)window._renderLBData(entries);
+  // Ne mettre à jour que si on a vraiment des données
+  if(entries.length>0){
+    window._fbLbData=entries;
+    if(window._renderLBData)window._renderLBData(entries);
+  } else if(!window._fbLbData||window._fbLbData.length===0){
+    // Firebase vide — afficher message
+    window._fbLbData=[];
+    if(window._renderLBData)window._renderLBData([]);
+  }
+  // Si entries vide mais qu'on avait déjà des données → garder l'affichage actuel
 },{onlyOnce:false});
 
 // Est-ce un nouveau record ? — vérifie par deviceId
@@ -425,6 +434,37 @@ window._fbRefreshLB=function(){
 
 <script>
 'use strict';
+
+// Défini en premier pour que le module Firebase puisse l'appeler dès que prêt
+window._renderLBData=function(lb){
+  // Met à jour TOUS les endroits où le classement s'affiche
+  ['lb-rows','lb-modal-rows'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(!lb||!lb.length){
+      el.innerHTML='<div class="lb-empty">Aucun score encore — sois le premier !</div>';
+      return;
+    }
+    const m=['🥇','🥈','🥉','4.','5.','6.','7.','8.','9.','10.'];
+    if(id==='lb-rows'){
+      el.innerHTML=lb.slice(0,10).map((e,i)=>`
+        <div class="lb-row ${i===0?'gr':''}">
+          <span class="lb-rank">${m[i]||i+1}</span>
+          <span class="lb-name">${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
+          <span class="lb-score">${(e.score||0).toLocaleString()}</span>
+        </div>`).join('');
+    } else {
+      el.innerHTML=lb.slice(0,10).map((e,i)=>`
+        <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?.2:.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
+          <span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:${i===0?'var(--gold)':'#456'};width:22px;flex-shrink:0;text-align:center;">${m[i]||i+1}</span>
+          <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-family:'Orbitron',sans-serif;color:${i===0?'var(--gold)':'var(--neon)'};font-size:.72rem;font-weight:700;">${(e.score||0).toLocaleString()}</div>
+            <div style="color:#456;font-size:.55rem;">Vague ${e.wave||0} · ${e.kills||0} kills</div>
+          </div>
+        </div>`).join('');
+    }
+  });
+};
 
 /* ══════════════════════════════════════════════
    AUDIO
@@ -498,33 +538,13 @@ function openProfile(){
 function openLeaderboardModal(){
   const modal=document.getElementById('lb-modal');
   modal.style.display='flex';
-  // Savoir d'où on vient
   const fromStats=document.getElementById('stats-screen').classList.contains('show');
   modal.dataset.fromStats=fromStats?'1':'0';
-  // Rendre le classement complet
-  const rows=document.getElementById('lb-modal-rows');
-  rows.innerHTML='<div style="color:#567;font-size:.7rem;text-align:center;padding:12px;">⏳ Chargement...</div>';
-  const medals=['🥇','🥈','🥉','4.','5.','6.','7.','8.','9.','10.'];
-  if(window._fbRefreshLB){
-    // Force un refresh Firebase
-    window._fbRefreshLB();
-    // Utilise les données déjà chargées si disponibles
-    setTimeout(()=>{
-      const lb=window._fbLbData||[];
-      if(!lb.length){rows.innerHTML='<div style="color:#567;font-size:.7rem;text-align:center;padding:12px;">Aucun score encore !</div>';return;}
-      rows.innerHTML=lb.map((e,i)=>`
-        <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?.2:.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
-          <span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:${i===0?'var(--gold)':'#456'};width:22px;flex-shrink:0;text-align:center;">${medals[i]||i+1}</span>
-          <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
-          <div style="text-align:right;flex-shrink:0;">
-            <div style="font-family:'Orbitron',sans-serif;color:${i===0?'var(--gold)':'var(--neon)'};font-size:.72rem;font-weight:700;">${(e.score||0).toLocaleString()}</div>
-            <div style="color:#456;font-size:.55rem;">Vague ${e.wave||0} · ${e.kills||0} kills</div>
-          </div>
-        </div>`).join('');
-    },600);
-  } else {
-    rows.innerHTML='<div style="color:#567;font-size:.7rem;text-align:center;padding:12px;">Connexion Firebase non disponible.</div>';
-  }
+  // Afficher ce qu'on a déjà
+  const lb=window._fbLbData&&window._fbLbData.length?window._fbLbData:_loadLocalLB();
+  window._renderLBData(lb);
+  // Refresh Firebase
+  if(window._fbRefreshLB)window._fbRefreshLB();
 }
 function closeLeaderboardModal(){
   const modal=document.getElementById('lb-modal');
@@ -935,48 +955,36 @@ function saveRecord(){
 function _doSaveRecord(name){
   if(!pendingScore)return;
   const entry={name,score:pendingScore.score,wave:pendingScore.wave,kills:pendingScore.kills,date:new Date().toLocaleDateString('fr-CA')};
+
+  // Sauvegarder dans Firebase — onValue va mettre à jour le classement automatiquement
   if(window._fbSaveScore){
     window._fbSaveScore(name,pendingScore.score,pendingScore.wave,pendingScore.kills,entry.date,getDeviceId());
   }
+
+  // Mettre à jour le cache local aussi (fusion, pas écrasement)
   const lb=_loadLocalLB();
-  // Remplacer l'entrée existante si meilleur score
   const idx=lb.findIndex(e=>e.name===name);
   if(idx>=0){if(entry.score>lb[idx].score)lb[idx]=entry;}
   else{lb.push(entry);}
   lb.sort((a,b)=>b.score-a.score);
   localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,10)));
+
   pendingScore=null;
-  renderLeaderboard();
+  // Ne pas appeler renderLeaderboard() ici — onValue Firebase le fait automatiquement
 }
 
 function _loadLocalLB(){try{return JSON.parse(localStorage.getItem('surv_lb'))||[];}catch(e){return[];}}
 
 function renderLeaderboard(){
-  // Si Firebase disponible, utiliser les données en temps réel déjà chargées
-  if(window._fbLbData&&window._fbLbData.length){
-    _renderLBData(window._fbLbData);
-  } else if(window._fbRefreshLB){
-    window._fbRefreshLB();
-  } else {
-    _renderLBData(_loadLocalLB());
-  }
+  // 1. Afficher immédiatement les données locales en attendant Firebase
+  const local=_loadLocalLB();
+  if(local.length)_renderLBData(local);
+
+  // 2. Demander un refresh Firebase — quand ça arrive ça va s'afficher via onValue
+  if(window._fbRefreshLB)window._fbRefreshLB();
 }
 
-// Exposer _renderLBData sur window pour que le module Firebase puisse l'appeler
-window._renderLBData=function(lb){
-  const el=document.getElementById('lb-rows');if(!el)return;
-  if(!lb||!lb.length){
-    el.innerHTML='<div class="lb-empty">Aucun score encore — sois le premier !</div>';
-    return;
-  }
-  const m=['🥇','🥈','🥉','4.','5.','6.','7.','8.','9.','10.'];
-  el.innerHTML=lb.slice(0,10).map((e,i)=>`
-    <div class="lb-row ${i===0?'gr':''}">
-      <span class="lb-rank">${m[i]||i+1}</span>
-      <span class="lb-name">${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
-      <span class="lb-score">${(e.score||0).toLocaleString()}</span>
-    </div>`).join('');
-}
+// _renderLBData défini au début du script
 function _renderLBData(lb){window._renderLBData(lb);}
 
 /* ══════════════════════════════════════════════
