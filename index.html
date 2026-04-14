@@ -308,7 +308,19 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <button id="prof-save-btn" onclick="saveProfileName()">✓ SAUVEGARDER</button>
     <div id="prof-existing">
       <div id="prof-stats-detail"></div>
+      <button id="prof-reset-btn" onclick="confirmReset()" style="margin-top:12px;font-family:'Share Tech Mono',monospace;background:transparent;border:1px solid var(--hot);color:var(--hot);padding:8px;width:100%;cursor:pointer;font-size:.72rem;-webkit-appearance:none;opacity:.7;">🗑 RÉINITIALISER TOUTES MES DONNÉES</button>
     </div>
+  </div>
+</div>
+
+<!-- Confirmation reset -->
+<div id="reset-confirm" style="display:none;position:fixed;inset:0;background:rgba(4,8,15,.97);z-index:800;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:290px;background:var(--panel);border:2px solid var(--hot);padding:22px 16px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:10px;">⚠️</div>
+    <div style="font-family:'Orbitron',sans-serif;color:var(--hot);font-size:.95rem;margin-bottom:8px;">TOUT EFFACER ?</div>
+    <p style="color:#89a;font-size:.75rem;line-height:1.7;margin-bottom:16px;">Énergie, pièces, boutique, codex, profil — tout sera remis à zéro. Impossible à annuler.</p>
+    <button onclick="doReset()" style="font-family:'Orbitron',sans-serif;background:var(--hot);border:none;color:#fff;padding:12px;width:100%;cursor:pointer;font-size:.85rem;font-weight:700;margin-bottom:8px;-webkit-appearance:none;">🗑 OUI, TOUT EFFACER</button>
+    <button onclick="document.getElementById('reset-confirm').style.display='none'" style="background:transparent;border:1px solid #345;color:#567;padding:9px;width:100%;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:.78rem;-webkit-appearance:none;">← Annuler</button>
   </div>
 </div>
 
@@ -466,6 +478,26 @@ function openProfile(){
   document.getElementById('profile-modal').classList.add('show');
   setTimeout(()=>inp.focus(),300);
 }
+function confirmReset(){
+  document.getElementById('profile-modal').classList.remove('show');
+  document.getElementById('reset-confirm').style.display='flex';
+}
+
+function doReset(){
+  // Effacer toutes les données locales
+  const keys=['surv_e','surv_r','surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw'];
+  keys.forEach(k=>localStorage.removeItem(k));
+  // Fermer les modals
+  document.getElementById('reset-confirm').style.display='none';
+  document.getElementById('profile-modal').classList.remove('show');
+  // Rafraîchir l'UI
+  updateEnergyUI();
+  renderLeaderboard();
+  renderProfileBadge();
+  // Ouvrir le profil pour que le joueur entre un nouveau nom
+  setTimeout(openProfile, 300);
+}
+
 function saveProfileName(){
   const name=document.getElementById('prof-name-input').value.trim();
   if(!name)return;
@@ -564,14 +596,14 @@ const CODEX_UPGRADES=[
   {id:'regen1',    icon:'💚',name:'RÉGÉNÉRATION',     desc:'+2 PV/seconde.',                       hint:'Équipe à vague 4'},
   {id:'dmg2',      icon:'🗡️',name:'DÉGÂTS++',         desc:'+40% dégâts.',                         hint:'Équipe à vague 4'},
   {id:'xpboost1',  icon:'✨',name:'XP BOOST',         desc:'+25% XP gagné.',                       hint:'Équipe à vague 4'},
-  {id:'n_haste',   icon:'⚡',name:'HÂTE',             desc:'+15% vitesse et cadence.',             hint:'Équipe à vague 4'},
+  {id:'n_haste',   icon:'🏎️',name:'HÂTE',             desc:'+15% vitesse et cadence.',             hint:'Équipe à vague 4'},
   {id:'pierce1',   icon:'🔱',name:'PERFORANT',        desc:'Balles traversent +1.',                hint:'Équipe à vague 5'},
   {id:'dash1',     icon:'⚡',name:'DASH',              desc:'Bouton Dash débloqué.',                hint:'Équipe à vague 5'},
-  {id:'n_magnet2', icon:'🔮',name:'SUPER MAGNÉT.',    desc:'Attire aussi les pièces.',             hint:'Équipe à vague 5'},
+  {id:'n_magnet2', icon:'🔮',name:'SUPER MAGNÉT.',    desc:'Portée XP +50%, attire aussi les pièces.',             hint:'Équipe à vague 5'},
   {id:'n_siphon',  icon:'🩺',name:'SIPHON',           desc:'Chaque kill soigne 5 PV.',             hint:'Équipe à vague 6'},
   {id:'orbit1',    icon:'🌀',name:'ORBITE',           desc:'+1 orbe protecteur.',                  hint:'Équipe à vague 6'},
   {id:'fire2',     icon:'💫',name:'MITRAILLEUSE',     desc:'Tir +45% plus vite.',                  hint:'Équipe à vague 6'},
-  {id:'knockback1',icon:'💢',name:'RECUL',            desc:'Balles repoussent les ennemis.',       hint:'Équipe à vague 6'},
+  {id:'knockback1',icon:'↩️',name:'RECUL',            desc:'Balles repoussent les ennemis.',       hint:'Équipe à vague 6'},
   {id:'tri1',      icon:'🔫',name:'TRIPLE TIR',       desc:'Tir en éventail x3.',                  hint:'Équipe à vague 7'},
   {id:'bspd1',     icon:'🚀',name:'BALLES RAPIDES',   desc:'Vitesse balles +40%.',                 hint:'Équipe à vague 7'},
   {id:'aura1',     icon:'🌐',name:'AURA DE FEU',      desc:'Brûle les ennemis proches.',           hint:'Équipe à vague 7'},
@@ -580,8 +612,8 @@ const CODEX_UPGRADES=[
   {id:'n_berserker',icon:'😤',name:'BERSERK',         desc:'+40% dégâts si PV < 30%.',            hint:'Équipe à vague 8'},
   {id:'explode1',  icon:'💥',name:'EXPLOSION',        desc:'Balles explosent.',                    hint:'Équipe à vague 9'},
   {id:'shield1',   icon:'🔵',name:'BOUCLIER',         desc:'Bloque 1 coup / 8s.',                  hint:'Équipe à vague 9'},
-  {id:'n_shrink',  icon:'🔬',name:'MINIBALLE',        desc:'Balles x3 plus rapides.',              hint:'Équipe à vague 9'},
-  {id:'multi2',    icon:'💢',name:'TIRS MULTIPLES',   desc:'+2 projectiles.',                      hint:'Équipe à vague 10'},
+  {id:'n_shrink',  icon:'🔬',name:'MINIBALLE',        desc:'Balles 3x plus petites et rapides.',              hint:'Équipe à vague 9'},
+  {id:'multi2',    icon:'🔀',name:'TIRS MULTIPLES',   desc:'+2 projectiles.',                      hint:'Équipe à vague 10'},
   {id:'xprad2',    icon:'🧲',name:'SUPER AIMANT',     desc:'Portée XP x3.',                        hint:'Équipe à vague 10'},
   {id:'n_thorns',  icon:'🌵',name:'ÉPINES',           desc:'Renvoie 25% dégâts.',                  hint:'Équipe à vague 10'},
   {id:'n_shield2', icon:'🔮',name:'BOUCLIER+',        desc:'Bouclier recharge en 5s.',             hint:'Équipe à vague 10'},
@@ -593,50 +625,50 @@ const CODEX_UPGRADES=[
   {id:'n_fury',    icon:'🔱',name:'FURIE',            desc:'+3% dégâts par kill.',                 hint:'Équipe à vague 12'},
   {id:'freeze1',   icon:'❄️',name:'GEL',              desc:'Balles gèlent 0.5s.',                  hint:'Équipe à vague 14'},
   {id:'regen2',    icon:'🌿',name:'HYPER RÉGÉN.',     desc:'+5 PV/seconde.',                       hint:'Équipe à vague 14'},
-  {id:'n_teleport',icon:'🌀',name:'BLINK',            desc:'Dash recharge en 1.5s.',               hint:'Équipe à vague 14'},
-  {id:'n_blade',   icon:'🌀',name:'LAMES TOURNANTES', desc:'Orbes plus rapides et larges.',        hint:'Équipe à vague 14'},
-  {id:'n_echo',    icon:'🔊',name:'ÉCHO',             desc:'5e balle fait x3 dégâts.',             hint:'Équipe à vague 15'},
-  {id:'n_fortress',icon:'🏯',name:'FORTERESSE',       desc:'PV +80, vitesse -10%.',                hint:'Équipe à vague 15'},
+  {id:'n_teleport',icon:'🔀',name:'BLINK',            desc:'Cooldown du Dash réduit à 1.5s.',               hint:'Équipe à vague 14'},
+  {id:'n_blade',   icon:'⚔️',name:'LAMES TOURNANTES', desc:'Orbes 1.5x plus larges et 1.8x plus rapides.',        hint:'Équipe à vague 14'},
+  {id:'n_echo',    icon:'🔊',name:'ÉCHO',             desc:'Toutes les 5 balles, 1 balle fait x3 dégâts.',             hint:'Équipe à vague 15'},
+  {id:'n_fortress',icon:'🏯',name:'FORTERESSE',       desc:'+80 PV max mais -10% vitesse.',                hint:'Équipe à vague 15'},
   {id:'slow1',     icon:'⏳',name:'VAGUE DE TEMPS',   desc:'Ennemis -20% vitesse.',                hint:'Équipe à vague 16'},
-  {id:'pierce2',   icon:'🗡️',name:'ULTRA PERFORANT',  desc:'Balles traversent tout.',              hint:'Équipe à vague 16'},
+  {id:'pierce2',   icon:'🔰',name:'ULTRA PERFORANT',  desc:'Balles traversent tout.',              hint:'Équipe à vague 16'},
   {id:'n_blizzard',icon:'🌨️',name:'BLIZZARD',         desc:'Zone de givre permanente.',            hint:'Équipe à vague 16'},
   {id:'n_pulse',   icon:'📡',name:'PULSATION',        desc:'Onde de choc toutes les 5s.',          hint:'Équipe à vague 16'},
   {id:'hp3',       icon:'🏰',name:'TITAN',            desc:'PV max +100.',                         hint:'Équipe à vague 18'},
   {id:'dmg3',      icon:'☢️',name:'ANTI-MATIÈRE',     desc:'+80% dégâts.',                         hint:'Équipe à vague 18'},
-  {id:'n_nova',    icon:'💢',name:'NOVA',             desc:'Explosion circulaire / 8s.',           hint:'Équipe à vague 18'},
+  {id:'n_nova',    icon:'🌸',name:'NOVA',             desc:'Explosion circulaire / 8s.',           hint:'Équipe à vague 18'},
   {id:'n_charge',  icon:'🔋',name:'CHARGE',           desc:'Plus vite = plus de dégâts.',          hint:'Équipe à vague 18'},
-  {id:'n_overload',icon:'⚡',name:'SURCHARGE',        desc:'Balle x5 dégâts / 10s.',              hint:'Équipe à vague 19'},
+  {id:'n_overload',icon:'🔌⚡',name:'SURCHARGE',        desc:'Toutes les 10s, la prochaine balle fait x5.',              hint:'Équipe à vague 19'},
   {id:'turret1',   icon:'🤖',name:'TOURELLE',         desc:'Invoque une tourelle auto.',            hint:'Équipe à vague 20'},
   {id:'multi3',    icon:'🌪️',name:'MITRAILLE',        desc:'+3 projectiles.',                      hint:'Équipe à vague 20'},
   {id:'n_phoenix', icon:'🔥',name:'PHÉNIX',           desc:'Reviens à 30% PV une fois.',           hint:'Équipe à vague 20'},
-  {id:'n_rupture', icon:'💢',name:'RUPTURE',          desc:'Chaque kill = onde de choc.',          hint:'Équipe à vague 20'},
+  {id:'n_rupture', icon:'💥',name:'RUPTURE',          desc:'Chaque kill = onde de choc.',          hint:'Équipe à vague 20'},
   {id:'explode2',  icon:'🌟',name:'SUPERNOVA',        desc:'Explosion x2 grande.',                 hint:'Équipe à vague 22'},
   {id:'speed3',    icon:'🌩️',name:'ÉCLAIR',           desc:'+50% vitesse.',                        hint:'Équipe à vague 22'},
   {id:'n_corona',  icon:'☀️',name:'COURONNE SOLAIRE', desc:'Halo de feu permanent.',               hint:'Équipe à vague 22'},
-  {id:'n_gravity', icon:'🌑',name:'GRAVITÉ NOIRE',    desc:'Attire les ennemis vers toi.',         hint:'Équipe à vague 22'},
-  {id:'n_shadow',  icon:'🌑',name:'OMBRE',            desc:'50% chance esquiver.',                 hint:'Équipe à vague 24'},
+  {id:'n_gravity', icon:'🌑',name:'GRAVITÉ NOIRE',    desc:'Attire les ennemis vers toi (risqué !).',         hint:'Équipe à vague 22'},
+  {id:'n_shadow',  icon:'🥷',name:'OMBRE',            desc:'50% chance esquiver.',                 hint:'Équipe à vague 24'},
   {id:'bsize2',    icon:'💣',name:'OBUS',             desc:'Balles x2.5 plus grosses.',            hint:'Équipe à vague 25'},
   {id:'orbit3',    icon:'🪐',name:'GALAXIE',          desc:'+3 orbes géants.',                     hint:'Équipe à vague 25'},
   {id:'n_clone',   icon:'👥',name:'CLONE',            desc:'Clone qui tire aussi.',                hint:'Équipe à vague 25'},
   {id:'n_laser2',  icon:'🔴',name:'MEGA LASER',       desc:'Laser géant / 6s.',                   hint:'Équipe à vague 26'},
   {id:'n_wrath',   icon:'😡',name:'COURROUX',         desc:'+100% dégâts 3s après heal.',          hint:'Équipe à vague 26'},
   {id:'chain2',    icon:'🌩️',name:'TEMPÊTE ÉCLAIR',   desc:'Balles rebondissent x5.',              hint:'Équipe à vague 28'},
-  {id:'crit3',     icon:'🗡️',name:'ASSASSIN',         desc:'Crit x4 dégâts, 40% chance.',         hint:'Équipe à vague 28'},
+  {id:'crit3',     icon:'🎭',name:'ASSASSIN',         desc:'Crit x4 dégâts, 40% chance.',         hint:'Équipe à vague 28'},
   {id:'n_hyper',   icon:'🌠',name:'HYPER BALLE',      desc:'1 balle / 4 fait x10 dégâts.',        hint:'Équipe à vague 28'},
   {id:'n_sentinel',icon:'🛸',name:'SENTINELLE',       desc:'Tourelle mobile avec toi.',            hint:'Équipe à vague 28'},
-  {id:'slow2',     icon:'🌀',name:'DISTORSION',       desc:'Ennemis -50% vitesse.',                hint:'Équipe à vague 30'},
+  {id:'slow2',     icon:'🕰️',name:'DISTORSION',       desc:'Ennemis -50% vitesse.',                hint:'Équipe à vague 30'},
   {id:'vamp2',     icon:'🩸',name:'DIEU SANG',        desc:'+10 PV par kill.',                     hint:'Équipe à vague 30'},
-  {id:'n_reaper',  icon:'💀',name:'FAUCHEUR',         desc:'10% tuer instantanément.',             hint:'Équipe à vague 32'},
+  {id:'n_reaper',  icon:'☠️',name:'FAUCHEUR',         desc:'10% tuer instantanément.',             hint:'Équipe à vague 32'},
   {id:'n_omega',   icon:'Ω', name:'OMEGA',            desc:'Dernière balle = géante.',             hint:'Équipe à vague 32'},
-  {id:'fire3',     icon:'⚡',name:'HYPERION',         desc:'Cadence quasi-instantanée.',           hint:'Équipe à vague 35'},
-  {id:'dmg4',      icon:'💀',name:'DIEU GUERRE',      desc:'+200% dégâts.',                        hint:'Équipe à vague 35'},
+  {id:'fire3',     icon:'🌀⚡',name:'HYPERION',         desc:'Cadence quasi-instantanée.',           hint:'Équipe à vague 35'},
+  {id:'dmg4',      icon:'🔱',name:'DIEU GUERRE',      desc:'+200% dégâts.',                        hint:'Équipe à vague 35'},
   {id:'n_singularity',icon:'🌌',name:'SINGULARITÉ',   desc:'Trou noir aspire les ennemis.',        hint:'Équipe à vague 35'},
   {id:'n_judgment',icon:'⚖️',name:'JUGEMENT',         desc:'Tue tout ennemi < 10% PV.',            hint:'Équipe à vague 35'},
-  {id:'n_abyss',   icon:'🕳️',name:'ABÎME',            desc:'Aspire les ennemis r=100.',            hint:'Équipe à vague 36'},
+  {id:'n_abyss',   icon:'🕳️',name:'ABÎME',            desc:'Téléporte les ennemis proches vers toi toutes les 20s.',            hint:'Équipe à vague 36'},
   {id:'invincible',icon:'✝️',name:'ÉCLAT DIVIN',      desc:'Invincible 3s / 15s.',                 hint:'Équipe à vague 40'},
   {id:'hp4',       icon:'♾️',name:'IMMORTEL',         desc:'PV max +300.',                         hint:'Équipe à vague 40'},
   {id:'n_timeloop',icon:'⌛',name:'BOUCLE TEMPORELLE',desc:'Retour position 3s si PV < 20%.',      hint:'Équipe à vague 40'},
-  {id:'n_rebirth', icon:'🌀',name:'RENAISSANCE',      desc:'Reviens à 50% PV (1x).',               hint:'Équipe à vague 38'},
+  {id:'n_rebirth', icon:'🔄',name:'RENAISSANCE',      desc:'Reviens à 50% PV (1x).',               hint:'Équipe à vague 38'},
   {id:'n_overcharge',icon:'🔌',name:'SURPUISSANCE',   desc:'+20% stats / 5s chaque 20s.',          hint:'Équipe à vague 38'},
   {id:'n_heaven',  icon:'🌤️',name:'CÉLESTE',          desc:'Regen rapide sans ennemi proche.',     hint:'Équipe à vague 42'},
   {id:'n_galaxy',  icon:'🌠',name:'VOIE LACTÉE',      desc:'+5 orbes ultra-rapides.',              hint:'Équipe à vague 42'},
@@ -769,6 +801,18 @@ function _renderLBData(lb){window._renderLBData(lb);}
    BOUTIQUE PERMANENTE
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
+const KSH_VER='surv_shop_ver';
+const SHOP_VERSION='v2'; // Changer ce numéro force un reset de la boutique pour tous
+
+// Vérifier la version au chargement — reset si version différente
+(function checkShopVersion(){
+  if(localStorage.getItem(KSH_VER)!==SHOP_VERSION){
+    localStorage.removeItem(KSH);
+    localStorage.removeItem('surv_coins');
+    localStorage.setItem(KSH_VER,SHOP_VERSION);
+    console.log('Boutique réinitialisée — nouvelle version');
+  }
+})();
 const SHOP_ITEMS=[
   {id:'s_hp',   icon:'❤️', name:'PV DE DÉPART+',    desc:'+20 PV max au début de chaque partie', baseCost:150, maxLvl:10,effect:s=>{s.player.maxHp+=20;s.player.hp+=20;}},
   {id:'s_dmg',  icon:'⚔️', name:'DÉGÂTS DE BASE+',  desc:'+6 dégâts dès le départ',              baseCost:200, maxLvl:8, effect:s=>s.player.bulletDmg+=6},
