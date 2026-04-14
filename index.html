@@ -971,31 +971,33 @@ function saveRecord(){
 
 function _doSaveRecord(name){
   if(!pendingScore)return;
-  const entry={name,score:pendingScore.score,wave:pendingScore.wave,kills:pendingScore.kills,date:new Date().toLocaleDateString('fr-CA')};
+  // Copie locale des données pour éviter que state soit écrasé
+  const sc={...pendingScore};
+  const entry={name,score:sc.score,wave:sc.wave,kills:sc.kills,date:new Date().toLocaleDateString('fr-CA')};
   const key=getPlayerKey(name);
-  console.log('[Record] Saving: key='+key+' name='+name+' score='+entry.score);
+  console.log('[Record] key='+key+' name='+name+' score='+entry.score);
+  pendingScore=null;
 
-  // Firebase — attendre que le module soit prêt
+  // Firebase — attendre que le module soit prêt (max 5s)
   const tryFirebase=async()=>{
-    for(let i=0;i<30;i++){
+    for(let i=0;i<50;i++){
       if(window._fbSaveScore){
         await window._fbSaveScore(key,name,entry.score,entry.wave,entry.kills,entry.date);
         return;
       }
       await new Promise(r=>setTimeout(r,100));
     }
-    console.warn('[Record] Firebase non disponible après 3s');
+    console.warn('[Record] Firebase pas disponible après 5s');
   };
   tryFirebase();
 
-  // Cache local
+  // Cache local immédiatement
   const lb=_loadLocalLB();
   const idx=lb.findIndex(e=>e.name===name);
   if(idx>=0){if(entry.score>lb[idx].score)lb[idx]=entry;}
   else lb.push(entry);
   lb.sort((a,b)=>b.score-a.score);
   localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,10)));
-  pendingScore=null;
 }
 
 function _loadLocalLB(){try{return JSON.parse(localStorage.getItem('surv_lb'))||[];}catch(e){return[];}}
@@ -2385,7 +2387,8 @@ function gameOver(){
   document.getElementById('game-screen').style.display='none';
   updateEnergyUI();
   document.getElementById('stats-screen').classList.add('show');
-  setTimeout(async()=>{if(await isNewRecord(score))openRecordSection(score,state.wave,state.kills,state.elapsed,state.player.level);},800);
+  // Toujours afficher le record — pas besoin de vérifier, _doSaveRecord gère ça
+  setTimeout(()=>openRecordSection(score,state.wave,state.kills,state.elapsed,state.player.level),400);
 }
 
 function showWaveBanner(w){
