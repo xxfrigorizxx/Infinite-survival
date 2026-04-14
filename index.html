@@ -4,12 +4,49 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>∞ SURVIVOR</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 :root{--neon:#00ffe7;--hot:#ff3c6e;--gold:#ffd700;--bg:#04080f;--panel:#0a1220;--txt:#c8e6f5;--coin:#f4a61d;--codex:#8888ff;}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'Share Tech Mono',monospace;touch-action:none;user-select:none;}
+
+/* ── Écran rotation paysage → demander portrait ── */
+#rotate-screen{
+  display:none;
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  text-align:center;padding:24px;
+}
+#rotate-screen .rot-icon{font-size:3.5rem;animation:rotateAnim 1.5s ease-in-out infinite;}
+#rotate-screen p{font-family:'Orbitron',sans-serif;color:var(--neon);font-size:clamp(.8rem,4vw,1rem);letter-spacing:.1em;}
+#rotate-screen small{color:#456;font-size:.65rem;}
+@keyframes rotateAnim{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
+
+/* En mode paysage — titre en deux colonnes, jeu plein écran */
+@media (orientation:landscape) and (max-height:500px){
+  #title-screen{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:auto;
+    gap:8px;
+    max-width:100%;
+    max-height:100vh;
+    padding:8px 12px;
+    overflow-y:auto;
+    align-items:start;
+  }
+  #title-screen h1{grid-column:1/-1;font-size:clamp(1.2rem,6vw,2rem);}
+  #title-screen>p{grid-column:1/-1;margin:0;}
+  #profile-badge{grid-column:1;}
+  #energy-row{grid-column:2;flex-direction:column;}
+  .title-btns{grid-column:1/-1;}
+  #leaderboard{grid-column:1/-1;}
+  #hud{flex-wrap:nowrap;overflow-x:auto;padding:2px 4px;}
+  .hud-block{min-width:36px;}
+}
 body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,231,.011) 2px,rgba(0,255,231,.011) 4px);pointer-events:none;z-index:9999;}
 #wrapper{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 
@@ -290,6 +327,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <button class="ctab active" onclick="switchCodexTab('enemies')">👾 Ennemis</button>
     <button class="ctab" onclick="switchCodexTab('upgrades')">⬆ Upgrades</button>
     <button class="ctab" onclick="switchCodexTab('shop')">🛒 Boutique</button>
+    <button class="ctab" onclick="switchCodexTab('biomes')">🌍 Biomes</button>
+    <button class="ctab" onclick="switchCodexTab('events')">⚡ Événements</button>
   </div>
   <div id="codex-grid-wrap"><div class="codex-grid" id="codex-grid"></div></div>
   <div class="back-bar"><button class="back-btn" onclick="closeCodex()">← RETOUR</button></div>
@@ -862,6 +901,7 @@ const CODEX_UPGRADES=[
   {id:'godmode',   icon:'👑',name:'MODE DIEU',          desc:'Tous les stats x2.',                  hint:'Vague 50'},
   {id:'n_apocalypse',icon:'🔥',name:'APOCALYPSE',       desc:'Balle = explosion+poison+gel.',       hint:'Vague 50'},
 ];
+
 function openCodex(fromStats=false){
   if(fromStats)document.getElementById('stats-screen').classList.remove('show');
   codexTab='enemies';
@@ -882,7 +922,8 @@ function closeCodex(){
 }
 function switchCodexTab(tab){
   codexTab=tab;
-  document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().includes(tab==='enemies'?'ennemi':tab==='upgrades'?'upgrade':'boutique')));
+  const labels={enemies:'ennemi',upgrades:'upgrade',shop:'boutique',biomes:'biome',events:'vénement'};
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().includes(labels[tab]||tab)));
   renderCodexGrid();
 }
 function renderCodexGrid(){
@@ -892,12 +933,15 @@ function renderCodexGrid(){
   let items=[], cat='';
   if(codexTab==='enemies'){items=CODEX_ENEMIES;cat='enemies';}
   else if(codexTab==='upgrades'){items=CODEX_UPGRADES;cat='upgrades';}
-  else{items=SHOP_ITEMS.map(i=>({id:i.id,icon:i.icon,name:i.name,desc:i.desc}));cat='shop';}
+  else if(codexTab==='biomes'){items=CODEX_BIOMES;cat='biomes';}
+  else if(codexTab==='events'){items=CODEX_EVENTS;cat='events';}
+  else if(codexTab==='mutations'){items=CODEX_MUTATIONS;cat='mutations';}
+  else{items=SHOP_ITEMS.map(i=>({id:i.id,icon:i.icon,name:i.name,desc:i.desc,hint:'Ouvre la boutique'}));cat='shop';}
   const catData=d[cat]||{};
-  let discovered=0;
-  items.forEach(it=>{if(catData[it.id])discovered++;});
+  // Compteur total toutes catégories
   const total=Object.values(d).reduce((a,c)=>a+Object.keys(c).length,0);
-  const totalAll=CODEX_ENEMIES.length+CODEX_UPGRADES.length+SHOP_ITEMS.length;
+  const totalAll=CODEX_ENEMIES.length+CODEX_UPGRADES.length+SHOP_ITEMS.length+
+    CODEX_BIOMES.length+CODEX_EVENTS.length+CODEX_MUTATIONS.length;
   countEl.textContent=`${total}/${totalAll}`;
   grid.innerHTML=items.map(it=>{
     const entry=catData[it.id];
@@ -907,8 +951,8 @@ function renderCodexGrid(){
     return`<div class="cc${isDisc?(isNew?' new-disc':''):'locked'}">
       <div class="cc-icon">${isDisc?it.icon:'❓'}</div>
       <div class="cc-name">${isDisc?it.name:'???'}</div>
-      <div class="cc-desc">${isDisc?it.desc:'<span class="cc-locked-txt">'+it.hint+'</span>'}</div>
-      ${isDisc?`<div class="cc-sub">${it.hint||''}</div>`:''}
+      <div class="cc-desc">${isDisc?it.desc:'<span style=\"color:#456;font-size:.55rem\">'+it.hint+'</span>'}</div>
+      ${isDisc&&it.hint?`<div class="cc-sub">${it.hint}</div>`:''}
       ${isNew?'<div class="cc-badge cc-new-badge">✦ NOUVEAU</div>':''}
     </div>`;
   }).join('');
@@ -1432,7 +1476,9 @@ function resizeCanvas(){
   H=Math.round(r.height)||(window.innerHeight-80);
   canvas.width=W;canvas.height=H;
 }
-window.addEventListener('resize',resizeCanvas);
+
+window.addEventListener('resize',()=>{ resizeCanvas(); });
+window.addEventListener('orientationchange',()=>{ setTimeout(resizeCanvas,300); });
 
 /* ── JOYSTICK ── */
 const jZone=document.getElementById('joystick-zone');
@@ -1484,7 +1530,7 @@ function mkState(){
     running:false,paused:false,
     wave:1,kills:0,elapsed:0,waveTimer:0,
     currentEvent:null,eventTimer:0,eventCooldown:30000,
-    biome:null,biomeTransition:0,
+    biome:null,biomeTransition:0,obstacles:[],
     _evSpawnMult:1,_evEnemySpeedMult:1,_evGiants:false,_evDark:false,
     _evGoldMult:1,_evBossRain:false,_evBossTimer:0,_evXpMult:1,_evHealRate:0,
     spawnInterval:1700,spawnTimer:0,
@@ -1662,15 +1708,354 @@ const EVENTS=[
   },
 ];
 
-// Biome actuel
+
+/* ══════════════════════════════════════════════
+   MUTATIONS DE BIOME (accumulent à chaque boucle)
+══════════════════════════════════════════════ */
+
+// Obstacles persistants dans le monde (zones, pièges, météorites...)
+// state.obstacles = [{type, x, y, r, ...}]
+
+// Niveau de mutation = nombre de boucles complètes
+function getBiomeLoop(){
+  if(!state)return 0;
+  return Math.floor(state.wave/(15*7)); // 7 biomes × 15 vagues = 105 vagues = 1 boucle
+}
+
+// Mutations disponibles par biome (s'accumulent)
+const BIOME_MUTATIONS={
+  void:[
+    // Boucle 1+
+    {id:'void_zones', name:"ZONES D'OMBRE", desc:'Des zones noires bloquent le passage',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       // Ajouter 3-5 zones sombres fixes
+       for(let i=0;i<3+Math.floor(Math.random()*3);i++){
+         s.obstacles.push({type:'void_zone',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:20+Math.random()*30,color:'rgba(0,0,0,.7)',solid:true});
+       }
+     }
+    },
+    // Boucle 2+
+    {id:'void_rifts', name:'FISSURES', desc:'Des failles téléportent les ennemis',
+     init:s=>{
+       for(let i=0;i<2;i++){
+         s.obstacles.push({type:'void_rift',x:Math.random()*W*.7+W*.15,y:Math.random()*H*.7+H*.15,
+           r:18,color:'rgba(100,0,200,.5)',riftTimer:0});
+       }
+     }
+    },
+  ],
+  inferno:[
+    // Boucle 1+
+    {id:'fire_zones', name:'ZONES DE FEU', desc:'Des zones de braise brûlent en permanence',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<4+Math.floor(Math.random()*3);i++){
+         s.obstacles.push({type:'fire_zone',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:25+Math.random()*25,color:'rgba(255,80,0,.25)',dmg:8,solid:false});
+       }
+     }
+    },
+    // Boucle 2+
+    {id:'meteors', name:'PLUIE DE MÉTÉORITES', desc:"Des météorites traversent l'écran",
+     init:s=>{ s._meteorTimer=0; }
+    },
+  ],
+  glacier:[
+    // Boucle 1+
+    {id:'ice_patches', name:'PLAQUES DE GLACE', desc:'Plaques glissantes — tu dérapes dessus',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<5+Math.floor(Math.random()*4);i++){
+         s.obstacles.push({type:'ice_patch',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:30+Math.random()*30,color:'rgba(150,220,255,.2)',solid:false,slippery:true});
+       }
+     }
+    },
+    // Boucle 2+
+    {id:'ice_spikes', name:'PICS DE GLACE', desc:'Des pics bloquent les passages',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<6;i++){
+         s.obstacles.push({type:'ice_spike',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:12,color:'rgba(200,240,255,.6)',solid:true,dmg:5});
+       }
+     }
+    },
+  ],
+  toxic:[
+    // Boucle 1+
+    {id:'toxic_pools', name:'MARES TOXIQUES', desc:'Des flaques de poison font des dégâts',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<4+Math.floor(Math.random()*3);i++){
+         s.obstacles.push({type:'toxic_pool',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:28+Math.random()*22,color:'rgba(85,200,0,.2)',solid:false,dmg:5,slow:.6});
+       }
+     }
+    },
+    // Boucle 2+
+    {id:'toxic_trees', name:'ARBRES VENIMEUX', desc:'Des arbres bloquent et empoisonnent',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<4;i++){
+         s.obstacles.push({type:'toxic_tree',x:Math.random()*W*.75+W*.12,y:Math.random()*H*.75+H*.12,
+           r:18,color:'rgba(30,120,0,.7)',solid:true,dmg:3});
+       }
+     }
+    },
+  ],
+  storm:[
+    // Boucle 1+
+    {id:'lightning_zones', name:'ZONES ÉLECTRIQUES', desc:"Des zones d'électricité paralysent",
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<3;i++){
+         s.obstacles.push({type:'lightning_zone',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:22,color:'rgba(180,180,255,.18)',dmg:12,solid:false,zapTimer:0});
+       }
+     }
+    },
+    // Boucle 2+
+    {id:'wind_currents', name:'COURANTS DE VENT', desc:'Des vents poussent le joueur',
+     init:s=>{
+       s._windAngle=Math.random()*Math.PI*2;
+       s._windForce=1.8;
+     }
+    },
+  ],
+  shadow:[
+    // Boucle 1+
+    {id:'shadow_walls', name:"MURS D'OMBRE", desc:'Des murs invisibles apparaissent',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<4;i++){
+         const horiz=Math.random()<.5;
+         s.obstacles.push({type:'shadow_wall',
+           x:Math.random()*W*.6+W*.2,y:Math.random()*H*.6+H*.2,
+           w:horiz?80+Math.random()*60:12,
+           h:horiz?12:80+Math.random()*60,
+           color:'rgba(80,0,180,.5)',solid:true});
+       }
+     }
+    },
+    // Boucle 2+
+    {id:'void_traps', name:'PIÈGES DU VIDE', desc:'Des pièges invisibles téléportent à un endroit aléatoire',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<3;i++){
+         s.obstacles.push({type:'void_trap',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:14,color:'rgba(0,0,0,0)',active:true});
+       }
+     }
+    },
+  ],
+  cosmic:[
+    // Boucle 1+
+    {id:'meteor_shower', name:'PLUIE DE MÉTÉORITES', desc:"Des météorites traversent l'écran",
+     init:s=>{ s._meteorTimer=0; }
+    },
+    // Boucle 2+
+    {id:'black_holes', name:'TROUS NOIRS', desc:'Des trous noirs aspirent tout',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<2;i++){
+         s.obstacles.push({type:'black_hole',
+           x:Math.random()*W*.6+W*.2,y:Math.random()*H*.6+H*.2,
+           r:20,color:'rgba(100,0,200,.3)',pullRadius:120,pullForce:2.5,angle:0});
+       }
+     }
+    },
+  ],
+};
+
+// Appliquer les mutations pour le biome+boucle actuel
+function applyBiomeMutations(biomeId, loopCount){
+  const muts=BIOME_MUTATIONS[biomeId]||[];
+  // Appliquer seulement les mutations jusqu'au niveau de boucle actuel
+  for(let i=0;i<Math.min(loopCount,muts.length);i++){
+    if(muts[i]&&muts[i].init){
+      try{ muts[i].init(state); }catch(e){}
+    }
+  }
+}
+
+// Effacer les obstacles au changement de biome
+function clearBiomeObstacles(){
+  if(state){
+    state.obstacles=[];
+    state._meteorTimer=0;
+    state._windAngle=0;
+    state._windForce=0;
+  }
+}
+
+// Mettre à jour les obstacles chaque frame
+function updateObstacles(dt){
+  if(!state||!state.obstacles)return;
+  const p=state.player;
+  const biome=getCurrentBiome();
+
+  // Météorites (inferno/cosmique)
+  if(state._meteorTimer>=0){
+    state._meteorTimer=(state._meteorTimer||0)+dt;
+    if(state._meteorTimer>2500){
+      state._meteorTimer=0;
+      // Spawner un météorite qui traverse l'écran
+      const fromLeft=Math.random()<.5;
+      const y=Math.random()*H*.8+H*.1;
+      state.obstacles.push({
+        type:'meteor',
+        x:fromLeft?-30:W+30,y,
+        vx:fromLeft?5+Math.random()*4:-(5+Math.random()*4),
+        vy:(Math.random()-.5)*3,
+        r:10+Math.random()*12,
+        color:biome.id==='cosmic'?'#cc44ff':'#ff6600',
+        life:1,dmg:30,solid:false,isMoving:true
+      });
+    }
+  }
+
+  // Vent (storm boucle 2)
+  if(state._windForce>0&&state._windAngle!==undefined){
+    p.x+=Math.cos(state._windAngle)*state._windForce*.5;
+    p.y+=Math.sin(state._windAngle)*state._windForce*.5;
+    p.x=Math.max(p.size,Math.min(W-p.size,p.x));
+    p.y=Math.max(p.size,Math.min(H-p.size,p.y));
+  }
+
+  // Mettre à jour chaque obstacle
+  for(let i=state.obstacles.length-1;i>=0;i--){
+    const ob=state.obstacles[i];
+    if(!ob)continue;
+
+    // Météorite mobile
+    if(ob.isMoving){
+      ob.x+=ob.vx;ob.y+=ob.vy;
+      // Touche le joueur
+      if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size){
+        if(!p.divineActive&&!p.shieldActive){p.hp-=ob.dmg;pts(p.x,p.y,'#ff6600',1,3);if(p.hp<=0){gameOver();return;}}
+      }
+      // Touche les ennemis
+      for(let j=state.enemies.length-1;j>=0;j--){
+        const e=state.enemies[j];if(!e)continue;
+        if(Math.hypot(ob.x-e.x,ob.y-e.y)<ob.r+e.size){e.hp-=ob.dmg*2;if(e.hp<=0)killEnemy(j);}
+      }
+      // Hors écran → supprimer
+      if(ob.x<-60||ob.x>W+60||ob.y<-60||ob.y>H+60){state.obstacles.splice(i,1);continue;}
+    }
+
+    // Zone de feu / toxique / éclair — dégâts au joueur
+    if((ob.type==='fire_zone'||ob.type==='toxic_pool'||ob.type==='lightning_zone')&&!ob.solid){
+      if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size*.5){
+        if(!p.divineActive&&Math.random()<.08){
+          p.hp-=(ob.dmg||5);
+          if(ob.slow)p.speed=Math.max(.5,p.speed*ob.slow);
+          if(p.hp<=0){gameOver();return;}
+        }
+      }
+    }
+
+    // Zone électrique — éclair visuel périodique
+    if(ob.type==='lightning_zone'){
+      ob.zapTimer=(ob.zapTimer||0)+dt;
+      if(ob.zapTimer>800){ob.zapTimer=0;pts(ob.x,ob.y,'#aaaaff',1,4);}
+    }
+
+    // Plaque glissante — déraper
+    if(ob.type==='ice_patch'){
+      if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r){
+        // Continuer dans la même direction avec inertie
+        if(joy.active||keys['w']||keys['s']||keys['a']||keys['d']){
+          p.x+=p._slideVx||0;p.y+=p._slideVy||0;
+          p._slideVx=(p._slideVx||0)*.85+(joy.dx||0)*p.speed*.3;
+          p._slideVy=(p._slideVy||0)*.85+(joy.dy||0)*p.speed*.3;
+        }
+      } else {p._slideVx=0;p._slideVy=0;}
+    }
+
+    // Trou noir — attire joueur et ennemis
+    if(ob.type==='black_hole'){
+      ob.angle=(ob.angle||0)+dt*.002;
+      const dx=ob.x-p.x,dy=ob.y-p.y,d=Math.hypot(dx,dy)||1;
+      if(d<ob.pullRadius){p.x+=dx/d*ob.pullForce*(1-d/ob.pullRadius);p.y+=dy/d*ob.pullForce*(1-d/ob.pullRadius);}
+      for(const e of state.enemies){if(!e)continue;const ex=ob.x-e.x,ey=ob.y-e.y,ed=Math.hypot(ex,ey)||1;if(ed<ob.pullRadius){e.x+=ex/ed*ob.pullForce*.5;e.y+=ey/ed*.5;}}
+    }
+
+    // Obstacles solides — bloquer joueur
+    if(ob.solid){
+      const dx=p.x-ob.x,dy=p.y-ob.y;
+      const dist=ob.w?Math.max(Math.abs(dx)-ob.w*.5,Math.abs(dy)-ob.h*.5):Math.hypot(dx,dy);
+      const minDist=ob.w?0:ob.r+p.size;
+      if(ob.w){
+        // Rectangle
+        if(Math.abs(dx)<ob.w*.5+p.size&&Math.abs(dy)<ob.h*.5+p.size){
+          if(Math.abs(dx)-ob.w*.5>Math.abs(dy)-ob.h*.5)p.x+=dx>0?2:-2;
+          else p.y+=dy>0?2:-2;
+          if(ob.dmg){p.hp-=ob.dmg*.1;if(p.hp<=0){gameOver();return;}}
+        }
+      } else if(dist<minDist){
+        const push=minDist-dist;p.x+=dx/(dist||1)*push;p.y+=dy/(dist||1)*push;
+        if(ob.dmg&&Math.random()<.05){p.hp-=ob.dmg;if(p.hp<=0){gameOver();return;}}
+      }
+    }
+
+    // Piège du vide — téléporter
+    if(ob.type==='void_trap'&&ob.active){
+      if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size){
+        p.x=Math.random()*W*.7+W*.15;p.y=Math.random()*H*.7+H*.15;
+        ob.active=false;setTimeout(()=>{if(ob)ob.active=true;},5000);
+        pts(p.x,p.y,'#8800ff',1.5,5);
+      }
+    }
+
+    // Fissure — téléporter ennemis proche
+    if(ob.type==='void_rift'){
+      ob.riftTimer=(ob.riftTimer||0)+dt;
+      if(ob.riftTimer>3000){ob.riftTimer=0;
+        for(const e of state.enemies){if(e&&Math.hypot(e.x-ob.x,e.y-ob.y)<ob.r+e.size*2){const{x,y}=edgePos();e.x=x;e.y=y;pts(ob.x,ob.y,'#8800ff',1,4);break;}}
+      }
+    }
+  }
+}
+
+// ── CODEX BIOMES ──
+const CODEX_BIOMES=BIOMES.map(b=>({
+  id:b.id, icon:b.icon, name:b.name, desc:b.desc,
+  hint:'Atteint vague '+(b.id==='void'?1:['void','inferno','glacier','toxic','storm','shadow','cosmic'].indexOf(b.id)*15)
+}));
+
+// ── CODEX MUTATIONS ──
+const CODEX_MUTATIONS=[];
+for(const[biomeId,muts] of Object.entries(BIOME_MUTATIONS)){
+  const biome=BIOMES.find(b=>b.id===biomeId)||{icon:'❓',name:biomeId};
+  muts.forEach((m,i)=>CODEX_MUTATIONS.push({
+    id:biomeId+'_mut'+i,
+    icon:biome.icon,
+    name:m.name,
+    desc:m.desc,
+    hint:'Survivre à '+(i+1)+' boucle'+(i>0?'s':'')+' en '+biome.name
+  }));
+}
+
+// ── CODEX ÉVÉNEMENTS ──
+const CODEX_EVENTS=EVENTS.map(e=>({
+  id:e.id, icon:e.icon, name:e.name, desc:e.desc,
+  hint:'Subir cet événement en jeu'
+}));
+
+// Biome actuel — progression dans l'ordre selon la vague
 function getBiome(wave){
-  const unlocked=BIOMES.filter(b=>b.unlockWave<=wave);
-  // Changer de biome toutes les 15 vagues, déterministiquement
-  const idx=Math.floor(wave/15)%unlocked.length;
-  return unlocked[Math.max(0,unlocked.length-1-idx%unlocked.length)]||BIOMES[0];
+  // Chaque biome dure 15 vagues, dans l'ordre de la liste
+  const idx=Math.min(Math.floor(wave/15), BIOMES.length-1);
+  return BIOMES[idx];
 }
 
 function getCurrentBiome(){
+  // Utiliser le biome sauvegardé dans state (change seulement à wave%15)
+  // Pas recalculer à chaque frame
+  if(state&&state.biome)return state.biome;
   if(!state)return BIOMES[0];
   return getBiome(state.wave);
 }
@@ -1691,6 +2076,7 @@ function startEvent(ev){
   _lastEventId=ev.id;
   ev.onStart(state);
   showEventBanner(ev);
+  discoverEntry('events',ev.id);
   snd('boss');
 }
 
@@ -1930,7 +2316,7 @@ function startGame(){
   document.getElementById('upgrade-screen').classList.remove('show');
   dashBtn.style.display='none';
   state=mkState();applyShopBonuses(state);
-  state.running=true;state.biome=getBiome(1);mouse={x:W/2,y:H/2};
+  state.running=true;state.biome=getBiome(1);setTimeout(()=>discoverEntry('biomes','void'),500);mouse={x:W/2,y:H/2};
   updateEnergyUI();showWaveBanner(1);
   if(gameLoop){cancelAnimationFrame(gameLoop);gameLoop=null;}
   lastTime=0;loop();
@@ -1978,9 +2364,21 @@ function update(dt){
     if(state.wave%15===0){
       const nb=getBiome(state.wave);
       if(!state.biome||state.biome.id!==nb.id){
+        clearBiomeObstacles();
         state.biome=nb;
         state.biomeTransition=1;
         showBiomeBanner(nb);
+        discoverEntry('biomes',nb.id);
+        // Appliquer les mutations selon le nombre de boucles
+        const loop=getBiomeLoop();
+        if(loop>0){
+          applyBiomeMutations(nb.id, loop);
+          // Découvrir les mutations actives
+          const muts=BIOME_MUTATIONS[nb.id]||[];
+          for(let mi=0;mi<Math.min(loop,muts.length);mi++){
+            discoverEntry('mutations',nb.id+'_mut'+mi);
+          }
+        }
       }
     }
     // Événement spécial toutes les ~15 vagues, aléatoire
@@ -1991,7 +2389,7 @@ function update(dt){
     }
   }
   // Biome par défaut
-  if(!state.biome)state.biome=getBiome(state.wave);
+  // Biome — déjà initialisé dans startGame()
   // Transition biome
   if(state.biomeTransition>0)state.biomeTransition=Math.max(0,state.biomeTransition-dt*.001);
   // Événement actif — timer
@@ -2484,6 +2882,7 @@ function update(dt){
 
   state.particles=state.particles.filter(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=.05;pt.life-=dt*.004;return pt.life>0;});
   state.dmgNums=state.dmgNums.filter(d=>{d.y-=1.3;d.life-=dt*.005;return d.life>0;});
+  updateObstacles(dt);
   updateHUD();
 }
 
@@ -2660,7 +3059,6 @@ function gameOver(){
 
 function showBiomeBanner(biome){
   // Changer la couleur du canvas CSS
-  const canvas=document.getElementById('canvas');
   if(canvas)canvas.style.background=biome.bg;
   // Banner biome
   const b=document.getElementById('wave-banner');
@@ -2736,6 +3134,52 @@ function draw(){
 
   // Pièces
   state.coinPickups.forEach(c=>{ctx.font='13px serif';ctx.textAlign='center';ctx.fillText('🪙',c.x,c.y);ctx.textAlign='left';});
+
+  // Obstacles de biome
+  if(state.obstacles){
+    for(const ob of state.obstacles){
+      if(!ob)continue;
+      ctx.save();
+      if(ob.type==='shadow_wall'){
+        ctx.fillStyle=ob.color;ctx.fillRect(ob.x-ob.w*.5,ob.y-ob.h*.5,ob.w,ob.h);
+        ctx.strokeStyle='rgba(120,0,255,.4)';ctx.lineWidth=1;ctx.strokeRect(ob.x-ob.w*.5,ob.y-ob.h*.5,ob.w,ob.h);
+      } else if(ob.type==='black_hole'){
+        const t=Date.now()*.002;
+        for(let ring=0;ring<3;ring++){
+          ctx.beginPath();ctx.arc(ob.x,ob.y,ob.r*(1+ring*.5)+Math.sin(t+ring)*3,0,Math.PI*2);
+          ctx.strokeStyle=`rgba(100,0,200,${.5-ring*.15})`;ctx.lineWidth=2;ctx.stroke();
+        }
+        ctx.beginPath();ctx.arc(ob.x,ob.y,ob.r*.5,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
+      } else if(ob.type==='ice_spike'){
+        ctx.translate(ob.x,ob.y);
+        ctx.beginPath();ctx.moveTo(0,-ob.r*2);ctx.lineTo(ob.r*.6,0);ctx.lineTo(-ob.r*.6,0);ctx.closePath();
+        ctx.fillStyle='rgba(200,240,255,.7)';ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1;ctx.stroke();
+      } else if(ob.type==='toxic_tree'){
+        ctx.translate(ob.x,ob.y);
+        ctx.fillStyle='rgba(20,80,0,.8)';ctx.fillRect(-ob.r*.4,-ob.r*1.5,ob.r*.8,ob.r*1.5);
+        ctx.beginPath();ctx.arc(0,-ob.r*1.5,ob.r,0,Math.PI*2);ctx.fillStyle='rgba(30,120,0,.7)';ctx.fill();
+      } else if(ob.type==='meteor'||ob.isMoving){
+        ctx.beginPath();ctx.arc(ob.x,ob.y,ob.r,0,Math.PI*2);
+        ctx.fillStyle=ob.color;ctx.shadowBlur=15;ctx.shadowColor=ob.color;ctx.fill();ctx.shadowBlur=0;
+        // Traînée
+        ctx.beginPath();ctx.moveTo(ob.x,ob.y);ctx.lineTo(ob.x-ob.vx*4,ob.y-ob.vy*4);
+        ctx.strokeStyle=ob.color+'88';ctx.lineWidth=ob.r;ctx.stroke();
+      } else if(ob.type==='void_trap'){
+        if(ob.active){ctx.beginPath();ctx.arc(ob.x,ob.y,ob.r,0,Math.PI*2);ctx.strokeStyle='rgba(100,0,200,.2)';ctx.lineWidth=1;ctx.stroke();}
+      } else {
+        // Cercle générique (fire_zone, toxic_pool, ice_patch, lightning_zone, void_zone, void_rift...)
+        ctx.beginPath();ctx.arc(ob.x,ob.y,ob.r,0,Math.PI*2);ctx.fillStyle=ob.color;ctx.fill();
+        if(ob.type==='lightning_zone'){ctx.strokeStyle='rgba(180,180,255,.4)';ctx.lineWidth=1.5;ctx.stroke();}
+        if(ob.type==='ice_patch'){ctx.strokeStyle='rgba(200,240,255,.3)';ctx.lineWidth=1;ctx.stroke();}
+        if(ob.type==='void_rift'){
+          const t2=Date.now()*.003;
+          ctx.strokeStyle=`rgba(150,0,255,${.4+Math.sin(t2)*.2})`;ctx.lineWidth=2;ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
 
   // XP gems
   state.xpGems.forEach(g=>{
