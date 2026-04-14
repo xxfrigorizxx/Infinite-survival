@@ -203,7 +203,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     </div>
     <div id="regen-timer"></div>
   </div>
-  <div id="leaderboard"><h3>🏆 MEILLEURS SCORES</h3><div id="lb-rows"></div></div>
+  <div id="leaderboard"><h3>🏆 MEILLEURS SCORES <span onclick="openLeaderboardModal()" style="font-size:.5rem;color:var(--gold);cursor:pointer;text-decoration:underline;letter-spacing:.05em;">VOIR TOUT</span></h3><div id="lb-rows"></div></div>
 </div>
 
 <!-- ══ JEU ══ -->
@@ -256,6 +256,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <button id="stats-play-btn" onclick="tryStart()">↺ REJOUER (-1 ⚡)</button>
     <button id="stats-shop-btn" onclick="openShopFromStats()">🛒 DÉPENSER MES PIÈCES</button>
     <button id="stats-codex-btn" onclick="openCodexFromStats()">📖 VOIR MES DÉCOUVERTES</button>
+    <button id="stats-lb-btn" onclick="openLeaderboardModal()" style="font-family:'Orbitron',sans-serif;background:transparent;border:1px solid var(--gold);color:var(--gold);padding:8px;width:100%;cursor:pointer;font-size:clamp(.66rem,2.6vw,.8rem);font-weight:700;-webkit-appearance:none;">🏆 CLASSEMENT COMPLET</button>
     <button id="stats-title-btn" onclick="backToTitle()">← MENU PRINCIPAL</button>
   </div>
 </div>
@@ -324,6 +325,18 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
 </div>
 
+<!-- ══ CLASSEMENT COMPLET ══ -->
+<div id="lb-modal" style="display:none;position:fixed;inset:0;background:rgba(4,8,15,.97);z-index:600;flex-direction:column;align-items:center;padding:0;overflow:hidden;">
+  <div style="flex-shrink:0;padding:12px 12px 5px;text-align:center;width:100%;">
+    <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:clamp(.95rem,4.2vw,1.28rem);letter-spacing:.1em;text-shadow:0 0 16px var(--gold);margin-bottom:3px;">🏆 CLASSEMENT MONDIAL</div>
+    <div style="color:#567;font-size:.6rem;margin-bottom:6px;">Top 10 — mis à jour en temps réel</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;width:100%;padding:0 12px 8px;display:flex;flex-direction:column;align-items:center;">
+    <div id="lb-modal-rows" style="width:100%;max-width:360px;"></div>
+  </div>
+  <div class="back-bar"><button class="back-btn" onclick="closeLeaderboardModal()">← RETOUR</button></div>
+</div>
+
 </div><!-- wrapper -->
 
 <!-- ══ MODULE FIREBASE (séparé pour ne pas bloquer les onclick) ══ -->
@@ -356,41 +369,45 @@ onValue(query(_lb,orderByChild('score'),limitToLast(MAX)),snap=>{
   if(window._renderLBData)window._renderLBData(entries);
 },{onlyOnce:false});
 
-// Est-ce un nouveau record pour ce joueur ou une entrée dans le top 10 ?
-window._fbIsNewRecord=async function(score,name){
+// Est-ce un nouveau record ? — vérifie par deviceId
+window._fbIsNewRecord=async function(score,name,deviceId){
   try{
-    const k=_key(name);
-    // Le joueur a déjà une entrée → vaut-il mieux ?
+    // Clé = deviceId (unique par appareil) ou nom en fallback
+    const k=deviceId||_key(name);
     const mySnap=await get(child(_lb,k));
     if(mySnap.exists()) return score>mySnap.val().score;
-    // Nouveau joueur → y a-t-il de la place dans le top 10 ?
+    // Nouveau joueur → place disponible ?
     const allSnap=await get(query(_lb,orderByChild('score')));
     const entries=[];allSnap.forEach(c=>entries.push({key:c.key,...c.val()}));
     if(entries.length<MAX) return true;
-    // Top 10 plein → battre le dernier ?
     entries.sort((a,b)=>a.score-b.score);
     return score>entries[0].score;
   }catch{return true;}
 };
 
-// Sauvegarder : 1 entrée par joueur, max 10 joueurs, virer le moins bon si plein
-window._fbSaveScore=async function(name,score,wave,kills,date){
+// Sauvegarder par deviceId — 1 entrée par appareil, met à jour le nom si changé
+window._fbSaveScore=async function(name,score,wave,kills,date,deviceId){
   try{
-    const k=_key(name);
+    const k=deviceId||_key(name);
     const playerRef=child(_lb,k);
-    // Ne pas remplacer si le score existant est meilleur
     const existing=await get(playerRef);
-    if(existing.exists()&&existing.val().score>=score) return;
-    // Lire tous les joueurs actuels
+    // Ne pas écraser si score existant est meilleur
+    if(existing.exists()&&existing.val().score>=score){
+      // Mettre à jour le nom si changé sans changer le score
+      if(existing.val().name!==name){
+        await set(playerRef,{...existing.val(),name});
+      }
+      return;
+    }
+    // Lire tous les joueurs
     const allSnap=await get(query(_lb,orderByChild('score')));
     const entries=[];allSnap.forEach(c=>entries.push({key:c.key,...c.val()}));
-    // Si top 10 plein et nouveau joueur → virer le moins bon
+    // Top 10 plein + nouveau joueur → virer le moins bon
     if(entries.length>=MAX&&!existing.exists()){
-      entries.sort((a,b)=>a.score-b.score); // croissant, [0]=le plus faible
-      if(score<=entries[0].score) return; // pas assez bon pour entrer
-      await remove(child(_lb,entries[0].key)); // virer le dernier
+      entries.sort((a,b)=>a.score-b.score);
+      if(score<=entries[0].score) return;
+      await remove(child(_lb,entries[0].key));
     }
-    // Écrire l'entrée du joueur (create ou update)
     await set(playerRef,{name,score,wave,kills,date,ts:Date.now()});
   }catch(e){console.warn('Firebase save failed',e);}
 };
@@ -478,6 +495,46 @@ function openProfile(){
   document.getElementById('profile-modal').classList.add('show');
   setTimeout(()=>inp.focus(),300);
 }
+function openLeaderboardModal(){
+  const modal=document.getElementById('lb-modal');
+  modal.style.display='flex';
+  // Savoir d'où on vient
+  const fromStats=document.getElementById('stats-screen').classList.contains('show');
+  modal.dataset.fromStats=fromStats?'1':'0';
+  // Rendre le classement complet
+  const rows=document.getElementById('lb-modal-rows');
+  rows.innerHTML='<div style="color:#567;font-size:.7rem;text-align:center;padding:12px;">⏳ Chargement...</div>';
+  const medals=['🥇','🥈','🥉','4.','5.','6.','7.','8.','9.','10.'];
+  if(window._fbRefreshLB){
+    // Force un refresh Firebase
+    window._fbRefreshLB();
+    // Utilise les données déjà chargées si disponibles
+    setTimeout(()=>{
+      const lb=window._fbLbData||[];
+      if(!lb.length){rows.innerHTML='<div style="color:#567;font-size:.7rem;text-align:center;padding:12px;">Aucun score encore !</div>';return;}
+      rows.innerHTML=lb.map((e,i)=>`
+        <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?.2:.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
+          <span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:${i===0?'var(--gold)':'#456'};width:22px;flex-shrink:0;text-align:center;">${medals[i]||i+1}</span>
+          <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-family:'Orbitron',sans-serif;color:${i===0?'var(--gold)':'var(--neon)'};font-size:.72rem;font-weight:700;">${(e.score||0).toLocaleString()}</div>
+            <div style="color:#456;font-size:.55rem;">Vague ${e.wave||0} · ${e.kills||0} kills</div>
+          </div>
+        </div>`).join('');
+    },600);
+  } else {
+    rows.innerHTML='<div style="color:#567;font-size:.7rem;text-align:center;padding:12px;">Connexion Firebase non disponible.</div>';
+  }
+}
+function closeLeaderboardModal(){
+  const modal=document.getElementById('lb-modal');
+  modal.style.display='none';
+  // Retourner à l'écran stats si on venait de là
+  if(modal.dataset.fromStats==='1'){
+    document.getElementById('stats-screen').classList.add('show');
+  }
+}
+
 function confirmReset(){
   document.getElementById('profile-modal').classList.remove('show');
   document.getElementById('reset-confirm').style.display='flex';
@@ -485,7 +542,7 @@ function confirmReset(){
 
 function doReset(){
   // Effacer toutes les données locales
-  const keys=['surv_e','surv_r','surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw'];
+  const keys=['surv_e','surv_r','surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw','surv_device_id'];
   keys.forEach(k=>localStorage.removeItem(k));
   // Fermer les modals
   document.getElementById('reset-confirm').style.display='none';
@@ -761,11 +818,17 @@ function openCodex(fromStats=false){
   document.querySelectorAll('.ctab').forEach((t,i)=>t.classList.toggle('active',i===0));
   renderCodexGrid();
   document.getElementById('codex-screen').classList.add('show');
+  document.getElementById('codex-screen').dataset.fromStats=fromStats?'1':'0';
 }
 function openCodexFromStats(){openCodex(true);}
 function closeCodex(){
+  const fromStats=document.getElementById('codex-screen').dataset.fromStats==='1';
   document.getElementById('codex-screen').classList.remove('show');
-  updateEnergyUI();
+  if(fromStats){
+    document.getElementById('stats-screen').classList.add('show');
+  } else {
+    updateEnergyUI();
+  }
 }
 function switchCodexTab(tab){
   codexTab=tab;
@@ -809,10 +872,17 @@ function renderCodexGrid(){
 ══════════════════════════════════════════════ */
 function calcScore(w,k,ms,lvl){return Math.floor(k*100+w*500+lvl*200+ms/1000*2);}
 
+// ID unique par appareil — persiste entre les sessions
+const KID='surv_device_id';
+function getDeviceId(){
+  let id=localStorage.getItem(KID);
+  if(!id){id='dev_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem(KID,id);}
+  return id;
+}
+
 async function isNewRecord(score){
   const name=getPrf()?.name||'Anonyme';
-  if(window._fbIsNewRecord)return await window._fbIsNewRecord(score,name);
-  // fallback local
+  if(window._fbIsNewRecord)return await window._fbIsNewRecord(score,name,getDeviceId());
   const lb=_loadLocalLB();
   return lb.length<5||score>lb[lb.length-1]?.score;
 }
@@ -820,26 +890,61 @@ async function isNewRecord(score){
 let pendingScore=null;
 function openRecordSection(score,wave,kills,ms,lvl){
   pendingScore={score,wave,kills,ms,lvl};
-  const rs=document.getElementById('record-section');
-  rs.style.display='block';
   const p=getPrf();
-  document.getElementById('rec-name-input').value=p&&p.name?p.name:'';
-  document.getElementById('rec-name-input').focus();
+
+  if(p&&p.name){
+    // A déjà un nom → sauvegarde automatique, pas besoin du formulaire
+    _doSaveRecord(p.name);
+    // Afficher une confirmation discrète
+    const rs=document.getElementById('record-section');
+    rs.style.display='block';
+    rs.innerHTML=`<div style="text-align:center;padding:6px;">
+      <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.9rem;margin-bottom:4px;">🏆 SCORE ENREGISTRÉ !</div>
+      <div style="color:#89a;font-size:.72rem;">Sous le nom <b style="color:var(--neon);">${p.name}</b></div>
+      <div style="color:#567;font-size:.6rem;margin-top:4px;">Change ton nom dans ⚙️ Profil</div>
+    </div>`;
+  } else {
+    // Nouveau joueur → afficher le formulaire
+    const rs=document.getElementById('record-section');
+    rs.style.display='block';
+    rs.innerHTML=`
+      <h3>🏆 NOUVEAU RECORD !</h3>
+      <div style="color:#89a;font-size:.72rem;margin-bottom:8px;text-align:center;">Entre ton nom pour le classement</div>
+      <input id="rec-name-input" type="text" maxlength="16" placeholder="Ton nom..." autocomplete="off" spellcheck="false"/>
+      <button id="rec-save-btn" onclick="saveRecord()">✓ ENREGISTRER</button>`;
+    setTimeout(()=>{const inp=document.getElementById('rec-name-input');if(inp)inp.focus();},200);
+  }
 }
 
 function saveRecord(){
+  const inp=document.getElementById('rec-name-input');
+  if(!inp||!pendingScore)return;
+  const name=inp.value.trim()||'Anonyme';
+  // Sauvegarder le nom dans le profil pour les prochaines fois
+  const p=getPrf()||{};
+  setPrf({...p,name});
+  renderProfileBadge();
+  _doSaveRecord(name);
+  const rs=document.getElementById('record-section');
+  rs.innerHTML=`<div style="text-align:center;padding:6px;">
+    <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.9rem;margin-bottom:4px;">🏆 SCORE ENREGISTRÉ !</div>
+    <div style="color:#89a;font-size:.72rem;">Bienvenue <b style="color:var(--neon);">${name}</b> !</div>
+  </div>`;
+}
+
+function _doSaveRecord(name){
   if(!pendingScore)return;
-  const name=document.getElementById('rec-name-input').value.trim()||getPrf()?.name||'Anonyme';
   const entry={name,score:pendingScore.score,wave:pendingScore.wave,kills:pendingScore.kills,date:new Date().toLocaleDateString('fr-CA')};
-  // Sauvegarde Firebase via le module séparé
   if(window._fbSaveScore){
-    window._fbSaveScore(name,pendingScore.score,pendingScore.wave,pendingScore.kills,entry.date);
+    window._fbSaveScore(name,pendingScore.score,pendingScore.wave,pendingScore.kills,entry.date,getDeviceId());
   }
-  // Toujours sauvegarder en local aussi (fallback hors-ligne)
   const lb=_loadLocalLB();
-  lb.push(entry);lb.sort((a,b)=>b.score-a.score);
+  // Remplacer l'entrée existante si meilleur score
+  const idx=lb.findIndex(e=>e.name===name);
+  if(idx>=0){if(entry.score>lb[idx].score)lb[idx]=entry;}
+  else{lb.push(entry);}
+  lb.sort((a,b)=>b.score-a.score);
   localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,10)));
-  document.getElementById('record-section').style.display='none';
   pendingScore=null;
   renderLeaderboard();
 }
@@ -986,10 +1091,19 @@ function openShop(fromStats=false){
   if(fromStats)document.getElementById('stats-screen').classList.remove('show');
   renderShop();
   document.getElementById('shop-screen').classList.add('show');
+  document.getElementById('shop-screen').dataset.fromStats=fromStats?'1':'0';
   SHOP_ITEMS.forEach(it=>discoverEntry('shop',it.id));
 }
 function openShopFromStats(){openShop(true);}
-function closeShop(){document.getElementById('shop-screen').classList.remove('show');updateEnergyUI();}
+function closeShop(){
+  const fromStats=document.getElementById('shop-screen').dataset.fromStats==='1';
+  document.getElementById('shop-screen').classList.remove('show');
+  if(fromStats){
+    document.getElementById('stats-screen').classList.add('show');
+  } else {
+    updateEnergyUI();
+  }
+}
 function renderShop(){
   document.getElementById('shop-coins-val').textContent=getCoins().toLocaleString();
   const grid=document.getElementById('shop-grid');grid.innerHTML='';
