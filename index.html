@@ -119,7 +119,9 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .shop-grid{display:flex;flex-direction:column;gap:6px;width:100%;max-width:370px;}
 .shop-item{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid rgba(244,166,29,.18);padding:9px 11px;cursor:pointer;position:relative;}
 .shop-item:active{border-color:var(--coin);background:rgba(244,166,29,.06);}
-.shop-item.maxed{opacity:.42;cursor:default;border-color:#252525;}
+.shop-item.shop-locked{opacity:.35;cursor:default;border-color:#222;border-style:dashed;}
+.upg-card.upg-mystery{border-color:rgba(136,136,255,.3);background:rgba(8,8,20,.8);}
+.upg-card.upg-mystery:active{border-color:#8888ff;}
 .shop-item.maxed::after{content:'MAX';position:absolute;right:9px;top:50%;transform:translateY(-50%);font-family:'Orbitron',sans-serif;font-size:.52rem;color:#555;letter-spacing:.1em;}
 .si-icon{font-size:1.4rem;flex-shrink:0;}.si-info{flex:1;}
 .si-name{font-family:'Orbitron',sans-serif;font-size:clamp(.56rem,2.1vw,.67rem);color:var(--neon);margin-bottom:2px;font-weight:700;}
@@ -264,6 +266,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <h2>🛒 BOUTIQUE</h2>
     <div class="shop-coins-disp">🪙 <span id="shop-coins-val">0</span> pièces</div>
     <div class="shop-sub">Améliorations permanentes entre les parties</div>
+    <button id="buy-energy-btn" onclick="buyEnergy()" style="font-family:'Orbitron',sans-serif;font-size:clamp(.7rem,2.8vw,.82rem);font-weight:700;background:rgba(255,231,0,.08);border:1px solid rgba(255,231,0,.5);color:var(--gold);padding:8px 16px;cursor:pointer;margin-top:5px;letter-spacing:.07em;-webkit-appearance:none;width:100%;max-width:370px;">⚡ ACHETER 1 ÉNERGIE — 100 🪙</button>
   </div>
   <div id="shop-grid-wrap"><div class="shop-grid" id="shop-grid"></div></div>
   <div class="back-bar"><button class="back-btn" onclick="closeShop()">← RETOUR</button></div>
@@ -310,6 +313,53 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 </div>
 
 </div><!-- wrapper -->
+
+<!-- ══ MODULE FIREBASE (séparé pour ne pas bloquer les onclick) ══ -->
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {getDatabase,ref,push,query,orderByChild,limitToLast,onValue,get} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+const _app=initializeApp({
+  apiKey:'AIzaSyBHC2SckDI2LB99ij_6ZDX9Q9n3_ByTMRQ',
+  authDomain:'infinite-survivor.firebaseapp.com',
+  databaseURL:'https://infinite-survivor-default-rtdb.firebaseio.com',
+  projectId:'infinite-survivor',
+  storageBucket:'infinite-survivor.firebasestorage.app',
+  messagingSenderId:'204461775424',
+  appId:'1:204461775424:web:58a71862d911a68acadda5'
+});
+const _db=getDatabase(_app);
+const _ref=ref(_db,'leaderboard');
+// Écoute temps réel
+onValue(query(_ref,orderByChild('score'),limitToLast(10)),snap=>{
+  const e=[];snap.forEach(c=>e.push(c.val()));
+  e.sort((a,b)=>b.score-a.score);
+  window._fbLbData=e;
+  if(window._renderLBData)window._renderLBData(e);
+},{onlyOnce:false});
+// Vérifier si nouveau record
+window._fbIsNewRecord=async function(score){
+  try{
+    const snap=await get(query(_ref,orderByChild('score'),limitToLast(10)));
+    const e=[];snap.forEach(c=>e.push(c.val()));
+    if(e.length<10)return true;
+    return score>Math.min(...e.map(x=>x.score));
+  }catch{return true;}
+};
+// Sauvegarder un score
+window._fbSaveScore=async function(name,score,wave,kills,date){
+  try{await push(_ref,{name,score,wave,kills,date,ts:Date.now()});}catch(e){console.warn('Firebase save failed',e);}
+};
+// Refresh manuel
+window._fbRefreshLB=function(){
+  get(query(_ref,orderByChild('score'),limitToLast(10))).then(snap=>{
+    const e=[];snap.forEach(c=>e.push(c.val()));
+    e.sort((a,b)=>b.score-a.score);
+    window._fbLbData=e;
+    if(window._renderLBData)window._renderLBData(e);
+  }).catch(()=>{if(window._renderLBData)window._renderLBData([]);});
+};
+</script>
+
 <script>
 'use strict';
 
@@ -611,11 +661,18 @@ function renderCodexGrid(){
 /* ══════════════════════════════════════════════
    CLASSEMENT
 ══════════════════════════════════════════════ */
-const KLB='surv_lb';
-function loadLB(){try{return JSON.parse(localStorage.getItem(KLB))||[];}catch(e){return[];}}
-function saveLB(lb){localStorage.setItem(KLB,JSON.stringify(lb));}
+/* ══════════════════════════════════════════════
+   FIREBASE — appels via window.* (défini dans le module séparé)
+══════════════════════════════════════════════ */
 function calcScore(w,k,ms,lvl){return Math.floor(k*100+w*500+lvl*200+ms/1000*2);}
-function isNewRecord(score){const lb=loadLB();return lb.length<5||score>lb[lb.length-1].score;}
+
+async function isNewRecord(score){
+  if(window._fbIsNewRecord)return await window._fbIsNewRecord(score);
+  // fallback local
+  const lb=_loadLocalLB();
+  return lb.length<5||score>lb[lb.length-1]?.score;
+}
+
 let pendingScore=null;
 function openRecordSection(score,wave,kills,ms,lvl){
   pendingScore={score,wave,kills,ms,lvl};
@@ -625,22 +682,53 @@ function openRecordSection(score,wave,kills,ms,lvl){
   document.getElementById('rec-name-input').value=p&&p.name?p.name:'';
   document.getElementById('rec-name-input').focus();
 }
+
 function saveRecord(){
   if(!pendingScore)return;
   const name=document.getElementById('rec-name-input').value.trim()||getPrf()?.name||'Anonyme';
-  const lb=loadLB();
-  lb.push({name,score:pendingScore.score,wave:pendingScore.wave,kills:pendingScore.kills,date:new Date().toLocaleDateString('fr-CA')});
-  lb.sort((a,b)=>b.score-a.score);saveLB(lb.slice(0,5));
+  const entry={name,score:pendingScore.score,wave:pendingScore.wave,kills:pendingScore.kills,date:new Date().toLocaleDateString('fr-CA')};
+  // Sauvegarde Firebase via le module séparé
+  if(window._fbSaveScore){
+    window._fbSaveScore(name,pendingScore.score,pendingScore.wave,pendingScore.kills,entry.date);
+  }
+  // Toujours sauvegarder en local aussi (fallback hors-ligne)
+  const lb=_loadLocalLB();
+  lb.push(entry);lb.sort((a,b)=>b.score-a.score);
+  localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,10)));
   document.getElementById('record-section').style.display='none';
   pendingScore=null;
   renderLeaderboard();
 }
+
+function _loadLocalLB(){try{return JSON.parse(localStorage.getItem('surv_lb'))||[];}catch(e){return[];}}
+
 function renderLeaderboard(){
-  const lb=loadLB();const el=document.getElementById('lb-rows');if(!el)return;
-  if(!lb.length){el.innerHTML='<div class="lb-empty">Aucun score encore !</div>';return;}
-  const m=['🥇','🥈','🥉','4.','5.'];
-  el.innerHTML=lb.map((e,i)=>`<div class="lb-row ${i===0?'gr':''}"><span class="lb-rank">${m[i]}</span><span class="lb-name">${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span><span class="lb-score">${e.score.toLocaleString()}</span></div>`).join('');
+  // Si Firebase disponible, utiliser les données en temps réel déjà chargées
+  if(window._fbLbData&&window._fbLbData.length){
+    _renderLBData(window._fbLbData);
+  } else if(window._fbRefreshLB){
+    window._fbRefreshLB();
+  } else {
+    _renderLBData(_loadLocalLB());
+  }
 }
+
+// Exposer _renderLBData sur window pour que le module Firebase puisse l'appeler
+window._renderLBData=function(lb){
+  const el=document.getElementById('lb-rows');if(!el)return;
+  if(!lb||!lb.length){
+    el.innerHTML='<div class="lb-empty">Aucun score encore — sois le premier !</div>';
+    return;
+  }
+  const m=['🥇','🥈','🥉','4.','5.','6.','7.','8.','9.','10.'];
+  el.innerHTML=lb.slice(0,10).map((e,i)=>`
+    <div class="lb-row ${i===0?'gr':''}">
+      <span class="lb-rank">${m[i]||i+1}</span>
+      <span class="lb-name">${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
+      <span class="lb-score">${(e.score||0).toLocaleString()}</span>
+    </div>`).join('');
+}
+function _renderLBData(lb){window._renderLBData(lb);}
 
 /* ══════════════════════════════════════════════
    BOUTIQUE PERMANENTE
@@ -668,6 +756,28 @@ function applyShopBonuses(s){
   const l=getShopLvls();
   SHOP_ITEMS.forEach(item=>{const lv=l[item.id]||0;for(let i=0;i<lv;i++)item.effect(s);});
 }
+function buyEnergy(){
+  const cost=100;
+  if(!spendCoins(cost)){
+    const btn=document.getElementById('buy-energy-btn');
+    if(btn){btn.textContent='❌ Pas assez de pièces !';setTimeout(()=>{btn.textContent='⚡ ACHETER 1 ÉNERGIE — 100 🪙';},1500);}
+    return;
+  }
+  const e=getE();
+  if(e>=EMAX){
+    // Remboursement
+    localStorage.setItem(KC,String(getCoins()+cost));
+    const btn=document.getElementById('buy-energy-btn');
+    if(btn){btn.textContent='❌ Énergie déjà pleine !';setTimeout(()=>{btn.textContent='⚡ ACHETER 1 ÉNERGIE — 100 🪙';},1500);}
+    return;
+  }
+  saveE(e+1);
+  snd('coin');
+  renderShop();
+  updateEnergyUI();
+  const btn=document.getElementById('buy-energy-btn');
+  if(btn){btn.textContent=`✅ Énergie ajoutée ! (${getE()}/${EMAX})`;setTimeout(()=>{btn.textContent='⚡ ACHETER 1 ÉNERGIE — 100 🪙';},2000);}
+}
 function openShop(fromStats=false){
   if(fromStats)document.getElementById('stats-screen').classList.remove('show');
   renderShop();
@@ -679,12 +789,51 @@ function closeShop(){document.getElementById('shop-screen').classList.remove('sh
 function renderShop(){
   document.getElementById('shop-coins-val').textContent=getCoins().toLocaleString();
   const grid=document.getElementById('shop-grid');grid.innerHTML='';
-  SHOP_ITEMS.forEach(item=>{
-    const lv=getShopLvl(item.id);const maxed=lv>=item.maxLvl;const cost=shopCost(item);const ok=getCoins()>=cost;
-    const div=document.createElement('div');div.className='shop-item'+(maxed?' maxed':'');
-    div.style.opacity=maxed||ok?'1':'.55';
-    div.innerHTML=`<span class="si-icon">${item.icon}</span><div class="si-info"><div class="si-name">${item.name}</div><div class="si-desc">${item.desc}</div><div class="si-level">Niv. ${lv}/${item.maxLvl}</div></div>${maxed?'':'<span class="si-cost">🪙'+cost+'</span>'}`;
-    if(!maxed){const buy=()=>{if(!spendCoins(cost))return;upgShop(item.id);snd('coin');renderShop();};div.addEventListener('click',buy);div.addEventListener('touchend',e=>{e.preventDefault();buy();},{passive:false});}
+  const levels=getShopLvls();
+
+  SHOP_ITEMS.forEach((item,idx)=>{
+    const lv=getShopLvl(item.id);
+    const maxed=lv>=item.maxLvl;
+    const cost=shopCost(item);
+    const ok=getCoins()>=cost;
+
+    // Déverrouillage progressif :
+    // - 1er item toujours accessible
+    // - item N accessible seulement si item N-1 a au moins 1 niveau acheté
+    const prevUnlocked = idx===0 || (levels[SHOP_ITEMS[idx-1].id]||0)>=1;
+    const locked = !prevUnlocked;
+
+    const div=document.createElement('div');
+
+    if(locked){
+      // Cadenas — item pas encore accessible
+      div.className='shop-item shop-locked';
+      div.innerHTML=`<span class="si-icon">🔒</span>
+        <div class="si-info">
+          <div class="si-name" style="color:#445;">???</div>
+          <div class="si-desc" style="color:#334;">Achetez l'amélioration précédente pour débloquer</div>
+        </div>`;
+    } else {
+      div.className='shop-item'+(maxed?' maxed':'');
+      div.style.opacity=maxed||ok?'1':'.55';
+      div.innerHTML=`<span class="si-icon">${item.icon}</span>
+        <div class="si-info">
+          <div class="si-name">${item.name}</div>
+          <div class="si-desc">${item.desc}</div>
+          <div class="si-level">Niv. ${lv}/${item.maxLvl}</div>
+        </div>
+        ${maxed?'':`<span class="si-cost">🪙${cost}</span>`}`;
+      if(!maxed){
+        const buy=()=>{
+          if(!spendCoins(cost))return;
+          upgShop(item.id);
+          snd('coin');
+          renderShop();
+        };
+        div.addEventListener('click',buy);
+        div.addEventListener('touchend',e=>{e.preventDefault();buy();},{passive:false});
+      }
+    }
     grid.appendChild(div);
   });
 }
@@ -1019,18 +1168,26 @@ function spawnEnemy(){
 
 function spawnWave(){
   const w=state.wave;
-  // Spawn de base
+  // Cap d'ennemis — jamais plus de 60 à l'écran
+  const cap=60;
+  if(state.enemies.length>=cap)return;
   spawnEnemy();
-  // Vagues massives selon le numéro de vague
-  const extra=Math.floor(w/3);
-  for(let i=0;i<extra;i++)spawnEnemy();
-  // Essaim à partir de vague 10
-  if(w>=10&&Math.random()<.4){for(let i=0;i<5;i++){const{x,y}=edgePos();const cfg=ETYPES.swarm;state.enemies.push({x,y,type:'swarm',hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins});discoverEntry('enemies','swarm');}}
+  // Extra progressif mais plafonné
+  const extra=Math.min(Math.floor(w/4), 8);
+  for(let i=0;i<extra&&state.enemies.length<cap;i++)spawnEnemy();
+  // Essaim à partir de vague 10 — limité
+  if(w>=10&&Math.random()<.3&&state.enemies.length<cap-5){
+    for(let i=0;i<3;i++){
+      const{x,y}=edgePos();const cfg=ETYPES.swarm;
+      state.enemies.push({x,y,type:'swarm',hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins});
+      discoverEntry('enemies','swarm');
+    }
+  }
   // Boss
   if(w>=5&&w%5===0){spawnBoss('boss');}
   if(w>=20&&w%10===0){spawnBoss('megaboss');}
   // Élite
-  if(w>=15&&Math.random()<.25)spawnElite();
+  if(w>=15&&Math.random()<.2)spawnElite();
 }
 
 function spawnBoss(type='boss'){
@@ -1095,9 +1252,16 @@ function update(dt){
   state.spawnTimer+=dt;
   if(state.spawnTimer>state.spawnInterval){
     state.spawnTimer=0;
-    const n=1+Math.floor(state.wave/6);
-    for(let i=0;i<n;i++)spawnEnemy();
+    const cap=60;
+    if(state.enemies.length<cap){
+      const n=1+Math.floor(state.wave/8); // moins agressif
+      for(let i=0;i<n&&state.enemies.length<cap;i++)spawnEnemy();
+    }
   }
+  // Limites performance
+  if(state.particles.length>180)state.particles.length=180;
+  if(state.xpGems.length>70)state.xpGems.length=70;
+  if(state.dmgNums.length>25)state.dmgNums.length=25;
 
   // Mouvement joueur
   let mx=0,my=0;
@@ -1172,7 +1336,11 @@ function update(dt){
       if(Math.hypot(b.x-p.x,b.y-p.y)<p.size+b.size){
         if(p.divineActive)return false;
         if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;return false;}
+        if(p.dodge>0&&Math.random()<p.dodge)return false;
+        if(p.shadowDodge&&Math.random()<.5)return false;
         p.hp-=8+state.wave;pts(p.x,p.y,'#ff3c6e',.6,2.5);
+        if(p.hp<=0&&p.phoenix){p.hp=p.maxHp*.3;p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);return false;}
+        if(p.hp<=0&&p.rebirth){p.hp=p.maxHp*.5;p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);return false;}
         if(p.hp<=0){gameOver();return false;}
         return false;
       }
@@ -1196,6 +1364,10 @@ function update(dt){
         // Entity : immunisé aux non-critiques
         if(e.immune&&!cr){pts(b.x,b.y,'#ff00ff',.6,1.5);if(b.pierce<=0)return false;b.pierce--;continue;}
         e.hp-=dmg;state.stats.totalDmg+=dmg;
+        // Reaper : 10% chance tuer instantanément
+        if(p.reaper&&Math.random()<.10){e.hp=0;}
+        // Judgment : tue ennemi < 10% PV
+        if(p.judgment&&e.hp>0&&e.hp<e.maxHp*.1){e.hp=0;}
         if(p.freeze&&!e.frozen){e.frozen=500;e.speed*=.35;}
         if(p.explode)explodeAt(b.x,b.y,b.dmg*.55);
         if(p.chain&&b.chainLeft>0){
@@ -1390,10 +1562,14 @@ function update(dt){
       if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;pts(p.x,p.y,'#00aaff',1.5,5);
         if(e.type==='splitter')splitEnemy(e);state.enemies.splice(i,1);continue;}
       if(e.type==='bomber'||e.type==='kamikaze'){explodeAt(e.x,e.y,e.type==='kamikaze'?55:e.hp*.5+20);killEnemy(i);continue;}
+      if(p.dodge>0&&Math.random()<p.dodge){state.enemies.splice(i,1);continue;}
+      if(p.shadowDodge&&Math.random()<.5){state.enemies.splice(i,1);continue;}
       p.hp-=e.dmg;pts(p.x,p.y,'#ff3c6e',.8,2.5);
       if(e.type==='splitter')splitEnemy(e);
       if(e.type==='toxic'){p.speed=Math.max(.5,p.speed*.9);}
       state.enemies.splice(i,1);
+      if(p.hp<=0&&p.phoenix){p.hp=p.maxHp*.3;p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);continue;}
+      if(p.hp<=0&&p.rebirth){p.hp=p.maxHp*.5;p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);continue;}
       if(p.hp<=0){gameOver();return;}
     }
   }
@@ -1476,27 +1652,48 @@ function killEnemy(i){
   if(state.player.siphon>0)state.player.hp=Math.min(state.player.maxHp,state.player.hp+state.player.siphon);
   if(state.player.furyStacks!=null)state.player.furyStacks++;
   // Rupture : onde de choc au kill
-  if(state.player.rupture)explodeAt(e.x,e.y,15);
+  if(state.player.rupture)explodeAt(e.x,e.y,12,1); // depth=1 pour éviter cascade
   // Sauvegarder pour nécromant
   if(e.type!=='parasite')state.lastKilled={type:e.type,maxHp:e.maxHp,speed:ETYPES[e.type]?.spd(state.wave)||e.speed,size:e.size,dmg:e.dmg,color:e.color,xp:Math.floor(e.xp*.3),coins:0};
   const gc=e.type==='megaboss'||e.type==='minigod'?10:e.type==='boss'||e.type==='titan'?6:e.type==='tank'||e.type==='elite'?3:1;
   const xm=state.xpMult||1;
   for(let k=0;k<gc;k++)state.xpGems.push({x:e.x+(Math.random()-.5)*18,y:e.y+(Math.random()-.5)*18,value:Math.ceil(e.xp*xm/gc)});
   if(e.coins>0)state.coinPickups.push({x:e.x,y:e.y,value:e.coins});
-  if(e.type==='bomber'||e.type==='kamikaze'){explodeAt(e.x,e.y,40);}
-  // Titan immunisé explosion — override
-  for(let k=0;k<6;k++)pts(e.x,e.y,e.color,.8,3);
+  // bomber/kamikaze : géré dans explodeAt si appelé depuis là, sinon explosion simple
+  if(e.type==='bomber'||e.type==='kamikaze')explodeAt(e.x,e.y,35,1);
+  for(let k=0;k<4;k++)pts(e.x,e.y,e.color,.7,2.5);
   snd('hit');state.enemies.splice(i,1);
 }
-function explodeAt(x,y,dmg){
+function explodeAt(x,y,dmg,_depth){
+  if((_depth||0)>2)return; // empêche les boucles infinies
   const r=state.player.explodeRadius||55;
   const toKill=[];
   for(let i=state.enemies.length-1;i>=0;i--){
     const e=state.enemies[i];if(!e)continue;
-    if(Math.hypot(e.x-x,e.y-y)<r){e.hp-=dmg;pts(e.x,e.y,'#ff6010',.5,1.8);if(e.hp<=0)toKill.push(i);}
+    if(Math.hypot(e.x-x,e.y-y)<r){
+      e.hp-=dmg;
+      if(e.hp<=0)toKill.push(i);
+    }
   }
-  for(const i of toKill)killEnemy(i);
-  for(let k=0;k<8;k++)pts(x,y,'#ff6010',1,3);
+  // tuer dans l'ordre inverse, sans déclencher d'autres explosions en chaîne
+  for(const i of toKill){
+    const e=state.enemies[i];if(!e)continue;
+    state.kills++;
+    state.stats.killTypes[e.type]=(state.stats.killTypes[e.type]||0)+1;
+    if(e.type==='boss'||e.type==='megaboss'||e.type==='minigod')state.stats.bossKills++;
+    if(state.player.vamp>0)state.player.hp=Math.min(state.player.maxHp,state.player.hp+state.player.vamp);
+    if(state.player.siphon>0)state.player.hp=Math.min(state.player.maxHp,state.player.hp+state.player.siphon);
+    const xm=state.xpMult||1;
+    state.xpGems.push({x:e.x,y:e.y,value:Math.ceil(e.xp*xm)});
+    if(e.coins>0)state.coinPickups.push({x:e.x,y:e.y,value:e.coins});
+    // Bomber/kamikaze : explosion secondaire avec depth+1
+    if(e.type==='bomber'||e.type==='kamikaze')explodeAt(e.x,e.y,dmg*.5,(_depth||0)+1);
+    pts(e.x,e.y,e.color,.6,2);
+    state.enemies.splice(i,1);
+  }
+  // Particules limitées
+  const nb=Math.min(6,8-(_depth||0)*2);
+  for(let k=0;k<nb;k++)pts(x,y,'#ff6010',.8,2.5);
 }
 function gainXP(v){
   const p=state.player;p.xp+=v;
@@ -1512,16 +1709,25 @@ function showUpgrades(){
   const codexData=getCodexData();
   choices.forEach(u=>{
     const known=!!(codexData['upgrades']&&codexData['upgrades'][u.id]);
-    const c=document.createElement('div');c.className='upg-card';
-    // Si jamais équipé : afficher ? dans le codex mais montrer l'upgrade en jeu
-    c.innerHTML=`<div class="upg-rarity rarity-${u.rarity}">${u.rarity.toUpperCase()}</div>
-      <div class="upg-icon">${u.icon}</div>
-      <div class="upg-name">${u.name}</div>
-      <div class="upg-desc">${u.desc}</div>
-      <div class="upg-wave">Débloqué vague ${u.unlockWave}${known?'':' · <span style="color:#8888ff">NOUVEAU !</span>'}</div>`;
+    const c=document.createElement('div');
+    c.className='upg-card'+(known?'':' upg-mystery');
+    if(known){
+      // Déjà équipé au moins une fois : afficher tout
+      c.innerHTML=`<div class="upg-rarity rarity-${u.rarity}">${u.rarity.toUpperCase()}</div>
+        <div class="upg-icon">${u.icon}</div>
+        <div class="upg-name">${u.name}</div>
+        <div class="upg-desc">${u.desc}</div>
+        <div class="upg-wave">Vague ${u.unlockWave}</div>`;
+    } else {
+      // Jamais équipé : seulement l'icône + rareté, nom et desc cachés
+      c.innerHTML=`<div class="upg-rarity rarity-${u.rarity}">${u.rarity.toUpperCase()}</div>
+        <div class="upg-icon">${u.icon}</div>
+        <div class="upg-name" style="color:#445;letter-spacing:.05em;">? ? ? ? ?</div>
+        <div class="upg-desc" style="color:#334;">Équipe pour découvrir...</div>
+        <div class="upg-wave" style="color:#8888ff;font-size:.48rem;">✦ INCONNU</div>`;
+    }
     const pick=()=>{
       u.apply(state);
-      // Découverte seulement quand équipé
       discoverEntry('upgrades',u.id);
       sc.classList.remove('show');
       state.paused=false;
@@ -1565,7 +1771,7 @@ function gameOver(){
   updateEnergyUI();
   document.getElementById('stats-screen').classList.add('show');
   // Record visible en bas des stats
-  setTimeout(()=>{if(isNewRecord(score))openRecordSection(score,state.wave,state.kills,state.elapsed,state.player.level);},800);
+  setTimeout(async()=>{if(await isNewRecord(score))openRecordSection(score,state.wave,state.kills,state.elapsed,state.player.level);},800);
 }
 
 function showWaveBanner(w){
