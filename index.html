@@ -4090,10 +4090,10 @@ function update(dt){
       for(let i=0;i<n&&state.enemies.length<cap;i++)spawnEnemy();
     }
   }
-  // Limites performance
-  if(state.particles.length>180)state.particles.length=180;
-  if(state.xpGems.length>70)state.xpGems.length=70;
-  if(state.dmgNums.length>25)state.dmgNums.length=25;
+  // Limites performance (conserver les entrées les plus récentes : push en fin de tableau)
+  if(state.particles.length>180){while(state.particles.length>180)state.particles.shift();}
+  if(state.xpGems.length>300){while(state.xpGems.length>300)state.xpGems.shift();}
+  if(state.dmgNums.length>25){while(state.dmgNums.length>25)state.dmgNums.shift();}
 
   // Mouvement joueur
   let mx=0,my=0;
