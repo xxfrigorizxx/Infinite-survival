@@ -222,7 +222,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— CHRONOS UPDATE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— ARSENAL UPDATE —</p>
   <p>Survie infinie · Biomes dynamiques · Événements spéciaux</p>
   <div id="profile-badge" onclick="openProfile()">
     <div class="pb-av" id="pb-av">?</div>
@@ -254,6 +254,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div id="hud">
     <div class="hud-block"><span class="hud-label">VIE</span><span class="hud-val" id="hud-hp">100</span></div>
     <div class="hud-block"><span class="hud-label">VAGUE</span><span class="hud-val" id="hud-wave">1</span></div>
+    <div class="hud-block"><span class="hud-label">TEMPS</span><span class="hud-val" id="hud-wave-timer" style="font-size:clamp(.4rem,1.8vw,.56rem);">60s</span></div>
     <div class="hud-block"><span class="hud-label">NIV.</span><span class="hud-val gold" id="hud-lvl">1</span></div>
     <div class="hud-block"><span class="hud-label">KILLS</span><span class="hud-val" id="hud-kills">0</span></div>
     <div class="hud-block"><span class="hud-label">TEMPS</span><span class="hud-val" id="hud-time">00:00</span></div>
@@ -407,8 +408,9 @@ const MAX=10;
 // Clé propre pour Firebase
 function key(name){
   return String(name||'joueur')
+    .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-zA-Z0-9_-]/g,'_')
+    .replace(/[^a-z0-9_-]/g,'_')
     .replace(/_+/g,'_').replace(/^_|_$/g,'')
     .slice(0,32)||'joueur';
 }
@@ -740,7 +742,26 @@ const CODEX_ENEMIES=[
   {id:'berserker_e',icon:'😡',name:'BERSERKER',        desc:'Accélère chaque fois qu\'il est touché. Danger !', hint:'Atteint vague 30'},
   {id:'entity',     icon:'👁️',name:'ENTITÉ',           desc:'Immunisée aux balles normales. Critiques seulement !',hint:'Atteint vague 32'},
   {id:'fallen',     icon:'👼',name:'ANGE DÉCHU',       desc:'Vol en spirale et tire en cercle.',                hint:'Atteint vague 35'},
-  {id:'cosmic',     icon:'🔮',name:'DIEU COSMIQUE',    desc:'Boss ultime. Tir en étoile + rafale vers toi.',    hint:'Atteint vague 40'},
+  {id:'cosmic',       icon:'🔮',name:'DIEU COSMIQUE',      desc:'Boss ultime. Tir en étoile + rafale vers toi.',       hint:'Atteint vague 40'},
+  // Exclusifs biomes
+  {id:'void_phantom', icon:'👻',name:'FANTÔME DES ABYSSES',desc:'Invisible sauf au contact. Se duplique à la mort.',    hint:'Biome : Le Vide'},
+  {id:'ember_demon',  icon:'😈',name:'DÉMON DE BRAISE',    desc:'Laisse une traînée de feu. Immunisé au gel.',          hint:'Biome : Enfer'},
+  {id:'ice_golem',    icon:'🧊',name:'GOLEM DE GLACE',     desc:'Se régénère sur les plaques. Explose en éclats.',      hint:'Biome : Glacier'},
+  {id:'spore',        icon:'🍄',name:'SPORE TOXIQUE',      desc:'Explose en nuage empoisonné à la mort.',              hint:'Biome : Marais'},
+  {id:'living_bolt',  icon:'⚡',name:'ÉCLAIR VIVANT',      desc:'Se téléporte près de toi toutes les 1.5s.',           hint:'Biome : Tempête'},
+  {id:'doppel',       icon:'👤',name:'DOPPELGÄNGER',       desc:'Copie tes mouvements en miroir.',                     hint:'Biome : Ombre'},
+  {id:'desert',      icon:'🏜️',name:'DÉSERT MAUDIT',    desc:'Chaleur écrasante. Les rapides dominent.',           hint:'Atteint vague 40'},
+  {id:'abyss',       icon:'🕳️',name:'ABÎME',            desc:'Gravité déformée. Les trous noirs règnent.',         hint:'Atteint vague 50'},
+  {id:'machine',     icon:'⚙️',name:'USINE INFERNALE',  desc:'Acier et rouages. Les tourelles sont essentielles.', hint:'Atteint vague 60'},
+  {id:'dream',       icon:'💭',name:'RÊVE BRISÉ',        desc:'Rien est réel. Méfie-toi des faux ennemis.',         hint:'Atteint vague 70'},
+  {id:'apocalypse',  icon:'☄️',name:'APOCALYPSE',        desc:'La fin du monde. Tout est permis.',                  hint:'Atteint vague 80'},
+  // Nouveaux biomes — ennemis exclusifs
+  {id:'scarab',       icon:'🪲',name:'SCARABÉE',          desc:'Creuse sous terre et surgit sous tes pieds.',        hint:'Biome : Désert'},
+  {id:'distortion',  icon:'🌀',name:'DISTORSION',         desc:'Se divise en 4 à la mort.',                          hint:'Biome : Abîme'},
+  {id:'drone',       icon:'🤖',name:'DRONE',              desc:'Vole au-dessus des obstacles. Tire en rafale.',      hint:'Biome : Usine'},
+  {id:'dreamspec',   icon:'💜',name:'SPECTRE DE RÊVE',   desc:'Change de forme aléatoirement.',                     hint:'Biome : Rêve'},
+  {id:'horseman',    icon:'🏇',name:'CAVALIER APOCALYPSE',desc:'Ultra-rapide, laisse une traînée de feu.',           hint:'Biome : Apocalypse'},
+  {id:'dying_star',   icon:'🌟',name:'ÉTOILE MOURANTE',    desc:'Orbite autour de toi. Explose en nova à la mort.',    hint:'Biome : Cosmique'},
 ];
 
 // Définition du codex — upgrades (résumé des 50 upgrades)
@@ -771,7 +792,7 @@ const CODEX_UPGRADES=[
   {id:'xpboost2',  icon:'📚',name:'ÉRUDIT',             desc:'+35% XP gagné.',                      hint:'Vague 4'},
   {id:'fire1b',    icon:'🔥',name:'DOUBLE GÂCHETTE',    desc:'Tir +20% plus vite.',                 hint:'Vague 4'},
   {id:'pierce1',   icon:'🔱',name:'PERFORANT',          desc:'Balles traversent +1.',               hint:'Vague 5'},
-  {id:'dash1',     icon:'⚡',name:'DASH',                desc:'Bouton Dash débloqué.',               hint:'Vague 5'},
+  {id:'dash1',     icon:'💨',name:'ESQUIVE RAPIDE',    desc:'Débloque le dash — esquive en un éclair.',    hint:'Vague 5'},
   {id:'n_magnet2', icon:'🔮',name:'SUPER MAGNÉT.',      desc:'Portée XP +50%, pièces aussi.',       hint:'Vague 5'},
   {id:'crit1b',    icon:'👁️',name:'ŒIL DE LYNX',       desc:'+15% chance crit.',                   hint:'Vague 5'},
   {id:'bsize1b',   icon:'⚫',name:'OBUS LÉGER',         desc:'Balles x1.6 plus grosses.',           hint:'Vague 5'},
@@ -900,6 +921,91 @@ const CODEX_UPGRADES=[
   {id:'n_armageddon',icon:'🌋',name:'ARMAGEDDON',       desc:'Explosion massive tue tout / 30s.',   hint:'Vague 48'},
   {id:'godmode',   icon:'👑',name:'MODE DIEU',          desc:'Tous les stats x2.',                  hint:'Vague 50'},
   {id:'n_apocalypse',icon:'🔥',name:'APOCALYPSE',       desc:'Balle = explosion+poison+gel.',       hint:'Vague 50'},
+
+  // ── NOUVELLES ARMES & OBJETS ──
+  {id:'w_laser', icon:'🔴',name:'LASER', desc:'Laser continu vers ennemi le plus proche', hint:'Vague 3'},
+  {id:'w_knife', icon:'🔪',name:'COUTEAUX', desc:'2 couteaux orbitent et transpercent', hint:'Vague 2'},
+  {id:'w_knife2', icon:'🔪',name:'COUTEAUX+', desc:'+2 couteaux supplémentaires', hint:'Vague 8'},
+  {id:'w_boomerang', icon:'🪃',name:'BOOMERANG', desc:'Balle qui fait un arc et revient', hint:'Vague 5'},
+  {id:'w_mine', icon:'💣',name:'MINES', desc:'Pose une mine tous les 3s', hint:'Vague 6'},
+  {id:'w_beam', icon:'⚡',name:'RAYON OMEGA', desc:'Rayon qui traverse tout l\'écran / 4s', hint:'Vague 10'},
+  {id:'w_saw', icon:'⚙️',name:'SCIE ROTATIVE', desc:'Grande scie qui tourne autour de toi', hint:'Vague 8'},
+  {id:'w_tornado', icon:'🌪️',name:'TORNADE', desc:'Tornade qui aspire et broie les ennemis / 8s', hint:'Vague 12'},
+  {id:'w_whip', icon:'〰️',name:'FOUET', desc:'Coup de fouet frontal qui repousse fort', hint:'Vague 7'},
+  {id:'w_grenade', icon:'💥',name:'GRENADIER', desc:'Lance une grenade lobée / 2s', hint:'Vague 9'},
+  {id:'w_crossbow', icon:'🏹',name:'ARBALÈTE', desc:'Carreau perforant toutes les 1.5s', hint:'Vague 6'},
+  {id:'w_magnet_shot', icon:'🧲',name:'TIR MAGNÉTIQUE', desc:'Balle qui courbe vers les ennemis', hint:'Vague 11'},
+  {id:'w_shield_bash', icon:'🛡️',name:'BOUCLIER CHOC', desc:'Bouclier qui fait des dégâts au contact', hint:'Vague 8'},
+  {id:'w_dart', icon:'🎯',name:'FLÉCHETTES', desc:'3 fléchettes rapides vers l\'ennemi ciblé', hint:'Vague 4'},
+  {id:'w_shuriken', icon:'⭐',name:'SHURIKEN', desc:'Shuriken qui rebondit entre 4 ennemis', hint:'Vague 7'},
+  {id:'p_bouncy', icon:'🏀',name:'ÉLASTIQUE', desc:'Toutes tes armes rebondissent 1 fois de plus', hint:'Vague 5'},
+  {id:'p_bigger', icon:'🔭',name:'GROSSISSEMENT', desc:'Tout x1.5 plus gros (balles, orbes, scie...)', hint:'Vague 3'},
+  {id:'p_faster', icon:'⚡',name:'CADENCE GLOBALE', desc:'Toutes les armes tirent 30% plus vite', hint:'Vague 6'},
+  {id:'p_toxic_trail', icon:'☠️',name:'TRAÎNÉE TOXIQUE', desc:'Tu laisses une traînée de poison derrière toi', hint:'Vague 10'},
+  {id:'p_magnet_orb', icon:'🌀',name:'ORBES MAGNÉTIQUES', desc:'Tes orbes attirent les ennemis vers eux', hint:'Vague 12'},
+  {id:'p_blood_price', icon:'🩸',name:'PACTE DE SANG', desc:'-30 PV max mais +150% dégâts', hint:'Vague 15'},
+  {id:'p_glass', icon:'🔮',name:'CANON DE VERRE', desc:'1 PV max mais dégâts x10', hint:'Vague 14'},
+  {id:'p_leech', icon:'🐛',name:'SANGSUE', desc:'Chaque tir soigne 0.5 PV', hint:'Vague 13'},
+  {id:'p_double_dmg', icon:'🎰',name:'DOUBLE MISE', desc:'50% chance x2 dégâts, 50% chance x0', hint:'Vague 18'},
+  {id:'p_combo', icon:'🔢',name:'COMPTEUR COMBO', desc:'Chaque kill consécutif +5% dégâts (max +200%)', hint:'Vague 16'},
+  {id:'p_mirror_shot', icon:'🪞',name:'TIR MIROIR', desc:'Chaque balle tire une copie dans la direction opposée', hint:'Vague 14'},
+  {id:'p_icicle', icon:'❄️',name:'LANCES DE GLACE', desc:'Tes orbes laissent des pics de glace', hint:'Vague 11'},
+  {id:'p_fire_trail', icon:'🔥',name:'TRAÎNÉE DE FEU', desc:'Tes balles laissent une traînée de feu', hint:'Vague 9'},
+  {id:'p_splitter', icon:'💠',name:'FRAGMENTEUR', desc:'Tes balles se fractionnent en 3 à mi-chemin', hint:'Vague 13'},
+  {id:'p_chain_lightning', icon:'⚡',name:'FOUDRE EN CHAÎNE', desc:'Chaque kill libère un arc électrique sur 3 ennemis', hint:'Vague 20'},
+  {id:'p_book', icon:'📕',name:'GRIMOIRE', desc:'Active 1 effet aléatoire toutes les 10s', hint:'Vague 22'},
+  {id:'p_dead_cat', icon:'🐱',name:'CHAT MORT', desc:'PV bloqués à 1 pendant 30s puis reviens à max', hint:'Vague 25'},
+  {id:'p_Isaac', icon:'😢',name:'LARMES DE ISAAC', desc:'Toutes tes stats augmentent avec tes larmes (kills)', hint:'Vague 20'},
+  // ── 50 NOUVELLES UPGRADES ──
+  {id:'x_volley', icon:'🏹', name:'VOLÉE', desc:'+4 projectiles en éventail large', hint:'Vague 4'},
+  {id:'x_snipe2', icon:'🎯', name:'TIREUR D\'ÉLITE', desc:'1 balle / 3 fait x5 dégâts', hint:'Vague 10'},
+  {id:'x_hollow', icon:'🟡', name:'BALLE CREUSE', desc:'Balles explosent en 6 éclats à impact', hint:'Vague 8'},
+  {id:'x_acid', icon:'🧪', name:'ACIDE', desc:'Dégâts augmentent sur ennemi déjà touché', hint:'Vague 9'},
+  {id:'x_tracer', icon:'🔦', name:'TRACEUR', desc:'Balles laissent une traînée lumineuse +30% dmg', hint:'Vague 3'},
+  {id:'x_ghost_b', icon:'👻', name:'BALLE FANTÔME', desc:'Balles traversent les ennemis sans les toucher — sauf boss', hint:'Vague 12'},
+  {id:'x_heavy', icon:'🪨', name:'LOURD', desc:'Balles 3x plus grosses, 2x moins rapides, 3x plus de dégâts', hint:'Vague 7'},
+  {id:'x_rapid2', icon:'💫', name:'RAFALE EXTRÊME', desc:'Cadence x4 mais dégâts -60%', hint:'Vague 11'},
+  {id:'x_orbit_shot', icon:'🌐', name:'TIR ORBITAL', desc:'1 balle orbite autour de toi pendant 5s', hint:'Vague 13'},
+  {id:'x_thunder', icon:'⚡', name:'FOUDRE', desc:'10% chance de stunner un ennemi 2s', hint:'Vague 8'},
+  {id:'x_fortress2', icon:'🏯', name:'FORTERESSE II', desc:'+200 PV max', hint:'Vague 16'},
+  {id:'x_barrier', icon:'🔷', name:'BARRIÈRE', desc:'Barrière sphérique bloque les balles ennemies', hint:'Vague 14'},
+  {id:'x_reflect', icon:'🪃', name:'RÉFLECTEUR', desc:'Renvoie les balles ennemies', hint:'Vague 15'},
+  {id:'x_invuln', icon:'🌟', name:'INVULNÉRABLE', desc:'1s invincible après chaque soin', hint:'Vague 20'},
+  {id:'x_second_life', icon:'💖', name:'DEUXIÈME VIE', desc:'Survit une fois à coup fatal (recharge en 60s)', hint:'Vague 18'},
+  {id:'x_aegis', icon:'🛡️', name:'ÉGIDE', desc:'Absorbe les 5 prochains coups', hint:'Vague 22'},
+  {id:'x_mist', icon:'🌫️', name:'BRUME', desc:'Nuage autour de toi aveugle les ennemis proches', hint:'Vague 12'},
+  {id:'x_anchor', icon:'⚓', name:'ANCRE', desc:'Tu te déplaces moins vite mais -70% dégâts reçus', hint:'Vague 10'},
+  {id:'x_heal_kill', icon:'🧛', name:'VAMPIRE ROI', desc:'+20 PV par kill', hint:'Vague 24'},
+  {id:'x_regen3', icon:'💗', name:'RÉGÉN. RAPIDE', desc:'+15 PV/seconde', hint:'Vague 19'},
+  {id:'x_blink2', icon:'🔀', name:'BLINK+', desc:'Dash traverse les ennemis et les gèle', hint:'Vague 11'},
+  {id:'x_phase', icon:'👁️', name:'DÉPHASAGE', desc:'Pendant le dash : invincible et x3 dégâts', hint:'Vague 18'},
+  {id:'x_sprint', icon:'🏃', name:'SPRINT', desc:'+60% vitesse pendant 2s après un kill', hint:'Vague 5'},
+  {id:'x_rocket_boots', icon:'🚀', name:'BOTTES-FUSÉE', desc:'Tu laisses une traînée d\'explosions pendant le dash', hint:'Vague 15'},
+  {id:'x_teleport2', icon:'🌀', name:'TÉLÉPORTATION', desc:'Se téléporte vers l\'ennemi le plus proche toutes les 5s', hint:'Vague 20'},
+  {id:'x_inverse', icon:'🔄', name:'CONTRÔLES INVERSÉS', desc:'Contrôles inversés mais dégâts x4 et vitesse x2', hint:'Vague 20'},
+  {id:'x_minigun', icon:'🌀', name:'MINIGUN', desc:'Cadence max + balles très petites', hint:'Vague 25'},
+  {id:'x_explosive_walk', icon:'💥', name:'MINES À PAS', desc:'Chaque pas laisse une mini-mine', hint:'Vague 16'},
+  {id:'x_echo2', icon:'🔊', name:'ÉCHO TRIPLE', desc:'Toutes les 3 balles, une fait x4 dégâts', hint:'Vague 17'},
+  {id:'x_overload2', icon:'⚡', name:'SURTENSION', desc:'Après 20 kills sans mourir: toutes stats x2 pendant 10s', hint:'Vague 22'},
+  {id:'x_entropy', icon:'🌀', name:'ENTROPIE', desc:'Stats aléatoires à chaque vague (peut être x10 ou x0.1)', hint:'Vague 28'},
+  {id:'x_orbit_bomb', icon:'💣', name:'BOMBES ORBITALES', desc:'Tes orbes explosent quand ils touchent un ennemi', hint:'Vague 20'},
+  {id:'x_laser_orb', icon:'🔴', name:'ORBES LASER', desc:'Tes orbes tirent des lasers vers les ennemis proches', hint:'Vague 22'},
+  {id:'x_saw2', icon:'⚙️', name:'DOUBLE SCIE', desc:'+1 scie rotative (tourne en sens inverse)', hint:'Vague 18'},
+  {id:'x_knife_explode', icon:'🔪', name:'COUTEAUX EXPLOSIFS', desc:'Tes couteaux explosent sur impact', hint:'Vague 20'},
+  {id:'x_tornado2', icon:'🌪️', name:'SUPER TORNADE', desc:'Tornade permanente autour de toi', hint:'Vague 30'},
+  {id:'x_time_stop', icon:'⏹️', name:'ARRÊT DU TEMPS', desc:'Gèle TOUT pendant 5s / 45s', hint:'Vague 35'},
+  {id:'x_death_nova', icon:'💀', name:'NOVA DE MORT', desc:'En mourant (avant résurrection): explosion massive', hint:'Vague 24'},
+  {id:'x_lucky', icon:'🍀', name:'CHANCEUX', desc:'+50% chances upgrades rares et +', hint:'Vague 6'},
+  {id:'x_cursed', icon:'💀', name:'MAUDIT', desc:'PV max /2 mais toutes les upgrades sont Mythiques', hint:'Vague 20'},
+  {id:'x_kamikaze', icon:'💥', name:'KAMIKAZEMODE', desc:'En mourant: explosion x300 dégâts tout autour', hint:'Vague 22'},
+  {id:'x_necro_up', icon:'💀', name:'NÉCROMANCIEN', desc:'Chaque ennemi tué revient combattre pour toi 5s', hint:'Vague 25'},
+  {id:'x_singularity2', icon:'🌌', name:'SINGULARITÉ II', desc:'Trou noir permanent aspire tout dans un rayon de 150px', hint:'Vague 40'},
+  {id:'x_phoenix2', icon:'🔥', name:'PHÉNIX ÉTERNEL', desc:'Ressuscite infiniment à 10% PV (60s cooldown)', hint:'Vague 30'},
+  {id:'x_fire_ice', icon:'🌊🔥', name:'PARADOXE', desc:'Balles gèlent ET brûlent en même temps', hint:'Vague 20'},
+  {id:'x_all_aura', icon:'✨', name:'AURA TOTALE', desc:'Feu + Glace + Poison + Électricité autour de toi', hint:'Vague 35'},
+  {id:'x_blood_god', icon:'🩸', name:'DIEU DU SANG', desc:'+50 PV par kill, PV max augmente indéfiniment', hint:'Vague 40'},
+  {id:'x_everything', icon:'🎁', name:'TOUT EN UN', desc:'Active TOUTES les armes simultanément', hint:'Vague 50'},
+
 ];
 
 function openCodex(fromStats=false){
@@ -968,9 +1074,14 @@ function calcScore(w,k,ms,lvl){return Math.floor(k*100+w*500+lvl*200+ms/1000*2);
 
 
 // ── CLASSEMENT ──
-// La clé Firebase = nom du joueur (identique sur tous les appareils/navigateurs)
+// La clé Firebase = nom en minuscules (identique partout, évite Fallen/fallen en double)
 function getPlayerKey(name){
-  return String(name||'joueur').replace(/[.#$\[\]/\s]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,32)||'joueur';
+  return String(name||'joueur')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9_-]/g,'_')
+    .replace(/_+/g,'_').replace(/^_|_$/g,'')
+    .slice(0,32)||'joueur';
 }
 
 let pendingScore=null;
@@ -1107,7 +1218,7 @@ const SHOP_ITEMS=[
   {id:'s_orb',   icon:'🌀', name:'ORBE DE DÉPART',      desc:'Commence avec 1 orbe',  baseCost:400, maxLvl:3, effect:s=>s.player.orbCount++},
   {id:'s_orbsz', icon:'🪐', name:'ORBES GÉANTS',        desc:'Orbes +20% plus gros',  baseCost:300, maxLvl:4, effect:s=>s.player.orbSize=(s.player.orbSize||7)*1.2},
   {id:'s_mag',   icon:'🧲', name:'MAGNÉT. DE BASE',     desc:'Portée XP +30%',        baseCost:275, maxLvl:4, effect:s=>s.player.xpRadius*=1.3},
-  {id:'s_dash',  icon:'⚡', name:'DASH AU DÉPART',      desc:'Dash débloqué au début', baseCost:600, maxLvl:1, effect:s=>{s.player.hasDash=true;}},
+  {id:'s_dash',  icon:'💨', name:'ESQUIVE AU DÉPART',   desc:'Dash débloqué dès le début', baseCost:600, maxLvl:1, effect:s=>{s.player.hasDash=true;}},
   {id:'s_dashcd',icon:'🔀', name:'DASH RAPIDE',         desc:'Dash -0.5s cooldown',   baseCost:350, maxLvl:4, effect:s=>s.player.dashCooldownMax=Math.max(1000,(s.player.dashCooldownMax||3000)-500)},
   {id:'s_energy',icon:'🔋', name:'ÉNERGIE DE BASE',     desc:'+1 énergie max',        baseCost:1000,maxLvl:5, effect:s=>{}}, // cosmétique
   // ── CATÉGORIE 4 : OFFENSIF AVANCÉ ──
@@ -1277,7 +1388,7 @@ const ALL_UPGRADES=[
   {id:'fire1b',   name:'DOUBLE GÂCHETTE', icon:'🔥',rarity:'rare',     unlockWave:4,  desc:'Tir +20% plus vite',         apply:s=>s.player.fireRate=Math.max(80,s.player.fireRate*.82)},
   // ── WAVE 5 ──
   {id:'pierce1',  name:'PERFORANT',       icon:'🔱',rarity:'epic',     unlockWave:5,  desc:'Balles traversent +1',       apply:s=>s.player.pierce++},
-  {id:'dash1',    name:'DASH',            icon:'⚡',rarity:'rare',     unlockWave:5,  desc:'Bouton Dash débloqué',       apply:s=>{s.player.hasDash=true;showDashBtn();}},
+  {id:'dash1',    name:'ESQUIVE RAPIDE',  icon:'💨',rarity:'rare',     unlockWave:5,  desc:'Débloque le dash — esquive en un éclair',       apply:s=>{s.player.hasDash=true;showDashBtn();}},
   {id:'n_magnet2',name:'SUPER MAGNÉT.',   icon:'🔮',rarity:'rare',     unlockWave:5,  desc:'Portée XP +50%, pièces aussi',apply:s=>{s.player.xpRadius*=1.5;s.player.coinRadius=180;}},
   {id:'crit1b',   name:'ŒIL DE LYNX',    icon:'👁️',rarity:'rare',    unlockWave:5,  desc:'+15% chance crit',           apply:s=>s.player.critChance=Math.min(.8,s.player.critChance+.15)},
   {id:'bsize1b',  name:'OBUS LÉGER',      icon:'⚫',rarity:'rare',    unlockWave:5,  desc:'Balles x1.6 plus grosses',   apply:s=>s.player.bulletSize*=1.6},
@@ -1435,6 +1546,263 @@ const ALL_UPGRADES=[
   // ── WAVE 50 ──
   {id:'godmode',  name:'MODE DIEU',       icon:'👑',rarity:'mythic',   unlockWave:50, desc:'Tous les stats x2',           apply:s=>{s.player.bulletDmg*=2;s.player.speed*=2;s.player.maxHp*=2;s.player.hp=s.player.maxHp;}},
   {id:'n_apocalypse',name:'APOCALYPSE',   icon:'🔥',rarity:'mythic',   unlockWave:50, desc:'Chaque balle = explosion+poison+gel',apply:s=>{s.player.explode=true;s.player.poisonBullet=true;s.player.freeze=true;}},
+  // ══════════════════════════════════════
+  // 50 UPGRADES SUPPLÉMENTAIRES
+  // ══════════════════════════════════════
+
+  // ── OFFENSIF ──
+  {id:'x_volley',  name:'VOLÉE',         icon:'🏹',rarity:'rare',     unlockWave:4,
+   desc:'+4 projectiles en éventail large', apply:s=>s.player.multiShot+=4},
+  {id:'x_snipe2',  name:"TIREUR D'ÉLITE",icon:'🎯',rarity:'epic',    unlockWave:10,
+   desc:'1 balle / 3 fait x5 dégâts', apply:s=>s.player.eliteShot=0},
+  {id:'x_hollow',  name:'BALLE CREUSE',  icon:'🟡',rarity:'rare',     unlockWave:8,
+   desc:'Balles explosent en 6 éclats à impact', apply:s=>s.player.hollowBullet=true},
+  {id:'x_acid',    name:'ACIDE',         icon:'🧪',rarity:'rare',     unlockWave:9,
+   desc:'Dégâts augmentent sur ennemi déjà touché', apply:s=>s.player.acid=true},
+  {id:'x_tracer',  name:'TRACEUR',       icon:'🔦',rarity:'common',   unlockWave:3,
+   desc:'Balles laissent une traînée lumineuse +30% dmg', apply:s=>{s.player.bulletDmg*=1.3;s.player.fireTrail=true;}},
+  {id:'x_ghost_b', name:'BALLE FANTÔME', icon:'👻',rarity:'epic',     unlockWave:12,
+   desc:'Balles traversent les ennemis sans les toucher — sauf boss', apply:s=>s.player.pierce+=99},
+  {id:'x_heavy',   name:'LOURD',         icon:'🪨',rarity:'rare',     unlockWave:7,
+   desc:'Balles 3x plus grosses, 2x moins rapides, 3x plus de dégâts', apply:s=>{s.player.bulletSize*=3;s.player.bulletSpeed*=.5;s.player.bulletDmg*=3;}},
+  {id:'x_rapid2',  name:'RAFALE EXTRÊME',icon:'💫',rarity:'epic',     unlockWave:11,
+   desc:'Cadence x4 mais dégâts -60%', apply:s=>{s.player.fireRate=Math.max(40,s.player.fireRate*.25);s.player.bulletDmg*=.4;}},
+  {id:'x_orbit_shot',name:'TIR ORBITAL', icon:'🌐',rarity:'epic',     unlockWave:13,
+   desc:'1 balle orbite autour de toi pendant 5s', apply:s=>s.player.orbitShot=true},
+  {id:'x_thunder', name:'FOUDRE',        icon:'⚡',rarity:'rare',     unlockWave:8,
+   desc:'10% chance de stunner un ennemi 2s', apply:s=>s.player.thunderShot=true},
+
+  // ── DÉFENSIF ──
+  {id:'x_fortress2',name:'FORTERESSE II',icon:'🏯',rarity:'epic',     unlockWave:16,
+   desc:'+200 PV max', apply:s=>{s.player.maxHp+=200;s.player.hp=s.player.maxHp;}},
+  {id:'x_barrier', name:'BARRIÈRE',      icon:'🔷',rarity:'epic',     unlockWave:14,
+   desc:'Barrière sphérique bloque les balles ennemies', apply:s=>s.player.barrier=true},
+  {id:'x_reflect', name:'RÉFLECTEUR',    icon:'🪃',rarity:'epic',     unlockWave:15,
+   desc:'Renvoie les balles ennemies', apply:s=>s.player.reflect=true},
+  {id:'x_invuln',  name:'INVULNÉRABLE',  icon:'🌟',rarity:'legendary',unlockWave:20,
+   desc:'1s invincible après chaque soin', apply:s=>s.player.invulnAfterHeal=true},
+  {id:'x_second_life',name:'DEUXIÈME VIE',icon:'💖',rarity:'legendary',unlockWave:18,
+   desc:'Survit une fois à coup fatal (recharge en 60s)', apply:s=>s.player.secondLife=true},
+  {id:'x_aegis',   name:'ÉGIDE',         icon:'🛡️',rarity:'legendary',unlockWave:22,
+   desc:'Absorbe les 5 prochains coups', apply:s=>s.player.aegis=(s.player.aegis||0)+5},
+  {id:'x_mist',    name:'BRUME',         icon:'🌫️',rarity:'rare',    unlockWave:12,
+   desc:'Nuage autour de toi aveugle les ennemis proches', apply:s=>s.player.mist=true},
+  {id:'x_anchor',  name:'ANCRE',         icon:'⚓',rarity:'rare',     unlockWave:10,
+   desc:'Tu te déplaces moins vite mais -70% dégâts reçus', apply:s=>{s.player.speed*=.6;s.player.defense=(s.player.defense||0)+.7;}},
+  {id:'x_heal_kill',name:'VAMPIRE ROI',  icon:'🧛',rarity:'legendary',unlockWave:24,
+   desc:'+20 PV par kill', apply:s=>s.player.vamp=(s.player.vamp||0)+20},
+  {id:'x_regen3',  name:'RÉGÉN. RAPIDE', icon:'💗',rarity:'epic',     unlockWave:19,
+   desc:'+15 PV/seconde', apply:s=>s.player.regen+=15},
+
+  // ── MOBILITÉ ──
+  {id:'x_blink2',  name:'BLINK+',        icon:'🔀',rarity:'epic',     unlockWave:11,
+   desc:'Dash traverse les ennemis et les gèle', apply:s=>{s.player.dashFreeze=true;s.player.dashCooldownMax=Math.max(800,s.player.dashCooldownMax-500);}},
+  {id:'x_phase',   name:'DÉPHASAGE',     icon:'👁️',rarity:'legendary',unlockWave:18,
+   desc:'Pendant le dash : invincible et x3 dégâts', apply:s=>s.player.phaseDash=true},
+  {id:'x_sprint',  name:'SPRINT',        icon:'🏃',rarity:'rare',     unlockWave:5,
+   desc:'+60% vitesse pendant 2s après un kill', apply:s=>s.player.sprintAfterKill=true},
+  {id:'x_rocket_boots',name:'BOTTES-FUSÉE',icon:'🚀',rarity:'epic',   unlockWave:15,
+   desc:"Tu laisses une traînée d'explosions pendant le dash", apply:s=>s.player.rocketBoots=true},
+  {id:'x_teleport2',name:'TÉLÉPORTATION',icon:'🌀',rarity:'legendary',unlockWave:20,
+   desc:"Se téléporte vers l'ennemi le plus proche toutes les 5s", apply:s=>s.player.autoTeleport=0},
+
+  // ── PASSIFS FOUS ──
+  {id:'x_inverse', name:'CONTRÔLES INVERSÉS',icon:'🔄',rarity:'mythic',unlockWave:20,
+   desc:'Contrôles inversés mais dégâts x4 et vitesse x2', apply:s=>{s.player._invertControls=true;s.player.bulletDmg*=4;s.player.speed*=2;}},
+  {id:'x_minigun', name:'MINIGUN',       icon:'🌀',rarity:'legendary',unlockWave:25,
+   desc:'Cadence max + balles très petites', apply:s=>{s.player.fireRate=50;s.player.bulletSize*=.4;s.player.bulletDmg*=1.5;}},
+  {id:'x_explosive_walk',name:'MINES À PAS',icon:'💥',rarity:'epic',  unlockWave:16,
+   desc:'Chaque pas laisse une mini-mine', apply:s=>s.player.stepMines=true},
+  {id:'x_echo2',   name:'ÉCHO TRIPLE',   icon:'🔊',rarity:'epic',     unlockWave:17,
+   desc:'Toutes les 3 balles, une fait x4 dégâts', apply:s=>{s.player.echoRate=3;s.player.echoCount=0;}},
+  {id:'x_overload2',name:'SURTENSION',   icon:'⚡',rarity:'legendary',unlockWave:22,
+   desc:'Après 20 kills sans mourir: toutes stats x2 pendant 10s', apply:s=>{s.player.overloadKills=0;s.player.overloadActive=false;}},
+  {id:'x_entropy', name:'ENTROPIE',      icon:'🌀',rarity:'mythic',   unlockWave:28,
+   desc:'Stats aléatoires à chaque vague (peut être x10 ou x0.1)', apply:s=>s.player.entropy=true},
+
+  // ── SYNERGIES UNIQUES ──
+  {id:'x_orbit_bomb',name:'BOMBES ORBITALES',icon:'💣',rarity:'legendary',unlockWave:20,
+   desc:'Tes orbes explosent quand ils touchent un ennemi', apply:s=>s.player.orbExplode=true},
+  {id:'x_laser_orb',name:'ORBES LASER',   icon:'🔴',rarity:'legendary',unlockWave:22,
+   desc:'Tes orbes tirent des lasers vers les ennemis proches', apply:s=>s.player.orbLaser=true},
+  {id:'x_saw2',    name:'DOUBLE SCIE',    icon:'⚙️',rarity:'epic',   unlockWave:18,
+   desc:'+1 scie rotative (tourne en sens inverse)', apply:s=>{s.player.sawActive=true;s.player.saw2=true;s.player.saw2Angle=Math.PI;}},
+  {id:'x_knife_explode',name:'COUTEAUX EXPLOSIFS',icon:'🔪',rarity:'legendary',unlockWave:20,
+   desc:'Tes couteaux explosent sur impact', apply:s=>s.player.knifeExplode=true},
+  {id:'x_tornado2',name:'SUPER TORNADE',  icon:'🌪️',rarity:'mythic', unlockWave:30,
+   desc:'Tornade permanente autour de toi', apply:s=>s.player.permTornado=true},
+
+  // ── SPÉCIAUX ──
+  {id:'x_time_stop',name:'ARRÊT DU TEMPS',icon:'⏹️',rarity:'mythic', unlockWave:35,
+   desc:'Gèle TOUT pendant 5s / 45s', apply:s=>s.player.timeStopTimer=0},
+  {id:'x_death_nova',name:'NOVA DE MORT', icon:'💀',rarity:'legendary',unlockWave:24,
+   desc:'En mourant (avant résurrection): explosion massive', apply:s=>s.player.deathNova=true},
+  {id:'x_lucky',   name:'CHANCEUX',       icon:'🍀',rarity:'rare',    unlockWave:6,
+   desc:'+50% chances upgrades rares et +', apply:s=>{s.player.lucky=true;}},
+  {id:'x_cursed',  name:'MAUDIT',         icon:'💀',rarity:'mythic',  unlockWave:20,
+   desc:'PV max /2 mais toutes les upgrades sont Mythiques', apply:s=>{s.player.maxHp=Math.max(10,s.player.maxHp*.5);s.player.hp=Math.min(s.player.hp,s.player.maxHp);s.player.cursed=true;}},
+  {id:'x_kamikaze',name:'KAMIKAZEMODE',   icon:'💥',rarity:'mythic',  unlockWave:22,
+   desc:'En mourant: explosion x300 dégâts tout autour', apply:s=>s.player.kamikazeDeath=true},
+  {id:'x_necro_up',name:'NÉCROMANCIEN',   icon:'💀',rarity:'legendary',unlockWave:25,
+   desc:'Chaque ennemi tué revient combattre pour toi 5s', apply:s=>s.player.necroRaise=true},
+  {id:'x_singularity2',name:'SINGULARITÉ II',icon:'🌌',rarity:'mythic',unlockWave:40,
+   desc:'Trou noir permanent aspire tout dans un rayon de 150px', apply:s=>s.player.permSingularity=true},
+  {id:'x_phoenix2',name:'PHÉNIX ÉTERNEL', icon:'🔥',rarity:'mythic',  unlockWave:30,
+   desc:'Ressuscite infiniment à 10% PV (60s cooldown)', apply:s=>{s.player.phoenixInfinite=true;s.player.phoenixCd=0;}},
+
+  // ── COMBOS FIXES ──
+  {id:'x_fire_ice', name:'PARADOXE',      icon:'🌊🔥',rarity:'legendary',unlockWave:20,
+   desc:'Balles gèlent ET brûlent en même temps', apply:s=>{s.player.freeze=true;s.player.fireTrail=true;s.player.bulletDmg*=1.5;}},
+  {id:'x_all_aura',name:'AURA TOTALE',    icon:'✨',rarity:'mythic',  unlockWave:35,
+   desc:'Feu + Glace + Poison + Électricité autour de toi', apply:s=>{s.player.aura=(s.player.aura||0)+40;s.player.blizzard=true;s.player.poisonBullet=true;}},
+  {id:'x_blood_god',name:'DIEU DU SANG',  icon:'🩸',rarity:'mythic',  unlockWave:40,
+   desc:'+50 PV par kill, PV max augmente indéfiniment', apply:s=>s.player.bloodGod=true},
+  {id:'x_everything',name:'TOUT EN UN',   icon:'🎁',rarity:'mythic',  unlockWave:50,
+   desc:'Active TOUTES les armes simultanément', apply:s=>{
+     s.player.laserBeam=true;s.player.knifeCount=(s.player.knifeCount||0)+4;
+     s.player.sawActive=true;s.player.tornadoTimer=0;s.player.beamTimer=0;
+     s.player.grenadeTimer=0;s.player.shurikenTimer=0;s.player.crossbowTimer=0;
+     s.player.mineTimer=0;s.player.whipTimer=0;
+   }},
+
+  // ══════════════════════════════════════════
+  // NOUVELLES ARMES & OBJETS (style Isaac)
+  // ══════════════════════════════════════════
+
+  // ── ARMES ACTIVES ──
+  {id:'w_laser',    name:'LASER',           icon:'🔴',rarity:'rare',     unlockWave:3,
+   desc:'Laser continu vers ennemi le plus proche',
+   apply:s=>{ s.player.laserBeam=true; }},
+
+  {id:'w_knife',    name:'COUTEAUX',        icon:'🔪',rarity:'common',   unlockWave:2,
+   desc:'2 couteaux orbitent et transpercent',
+   apply:s=>{ s.player.knifeCount=(s.player.knifeCount||0)+2; s.player.knifeAngle=0; }},
+
+  {id:'w_knife2',   name:'COUTEAUX+',       icon:'🔪',rarity:'rare',     unlockWave:8,
+   desc:'+2 couteaux supplémentaires',
+   apply:s=>{ s.player.knifeCount=(s.player.knifeCount||0)+2; }},
+
+  {id:'w_boomerang',name:'BOOMERANG',       icon:'🪃',rarity:'rare',     unlockWave:5,
+   desc:'Balle qui fait un arc et revient',
+   apply:s=>{ s.player.boomerang=true; }},
+
+  {id:'w_mine',     name:'MINES',           icon:'💣',rarity:'rare',     unlockWave:6,
+   desc:'Pose une mine tous les 3s',
+   apply:s=>{ s.player.mineTimer=0; }},
+
+  {id:'w_beam',     name:'RAYON OMEGA',     icon:'⚡',rarity:'epic',     unlockWave:10,
+   desc:"Rayon qui traverse tout l'écran / 4s",
+   apply:s=>{ s.player.beamTimer=0; }},
+
+  {id:'w_saw',      name:'SCIE ROTATIVE',   icon:'⚙️',rarity:'epic',    unlockWave:8,
+   desc:'Grande scie qui tourne autour de toi',
+   apply:s=>{ s.player.sawActive=true; s.player.sawAngle=0; s.player.sawRadius=70; }},
+
+  {id:'w_tornado',  name:'TORNADE',         icon:'🌪️',rarity:'epic',    unlockWave:12,
+   desc:'Tornade qui aspire et broie les ennemis / 8s',
+   apply:s=>{ s.player.tornadoTimer=0; }},
+
+  {id:'w_whip',     name:'FOUET',           icon:'〰️',rarity:'rare',    unlockWave:7,
+   desc:'Coup de fouet frontal qui repousse fort',
+   apply:s=>{ s.player.whipTimer=0; }},
+
+  {id:'w_grenade',  name:'GRENADIER',       icon:'💥',rarity:'rare',     unlockWave:9,
+   desc:'Lance une grenade lobée / 2s',
+   apply:s=>{ s.player.grenadeTimer=0; }},
+
+  {id:'w_crossbow', name:'ARBALÈTE',        icon:'🏹',rarity:'rare',     unlockWave:6,
+   desc:'Carreau perforant toutes les 1.5s',
+   apply:s=>{ s.player.crossbowTimer=0; }},
+
+  {id:'w_magnet_shot',name:'TIR MAGNÉTIQUE',icon:'🧲',rarity:'epic',    unlockWave:11,
+   desc:'Balle qui courbe vers les ennemis',
+   apply:s=>{ s.player.magnetShot=true; }},
+
+  {id:'w_shield_bash',name:'BOUCLIER CHOC', icon:'🛡️',rarity:'rare',   unlockWave:8,
+   desc:'Bouclier qui fait des dégâts au contact',
+   apply:s=>{ s.player.shieldBash=true; }},
+
+  {id:'w_dart',     name:'FLÉCHETTES',      icon:'🎯',rarity:'common',   unlockWave:4,
+   desc:"3 fléchettes rapides vers l'ennemi ciblé",
+   apply:s=>{ s.player.dartShot=true; }},
+
+  {id:'w_shuriken', name:'SHURIKEN',        icon:'⭐',rarity:'rare',     unlockWave:7,
+   desc:'Shuriken qui rebondit entre 4 ennemis',
+   apply:s=>{ s.player.shurikenTimer=0; }},
+
+  // ── PASSIFS SYNERGIQUES ──
+  {id:'p_bouncy',   name:'ÉLASTIQUE',       icon:'🏀',rarity:'rare',     unlockWave:5,
+   desc:'Toutes tes armes rebondissent 1 fois de plus',
+   apply:s=>{ s.player.pierce++; s.player.chainCount=(s.player.chainCount||2)+1; }},
+
+  {id:'p_bigger',   name:'GROSSISSEMENT',   icon:'🔭',rarity:'common',   unlockWave:3,
+   desc:'Tout x1.5 plus gros (balles, orbes, scie...)',
+   apply:s=>{ s.player.bulletSize*=1.5; s.player.orbSize=(s.player.orbSize||7)*1.5; s.player.sawRadius=(s.player.sawRadius||70)*1.3; }},
+
+  {id:'p_faster',   name:'CADENCE GLOBALE', icon:'⚡',rarity:'rare',     unlockWave:6,
+   desc:'Toutes les armes tirent 30% plus vite',
+   apply:s=>{ s.player.fireRate=Math.max(60,s.player.fireRate*.75); s.player.grenadeTimer=(s.player.grenadeTimer||0); }},
+
+  {id:'p_toxic_trail',name:'TRAÎNÉE TOXIQUE',icon:'☠️',rarity:'epic',   unlockWave:10,
+   desc:'Tu laisses une traînée de poison derrière toi',
+   apply:s=>{ s.player.toxicTrail=true; }},
+
+  {id:'p_magnet_orb',name:'ORBES MAGNÉTIQUES',icon:'🌀',rarity:'epic',  unlockWave:12,
+   desc:'Tes orbes attirent les ennemis vers eux',
+   apply:s=>{ s.player.orbMagnet=true; }},
+
+  {id:'p_blood_price',name:'PACTE DE SANG', icon:'🩸',rarity:'legendary',unlockWave:15,
+   desc:'-30 PV max mais +150% dégâts',
+   apply:s=>{ s.player.maxHp=Math.max(20,s.player.maxHp-30); s.player.hp=Math.min(s.player.hp,s.player.maxHp); s.player.bulletDmg*=2.5; }},
+
+  {id:'p_glass',    name:'CANON DE VERRE',  icon:'🔮',rarity:'legendary',unlockWave:14,
+   desc:'1 PV max mais dégâts x10',
+   apply:s=>{ s.player.maxHp=1; s.player.hp=1; s.player.bulletDmg*=10; }},
+
+  {id:'p_leech',    name:'SANGSUE',         icon:'🐛',rarity:'epic',     unlockWave:13,
+   desc:'Chaque tir soigne 0.5 PV',
+   apply:s=>{ s.player.lifeSteal=true; }},
+
+  {id:'p_double_dmg',name:'DOUBLE MISE',    icon:'🎰',rarity:'legendary',unlockWave:18,
+   desc:'50% chance x2 dégâts, 50% chance x0',
+   apply:s=>{ s.player.doubleBet=true; }},
+
+  {id:'p_combo',    name:'COMPTEUR COMBO',  icon:'🔢',rarity:'epic',     unlockWave:16,
+   desc:'Chaque kill consécutif +5% dégâts (max +200%)',
+   apply:s=>{ s.player.combo=0; s.player.comboTimer=0; }},
+
+  {id:'p_mirror_shot',name:'TIR MIROIR',    icon:'🪞',rarity:'epic',     unlockWave:14,
+   desc:'Chaque balle tire une copie dans la direction opposée',
+   apply:s=>{ s.player.mirrorShot=true; }},
+
+  {id:'p_icicle',   name:'LANCES DE GLACE', icon:'❄️',rarity:'rare',    unlockWave:11,
+   desc:'Tes orbes laissent des pics de glace',
+   apply:s=>{ s.player.icicleOrbs=true; }},
+
+  {id:'p_fire_trail',name:'TRAÎNÉE DE FEU', icon:'🔥',rarity:'rare',     unlockWave:9,
+   desc:'Tes balles laissent une traînée de feu',
+   apply:s=>{ s.player.fireTrail=true; }},
+
+  {id:'p_splitter', name:'FRAGMENTEUR',     icon:'💠',rarity:'epic',     unlockWave:13,
+   desc:'Tes balles se fractionnent en 3 à mi-chemin',
+   apply:s=>{ s.player.splitBullet=true; }},
+
+  {id:'p_chain_lightning',name:'FOUDRE EN CHAÎNE',icon:'⚡',rarity:'legendary',unlockWave:20,
+   desc:'Chaque kill libère un arc électrique sur 3 ennemis',
+   apply:s=>{ s.player.chainLightning=true; }},
+
+  {id:'p_book',     name:'GRIMOIRE',        icon:'📕',rarity:'legendary',unlockWave:22,
+   desc:'Active 1 effet aléatoire toutes les 10s',
+   apply:s=>{ s.player.grimoire=true; s.player.grimoireTimer=0; }},
+
+  {id:'p_dead_cat', name:'CHAT MORT',       icon:'🐱',rarity:'mythic',   unlockWave:25,
+   desc:'PV bloqués à 1 pendant 30s puis reviens à max',
+   apply:s=>{ s.player.deadCat=true; s.player.deadCatTimer=0; }},
+
+  {id:'p_Isaac',    name:'LARMES DE ISAAC', icon:'😢',rarity:'mythic',   unlockWave:20,
+   desc:'Toutes tes stats augmentent avec tes larmes (kills)',
+   apply:s=>{ s.player.isaacTears=0; }},
+
 ];
 
 function getAvailableUpgrades(wave){
@@ -1529,7 +1897,9 @@ function mkState(){
   return{
     running:false,paused:false,
     wave:1,kills:0,elapsed:0,waveTimer:0,
-    currentEvent:null,eventTimer:0,eventCooldown:30000,
+    camX:0,camY:0,
+    biomeBossAlive:false,waveCleared:false,
+    currentEvent:null,eventTimer:0,eventCooldown:15,
     biome:null,biomeTransition:0,obstacles:[],
     _evSpawnMult:1,_evEnemySpeedMult:1,_evGiants:false,_evDark:false,
     _evGoldMult:1,_evBossRain:false,_evBossTimer:0,_evXpMult:1,_evHealRate:0,
@@ -1542,7 +1912,7 @@ function mkState(){
       hp:100,maxHp:100,xp:0,xpNext:80,level:1,
       fireRate:350,lastFire:0,
       bulletDmg:18,bulletSize:6,bulletSpeed:6.5,
-      multiShot:0,pierce:0,orbCount:0,orbSize:7,xpRadius:90,
+      multiShot:0,pierce:0,orbCount:0,orbSize:7,xpRadius:Math.min(W,H)*.14,
       explode:false,explodeRadius:55,
       chain:false,chainCount:2,
       freeze:false,vamp:0,regen:0,regenTimer:0,
@@ -1617,6 +1987,51 @@ const BIOMES=[
     enemies:['ghost','stealth','void_e','illusionist','necro','entity'],
     upgrades:['n_shadow','n_reaper','crit3','n_echo','pierce2'],
     desc:'Ennemis invisibles. Critiques obligatoires.'
+  },
+  {
+    id:'desert',    name:'DÉSERT MAUDIT',  icon:'🏜️',
+    bg:'#120800',   grid:'rgba(255,160,0,.04)',   accent:'#ff9900',
+    skyColor:'rgba(200,100,0,.06)',
+    unlockWave:40,
+    enemies:['titan','charger','kamikaze','armored','dasher'],
+    upgrades:['speed3','knockback2','aura2','n_charge','dmg4a'],
+    desc:'Chaleur écrasante. Les rapides dominent ici.'
+  },
+  {
+    id:'abyss',     name:'ABÎME',          icon:'🕳️',
+    bg:'#000005',   grid:'rgba(0,0,100,.05)',     accent:'#0033ff',
+    skyColor:'rgba(0,0,80,.08)',
+    unlockWave:50,
+    enemies:['graviton','void_e','necro','demon','entity'],
+    upgrades:['n_gravity','n_abyss','pierce3','n_shadow','vamp2'],
+    desc:'Gravité déformée. Les trous noirs règnent.'
+  },
+  {
+    id:'machine',   name:'USINE INFERNALE',icon:'⚙️',
+    bg:'#0a0a0a',   grid:'rgba(150,150,150,.04)', accent:'#cccccc',
+    skyColor:'rgba(80,80,80,.05)',
+    unlockWave:60,
+    enemies:['armored','guardian','striker','tank','absorber'],
+    upgrades:['turret1','turret2','n_sentinel','n_clone','n_overload'],
+    desc:'Acier et rouages. Les tourelles sont essentielles.'
+  },
+  {
+    id:'dream',     name:'RÊVE BRISÉ',     icon:'💭',
+    bg:'#080510',   grid:'rgba(200,150,255,.035)', accent:'#cc88ff',
+    skyColor:'rgba(100,50,200,.06)',
+    unlockWave:70,
+    enemies:['illusionist','doppel','mirror','ghost','stealth'],
+    upgrades:['n_echo','n_chaos','n_clone','crit3','n_shadow'],
+    desc:'Rien est réel. Méfie-toi des faux ennemis.'
+  },
+  {
+    id:'apocalypse',name:'APOCALYPSE',     icon:'☄️',
+    bg:'#0f0000',   grid:'rgba(255,50,0,.05)',    accent:'#ff2200',
+    skyColor:'rgba(150,0,0,.08)',
+    unlockWave:80,
+    enemies:['fallen','cosmic','minigod','berserker_e','firetitan'],
+    upgrades:['godmode','n_apocalypse','n_eternal','invincible','n_armageddon'],
+    desc:'La fin du monde. Tout est permis.'
   },
   {
     id:'cosmic',    name:'COSMIQUE',       icon:'🌌',
@@ -1700,6 +2115,146 @@ const EVENTS=[
     onEnd:s=>{}
   },
   {
+    id:'shrink',    name:'RÉTRÉCISSEMENT',  icon:'🔬', duration:20000,
+    desc:'Toi et tes balles rapetissent — mais +100% vitesse !',
+    color:'#00ffaa',
+    onStart:s=>{ s.player.size*=.4; s.player.bulletSize*=.5; s.player.speed*=2; s._evShrunk=true; },
+    onEnd:  s=>{ if(s._evShrunk){s.player.size*=2.5;s.player.bulletSize*=2;s.player.speed/=2;s._evShrunk=false;} }
+  },
+  {
+    id:'mirror_dmg',name:'MIROIR DE DÉGÂTS',icon:'🪞', duration:18000,
+    desc:'Tous les dégâts reçus sont renvoyés aux ennemis proches !',
+    color:'#88ddff',
+    onStart:s=>{ s._evMirror=true; },
+    onEnd:  s=>{ s._evMirror=false; }
+  },
+  {
+    id:'bullet_rain',name:'PLUIE DE BALLES',icon:'🌧️', duration:15000,
+    desc:'Tes balles tombent du ciel toutes les 0.5s !',
+    color:'#4499ff',
+    onStart:s=>{ s._evBulletRain=true; s._evBulletRainTimer=0; },
+    onEnd:  s=>{ s._evBulletRain=false; }
+  },
+  {
+    id:'time_warp',  name:'DISTORSION TEMPORELLE',icon:'⌛', duration:12000,
+    desc:'Le temps ralentit pour tout le monde — sauf toi !',
+    color:'#aa88ff',
+    onStart:s=>{ s._evTimeSlow=0.25; },
+    onEnd:  s=>{ s._evTimeSlow=1; }
+  },
+  {
+    id:'magnet_ev',  name:'SUPER MAGNÉTISME',     icon:'🧲', duration:20000,
+    desc:'Tout est attiré vers toi — XP, pièces, ET ennemis !',
+    color:'#ff88aa',
+    onStart:s=>{ s._evMagnet=true; },
+    onEnd:  s=>{ s._evMagnet=false; }
+  },
+  {
+    id:'phantom',    name:'FANTÔME',              icon:'👻', duration:15000,
+    desc:'Tu traverses les ennemis sans prendre de dégâts !',
+    color:'#aaaacc',
+    onStart:s=>{ s._evPhantom=true; },
+    onEnd:  s=>{ s._evPhantom=false; }
+  },
+  {
+    id:'overdrive',  name:'SURDÉCUPLEMENT',       icon:'🔥⚡', duration:15000,
+    desc:'+300% dégâts mais PV descend à 1 !',
+    color:'#ff6600',
+    onStart:s=>{ s._evOverdrive=true; s.player.bulletDmg*=4; s.player.hp=1; },
+    onEnd:  s=>{ if(s._evOverdrive){s.player.bulletDmg/=4;s._evOverdrive=false;} }
+  },
+  {
+    id:'clone_ev',   name:'ARMÉE DE CLONES',      icon:'👥', duration:25000,
+    desc:'3 clones de toi apparaissent et tirent aussi !',
+    color:'#00ccff',
+    onStart:s=>{ s._evClones=[]; for(let i=0;i<3;i++)s._evClones.push({x:s.player.x+(i-1)*60,y:s.player.y+50,angle:0}); },
+    onEnd:  s=>{ s._evClones=null; }
+  },
+  {
+    id:'quake',      name:'SÉISME',               icon:'🌍', duration:10000,
+    desc:'Le sol tremble — tous les ennemis sont ralentis et étourdis !',
+    color:'#886622',
+    onStart:s=>{ for(const e of s.enemies)if(e){e.frozen=3000;e.speed*=.4;} s._evQuake=true; },
+    onEnd:  s=>{ s._evQuake=false; }
+  },
+  {
+    id:'blood_moon', name:'LUNE DE SANG',          icon:'🌕', duration:30000,
+    desc:'Ennemis +50% HP mais +200% XP et pièces !',
+    color:'#cc2200',
+    onStart:s=>{ for(const e of s.enemies)if(e){e.hp*=1.5;e.maxHp*=1.5;} s._evBloodMoon=true; s._evXpMult=3; s._evGoldMult=3; },
+    onEnd:  s=>{ s._evBloodMoon=false; s._evXpMult=1; s._evGoldMult=1; }
+  },
+  {
+    id:'rewind',     name:'REMBOBINAGE',           icon:'⏮️', duration:5000,
+    desc:'Tous les ennemis retournent à leur position de spawn !',
+    color:'#ffcc00',
+    onStart:s=>{ for(const e of s.enemies)if(e){const{x,y}=edgePos();e.x=x;e.y=y;} },
+    onEnd:  s=>{}
+  },
+  {
+    id:'shield_ev',  name:'BOUCLIER DIVIN',        icon:'🛡️', duration:12000,
+    desc:'Invincible complet pendant 12 secondes !',
+    color:'#4488ff',
+    onStart:s=>{ s._evInvincible=true; },
+    onEnd:  s=>{ s._evInvincible=false; }
+  },
+  {
+    id:'gravity_storm',name:'TEMPÊTE GRAVITATIONNELLE',icon:'🌀', duration:20000,
+    desc:'La gravité tourne — tous les ennemis valsent aléatoirement !',
+    color:'#8844ff',
+    onStart:s=>{ s._evGravStorm=true; s._evGravAngle=0; },
+    onEnd:  s=>{ s._evGravStorm=false; }
+  },
+  {
+    id:'nuke',       name:'FRAPPE NUCLÉAIRE',      icon:'💥', duration:3000,
+    desc:'Explosion massive qui tue tous les ennemis proches !',
+    color:'#ffff00',
+    onStart:s=>{ explodeAt(s.player.x,s.player.y,999,0); },
+    onEnd:  s=>{}
+  },
+  {
+    id:'curse',      name:'MALÉDICTION',           icon:'💀', duration:25000,
+    desc:'Tes PV descendent lentement — mais x10 XP !',
+    color:'#660033',
+    onStart:s=>{ s._evCurse=true; s._evXpMult=10; },
+    onEnd:  s=>{ s._evCurse=false; s._evXpMult=1; }
+  },
+  {
+    id:'laser_sky',  name:'PLUIE LASER',           icon:'🔴', duration:18000,
+    desc:'Des lasers tombent du ciel sur les ennemis !',
+    color:'#ff0044',
+    onStart:s=>{ s._evLaserSky=true; s._evLaserTimer=0; },
+    onEnd:  s=>{ s._evLaserSky=false; }
+  },
+  {
+    id:'coin_flood',  name:'DÉLUGE DE PIÈCES',     icon:'💰', duration:15000,
+    desc:'Des pièces pleuvent partout sur la map !',
+    color:'#ffdd00',
+    onStart:s=>{ for(let i=0;i<30;i++){const{x,y}=edgePos();s.coinPickups.push({x:x+s.camX,y:y+s.camY,value:10+Math.floor(Math.random()*20)});} },
+    onEnd:  s=>{}
+  },
+  {
+    id:'rage',        name:'RAGE TOTALE',           icon:'😡', duration:20000,
+    desc:'Tous les ennemis foncent vers toi en berserker !',
+    color:'#ff2200',
+    onStart:s=>{ s._evRage=true; for(const e of s.enemies)if(e)e.speed*=2.5; },
+    onEnd:  s=>{ s._evRage=false; }
+  },
+  {
+    id:'multiverse',  name:'MULTIVERS',             icon:'🌐', duration:20000,
+    desc:'Chaque balle se duplique à mi-chemin !',
+    color:'#00ffcc',
+    onStart:s=>{ s._evMultiverse=true; },
+    onEnd:  s=>{ s._evMultiverse=false; }
+  },
+  {
+    id:'titan_rise',  name:'ÉVEIL DES TITANS',     icon:'🗿', duration:35000,
+    desc:'3 titans géants surgissent immédiatement !',
+    color:'#886644',
+    onStart:s=>{ for(let i=0;i<3;i++){spawnBoss('titan');} },
+    onEnd:  s=>{}
+  },
+  {
     id:'healing',   name:'ZONE DE SOINS',    icon:'💚', duration:15000,
     desc:"Tu te régénères à 30 PV/sec pendant 15s !",
     color:'#00ff88',
@@ -1719,7 +2274,7 @@ const EVENTS=[
 // Niveau de mutation = nombre de boucles complètes
 function getBiomeLoop(){
   if(!state)return 0;
-  return Math.floor(state.wave/(15*7)); // 7 biomes × 15 vagues = 105 vagues = 1 boucle
+  return Math.floor(state.wave/(15*12)); // 12 biomes × 15 vagues = 180 vagues = 1 boucle
 }
 
 // Mutations disponibles par biome (s'accumulent)
@@ -1851,6 +2406,92 @@ const BIOME_MUTATIONS={
      }
     },
   ],
+  desert:[
+    {id:'sand_storms', name:'TEMPÊTES DE SABLE', desc:'Des tourbillons de sable ralentissent et aveuglent',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<3;i++){
+         s.obstacles.push({type:'sand_storm',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:35+Math.random()*25,color:'rgba(200,150,50,.2)',solid:false,dmg:4,
+           vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,stTimer:0});
+       }
+     }
+    },
+    {id:'quicksand', name:'SABLES MOUVANTS', desc:'Des zones de sables mouvants piègent le joueur',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<4;i++){
+         s.obstacles.push({type:'quicksand',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:28,color:'rgba(180,130,40,.3)',solid:false,slow:.3});
+       }
+     }
+    },
+  ],
+  abyss:[
+    {id:'abyss_holes', name:'TROUS DIMENSIONNELS', desc:'Des trous téléportent tout ce qui les touche',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<3;i++){
+         s.obstacles.push({type:'black_hole',
+           x:Math.random()*W*.6+W*.2,y:Math.random()*H*.6+H*.2,
+           r:22,color:'rgba(0,0,100,.4)',pullRadius:140,pullForce:3,angle:0});
+       }
+     }
+    },
+    {id:'gravity_flip', name:'INVERSION DE GRAVITÉ', desc:'La gravité attire vers le haut périodiquement',
+     init:s=>{ s._gravFlipTimer=0; s._gravFlipped=false; }
+    },
+  ],
+  machine:[
+    {id:'turret_walls', name:'TOURELLES FIXES', desc:'Des tourelles ennemies tirent depuis les murs',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<3;i++){
+         s.obstacles.push({type:'enemy_turret',
+           x:Math.random()*W*.7+W*.15,y:Math.random()*H*.7+H*.15,
+           r:16,color:'rgba(150,150,150,.7)',solid:true,fireTimer:0,dmg:15});
+       }
+     }
+    },
+    {id:'conveyor', name:'TAPIS ROULANTS', desc:'Des tapis poussent le joueur dans une direction',
+     init:s=>{ s._conveyorAngle=Math.random()*Math.PI*2; s._conveyorForce=1.5; }
+    },
+  ],
+  dream:[
+    {id:'illusion_walls', name:'MURS ILLUSOIRES', desc:'Des murs faux apparaissent — certains sont vrais !',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<5;i++){
+         const real=Math.random()<.4;
+         const horiz=Math.random()<.5;
+         s.obstacles.push({type:'dream_wall',
+           x:Math.random()*W*.6+W*.2,y:Math.random()*H*.6+H*.2,
+           w:horiz?70+Math.random()*50:14,h:horiz?14:70+Math.random()*50,
+           color:real?'rgba(200,150,255,.4)':'rgba(200,150,255,.1)',
+           solid:real});
+       }
+     }
+    },
+    {id:'nightmares', name:'CAUCHEMARS', desc:'Des ennemis fantômes apparaissent de nulle part',
+     init:s=>{ s._nightmareTimer=0; }
+    },
+  ],
+  apocalypse:[
+    {id:'meteor_apocalypse', name:'PLUIE DE MÉTÉORITES', desc:"Des météorites massives s'écrasent partout",
+     init:s=>{ s._meteorTimer=0; s._meteorRate=1200; }
+    },
+    {id:'cracks', name:'FISSURES DE FIN', desc:'Des fissures dans le sol libèrent de la lave',
+     init:s=>{
+       s.obstacles=s.obstacles||[];
+       for(let i=0;i<6;i++){
+         s.obstacles.push({type:'lava_crack',
+           x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,
+           r:20+Math.random()*20,color:'rgba(255,50,0,.3)',solid:false,dmg:12,
+           pulseTimer:0});
+       }
+     }
+    },
+  ],
   cosmic:[
     // Boucle 1+
     {id:'meteor_shower', name:'PLUIE DE MÉTÉORITES', desc:"Des météorites traversent l'écran",
@@ -1921,8 +2562,7 @@ function updateObstacles(dt){
   if(state._windForce>0&&state._windAngle!==undefined){
     p.x+=Math.cos(state._windAngle)*state._windForce*.5;
     p.y+=Math.sin(state._windAngle)*state._windForce*.5;
-    p.x=Math.max(p.size,Math.min(W-p.size,p.x));
-    p.y=Math.max(p.size,Math.min(H-p.size,p.y));
+    // map infinie — pas de bords
   }
 
   // Mettre à jour chaque obstacle
@@ -2047,9 +2687,15 @@ const CODEX_EVENTS=EVENTS.map(e=>({
 
 // Biome actuel — progression dans l'ordre selon la vague
 function getBiome(wave){
-  // Chaque biome dure 15 vagues, dans l'ordre de la liste
-  const idx=Math.min(Math.floor(wave/15), BIOMES.length-1);
+  // Chaque biome dure 15 vagues, boucle sur les 12 biomes à l'infini
+  const idx=Math.floor(wave/15) % BIOMES.length;
   return BIOMES[idx];
+}
+
+function getBiomeLoop(){
+  if(!state)return 0;
+  // 1 boucle complète = 12 biomes × 15 vagues = 180 vagues
+  return Math.floor(state.wave/(15*BIOMES.length));
 }
 
 function getCurrentBiome(){
@@ -2206,18 +2852,65 @@ const ETYPES={
   fallen:   {hp:(w)=>500+w*90, spd:(w)=>0.8+w*.04, sz:30,dmg:50,color:'#ffffff',xp:150,coins:15,unlockWave:35},
   // Vague 40 — Dieu Cosmique : boss final ultime
   cosmic:   {hp:(w)=>900+w*150,spd:(w)=>0.5+w*.03, sz:40,dmg:70,color:'#cc00ff',xp:300,coins:25,unlockWave:40},
+  // ── ENNEMIS DES NOUVEAUX BIOMES ──
+  // 🏜️ Désert — Scarabée : creuse sous terre et surgit sous le joueur
+  scarab:      {hp:(w)=>50+w*11, spd:(w)=>1.4+w*.06,sz:12,dmg:16,color:'#cc8800',xp:20,coins:2,unlockWave:40, biome:'desert'},
+  // 🕳️ Abîme — Distorsion : se divise en 4 quand touché
+  distortion:  {hp:(w)=>40+w*9,  spd:(w)=>1.2+w*.06,sz:13,dmg:14,color:'#2200aa',xp:22,coins:2,unlockWave:50, biome:'abyss'},
+  // ⚙️ Usine — Drone : vole au-dessus, immunisé aux obstacles
+  drone:       {hp:(w)=>45+w*10, spd:(w)=>1.8+w*.07,sz:11,dmg:12,color:'#aaaaaa',xp:18,coins:2,unlockWave:60, biome:'machine'},
+  // 💭 Rêve — Spectre de Rêve : change de forme aléatoirement
+  dreamspec:   {hp:(w)=>55+w*12, spd:(w)=>1.5+w*.07,sz:13,dmg:15,color:'#cc99ff',xp:25,coins:2,unlockWave:70, biome:'dream'},
+  // ☄️ Apocalypse — Cavalier : ultra-rapide, laisse une traînée de destruction
+  horseman:    {hp:(w)=>80+w*18, spd:(w)=>2.5+w*.09,sz:14,dmg:30,color:'#ff0000',xp:40,coins:3,unlockWave:80, biome:'apocalypse'},
+  // ── ENNEMIS EXCLUSIFS AUX BIOMES ──
+  // 🌌 Vide — Fantôme des abysses : invisible sauf au contact, se duplique à la mort
+  void_phantom:{hp:(w)=>35+w*8, spd:(w)=>1.6+w*.07,sz:11,dmg:14,color:'#001133',xp:18,coins:1,unlockWave:1,  biome:'void'},
+  // 🔥 Enfer — Démon de braise : laisse une traînée de feu, immunisé au gel
+  ember_demon: {hp:(w)=>55+w*12,spd:(w)=>1.3+w*.06,sz:14,dmg:18,color:'#ff2200',xp:22,coins:2,unlockWave:15, biome:'inferno'},
+  // ❄️ Glacier — Golem de glace : se régénère dans les plaques, explose en éclats en mourant
+  ice_golem:   {hp:(w)=>90+w*20,spd:(w)=>0.6+w*.03,sz:18,dmg:20,color:'#cceeff',xp:30,coins:2,unlockWave:30, biome:'glacier'},
+  // ☣️ Marais — Spore toxique : éclate en nuage empoisonné à la mort
+  spore:       {hp:(w)=>30+w*7, spd:(w)=>1.1+w*.05,sz:13,dmg:8, color:'#66ff22',xp:14,coins:1,unlockWave:45, biome:'toxic'},
+  // ⚡ Tempête — Éclair vivant : se téléporte aléatoirement, chaque touche décharge
+  living_bolt: {hp:(w)=>40+w*9, spd:(w)=>2.0+w*.08,sz:10,dmg:16,color:'#ddddff',xp:20,coins:2,unlockWave:60, biome:'storm'},
+  // 🌑 Ombre — Doppelgänger : copie exacte du joueur qui imite ses mouvements
+  doppel:      {hp:(w)=>60+w*14,spd:(w)=>2.8+w*.06,sz:12,dmg:20,color:'#330066',xp:35,coins:3,unlockWave:75, biome:'shadow'},
+  // 🌌 Cosmique — Étoile mourante : orbit autour du joueur, explose en nova à la mort
+  dying_star:  {hp:(w)=>150+w*30,spd:(w)=>0.9+w*.04,sz:16,dmg:25,color:'#ffaaff',xp:60,coins:4,unlockWave:90, biome:'cosmic'},
 };
 
 function edgePos(){
+  // Spawn autour de la caméra (pas juste les bords du canvas)
+  const cx=(state&&state.camX)||0, cy=(state&&state.camY)||0;
+  const margin=50;
   const s=Math.floor(Math.random()*4);
-  if(s===0)return{x:Math.random()*W,y:-30};if(s===1)return{x:W+30,y:Math.random()*H};
-  if(s===2)return{x:Math.random()*W,y:H+30};return{x:-30,y:Math.random()*H};
+  if(s===0)return{x:cx+Math.random()*W,       y:cy-margin};
+  if(s===1)return{x:cx+W+margin,               y:cy+Math.random()*H};
+  if(s===2)return{x:cx+Math.random()*W,       y:cy+H+margin};
+  return        {x:cx-margin,                  y:cy+Math.random()*H};
 }
 
 function spawnEnemy(){
   const w=state.wave;
-  const avail=Object.keys(ETYPES).filter(t=>t!=='boss'&&t!=='megaboss'&&ETYPES[t].unlockWave<=w);
-  const type=avail[Math.floor(Math.random()*avail.length)];
+  const currentBiomeId=getCurrentBiome().id;
+  // Pool de base : exclure boss, megaboss, et ennemis exclusifs à d'autres biomes
+  const avail=Object.keys(ETYPES).filter(t=>{
+    if(t==='boss'||t==='megaboss')return false;
+    const cfg=ETYPES[t];
+    if(cfg.unlockWave>w)return false;
+    // Si l'ennemi a un biome exclusif, il spawn seulement dans ce biome
+    if(cfg.biome&&cfg.biome!==currentBiomeId)return false;
+    return true;
+  });
+  // Bonus : l'ennemi du biome actuel a 30% de chances supplémentaires
+  const biomeEnemies=avail.filter(t=>ETYPES[t].biome===currentBiomeId);
+  let type;
+  if(biomeEnemies.length&&Math.random()<.30){
+    type=biomeEnemies[Math.floor(Math.random()*biomeEnemies.length)];
+  } else {
+    type=avail[Math.floor(Math.random()*avail.length)];
+  }
   const{x,y}=edgePos();
   const cfg=ETYPES[type];
   const _gm=state&&state._evGiants?3:1;
@@ -2253,6 +2946,19 @@ function spawnEnemy(){
   if(type==='berserker_e'){e.bersHits=0;}
   if(type==='fallen'){e.falT=0;e.falAngle=0;}
   if(type==='cosmic'){e.cosT=0;e.cosPhase=0;}
+  // Biome exclusifs
+  if(type==='void_phantom'){e.visible=true;e.vpTimer=0;e.splitDone=false;}
+  if(type==='ember_demon'){e.trailTimer=0;}
+  if(type==='ice_golem'){e.igTimer=0;}
+  if(type==='spore'){e.sporeReady=true;}
+  if(type==='living_bolt'){e.boltTimer=0;}
+  if(type==='doppel'){e.doppelTimer=0;}
+  if(type==='dying_star'){e.starAngle=0;e.starOrbit=120;}
+  if(type==='scarab'){e.underground=false;e.scarabTimer=0;}
+  if(type==='distortion'){e.distSplit=0;}
+  if(type==='drone'){e.droneTimer=0;}
+  if(type==='dreamspec'){e.dreamForm=Math.floor(Math.random()*4);e.dreamTimer=0;}
+  if(type==='horseman'){e.horseTrail=[];}
   if(type==='twin'){
     // Spawn son jumeau
     const{x:tx2,y:ty2}=edgePos();
@@ -2281,11 +2987,69 @@ function spawnWave(){
       discoverEntry('enemies','swarm');
     }
   }
-  // Boss
-  if(w>=5&&w%5===0){spawnBoss('boss');}
-  if(w>=20&&w%10===0){spawnBoss('megaboss');}
+  // Boss standard toutes les 15 vagues (vague 15, 30, 45...)
+  // sauf les vagues de boss de biome (gérées séparément à wave%15===14)
+  if(w>=15&&w%15===0){spawnBoss('boss');}
+  if(w>=30&&w%30===0){spawnBoss('megaboss');}
   // Élite
   if(w>=15&&Math.random()<.2)spawnElite();
+}
+
+
+// Boss spécial de fin de biome selon le biome actuel
+const BIOME_BOSS={
+  void:     {type:'entity',   name:'ENTITÉ DU VIDE',     scale:2.5},
+  inferno:  {type:'firetitan',name:'TITAN INFERNAL',     scale:2.2},
+  glacier:  {type:'icetitan', name:'SEIGNEUR GLACIAL',   scale:2.2},
+  toxic:    {type:'colossus', name:'COLOSSE TOXIQUE',    scale:2.0},
+  storm:    {type:'minigod',  name:'DIEU DE LA TEMPÊTE', scale:2.3},
+  shadow:   {type:'fallen',   name:'OMBRE ABSOLUE',      scale:2.0},
+  desert:     {type:'titan',    name:'PHARAON DES SABLES',   scale:2.2},
+  abyss:      {type:'graviton', name:'SEIGNEUR DE L\'ABÎME',   scale:2.5},
+  machine:    {type:'guardian', name:'COLOSSE MÉCANIQUE',       scale:2.3},
+  dream:      {type:'doppel',   name:'L\'AUTRE MOI',            scale:2.0},
+  apocalypse: {type:'fallen',   name:'ANGE DE L\'APOCALYPSE',  scale:3.0},
+  cosmic:   {type:'cosmic',   name:'DIEU COSMIQUE',      scale:2.5},
+};
+
+function spawnBiomeBoss(){
+  const biome=getCurrentBiome();
+  const bb=BIOME_BOSS[biome.id]||{type:'megaboss',name:'BOSS',scale:2};
+  const w=state.wave;
+  const{x,y}=edgePos();
+  const cfg=ETYPES[bb.type]||ETYPES.megaboss;
+  const boss={
+    x,y,
+    type:bb.type,
+    hp:  cfg.hp(w)*bb.scale*1.5,
+    maxHp:cfg.hp(w)*bb.scale*1.5,
+    speed:cfg.spd(w)*.8,
+    size: cfg.sz*bb.scale,
+    dmg:  cfg.dmg*1.3,
+    color:biome.accent,
+    xp:   cfg.xp*3,
+    coins:cfg.coins*3,
+    isBiomeBoss:true,
+    biomeBossName:bb.name,
+    id:Math.random()
+  };
+  // Initialiser extras selon le type
+  if(bb.type==='entity')boss.immune=true;
+  if(bb.type==='cosmic'){boss.cosT=0;boss.cosPhase=0;}
+  if(bb.type==='fallen'){boss.falT=0;boss.falAngle=0;}
+  state.enemies.push(boss);
+  state.biomeBossAlive=true;
+  snd('boss');
+  // Banner spécial
+  const b=document.getElementById('wave-banner');
+  if(b){
+    b.textContent=`⚠ BOSS — ${bb.name} ⚠`;
+    b.style.color=biome.accent;
+    b.style.background=biome.accent+'22';
+    b.style.borderColor=biome.accent;
+    b.classList.add('show');
+  }
+  discoverEntry('enemies',bb.type);
 }
 
 function spawnBoss(type='boss'){
@@ -2316,7 +3080,10 @@ function startGame(){
   document.getElementById('upgrade-screen').classList.remove('show');
   dashBtn.style.display='none';
   state=mkState();applyShopBonuses(state);
-  state.running=true;state.biome=getBiome(1);setTimeout(()=>discoverEntry('biomes','void'),500);mouse={x:W/2,y:H/2};
+  state.running=true;state.biome=getBiome(1);
+  state.camX=state.player.x-W/2;
+  state.camY=state.player.y-H/2;
+  setTimeout(()=>discoverEntry('biomes','void'),500);mouse={x:W/2,y:H/2};
   updateEnergyUI();showWaveBanner(1);
   if(gameLoop){cancelAnimationFrame(gameLoop);gameLoop=null;}
   lastTime=0;loop();
@@ -2353,38 +3120,72 @@ function update(dt){
   const p=state.player;
   state.elapsed+=dt;state.waveTimer+=dt;
 
+  // Caméra suit le joueur en douceur
+  const targetCamX=p.x-W/2;
+  const targetCamY=p.y-H/2;
+  state.camX+=(targetCamX-state.camX)*.12;
+  state.camY+=(targetCamY-state.camY)*.12;
+
   // Vague toutes les 18s
-  if(state.waveTimer>18000){
+  // Avancer la vague si : 60s écoulées OU tous les ennemis morts (et pas de boss biome en vie)
+  const waveReady=state.waveTimer>60000||(state.enemies.length===0&&!state.biomeBossAlive);
+  // Vague de boss biome (wave 14, 29, 44...) — bloquer jusqu'au kill
+  if(state.biomeBossAlive){
+    // Vérifier si le boss est encore en vie
+    const bossStillAlive=state.enemies.some(e=>e.isBiomeBoss);
+    if(!bossStillAlive){
+      state.biomeBossAlive=false;
+      // Soin du joueur + avancer la vague immédiatement
+      p.hp=Math.min(p.maxHp,p.hp+p.maxHp*.3);pts(p.x,p.y,'#00ff88',1.5,6);
+      state.waveTimer=60001; // forcer avancement
+    }
+  }
+  if(waveReady&&!state.biomeBossAlive){
     state.waveTimer=0;state.wave++;
     state.spawnInterval=Math.max(250,state.spawnInterval-60);
     showWaveBanner(state.wave);
     spawnWave();
-    if(state.wave%5===0){p.hp=Math.min(p.maxHp,p.hp+25);pts(p.x,p.y,'#00ff88',1.2,5);}
+    if(state.wave%15===0){p.hp=Math.min(p.maxHp,p.hp+Math.floor(p.maxHp*.15));pts(p.x,p.y,'#00ff88',1.2,5);}
+    // Dernière vague de chaque biome (14, 29, 44, 59...) → boss de biome
+    if(state.wave%15===14){
+      state.biomeBossAlive=false; // reset au cas où
+      setTimeout(()=>{ if(state.running)spawnBiomeBoss(); },2500);
+    }
     // Changement de biome toutes les 15 vagues
     if(state.wave%15===0){
       const nb=getBiome(state.wave);
-      if(!state.biome||state.biome.id!==nb.id){
-        clearBiomeObstacles();
-        state.biome=nb;
-        state.biomeTransition=1;
-        showBiomeBanner(nb);
-        discoverEntry('biomes',nb.id);
-        // Appliquer les mutations selon le nombre de boucles
-        const loop=getBiomeLoop();
-        if(loop>0){
-          applyBiomeMutations(nb.id, loop);
-          // Découvrir les mutations actives
-          const muts=BIOME_MUTATIONS[nb.id]||[];
-          for(let mi=0;mi<Math.min(loop,muts.length);mi++){
-            discoverEntry('mutations',nb.id+'_mut'+mi);
-          }
+      const loop=getBiomeLoop();
+      // Toujours changer — même si c'est le même biome ID (nouvelle boucle = nouvelles mutations)
+      clearBiomeObstacles();
+      state.biome=nb;
+      state.biomeTransition=1;
+      showBiomeBanner(nb);
+      discoverEntry('biomes',nb.id);
+      // Appliquer les mutations cumulées selon le nombre de boucles
+      if(loop>0){
+        applyBiomeMutations(nb.id, loop);
+        const muts=BIOME_MUTATIONS[nb.id]||[];
+        for(let mi=0;mi<Math.min(loop,muts.length);mi++){
+          discoverEntry('mutations',nb.id+'_mut'+mi);
         }
+      }
+      // Annoncer la nouvelle boucle si on recommence au début
+      if(nb.id===BIOMES[0].id&&loop>0){
+        setTimeout(()=>{
+          const b=document.getElementById('wave-banner');
+          if(b){
+            b.textContent=`🔄 BOUCLE ${loop+1} — LES BIOMES MUTENT !`;
+            b.style.color='#ffd700';b.style.background='rgba(255,215,0,.15)';
+            b.classList.add('show');
+            setTimeout(()=>{b.classList.remove('show');b.style.color='';b.style.background='';},4000);
+          }
+        },1500);
       }
     }
     // Événement spécial toutes les ~15 vagues, aléatoire
-    state.eventCooldown-=18000;
+    state.eventCooldown--;
     if(state.eventCooldown<=0){
-      state.eventCooldown=45000+Math.random()*30000;
+      state.eventCooldown=15; // toutes les 15 vagues
       startEvent(pickEvent());
     }
   }
@@ -2403,8 +3204,79 @@ function update(dt){
   }
   // Soin événement
   if(state._evHealRate>0)p.hp=Math.min(p.maxHp,p.hp+state._evHealRate*dt*.001);
-  // XP mult événement
-  if(state._evXpMult>1)state.xpMult=(state.xpMult||1);  // géré dans gainXP
+  // Malédiction — PV descend lentement
+  if(state._evCurse)p.hp=Math.max(1,p.hp-8*dt*.001);
+  // Miroir de dégâts — géré dans collision
+  // Phantom — géré dans collision
+  if(state._evInvincible)p.shieldActive=true;
+  // Tempête gravitationnelle
+  if(state._evGravStorm){
+    state._evGravAngle=(state._evGravAngle||0)+dt*.0005;
+    for(const e of state.enemies){if(!e)continue;
+      e.x+=Math.cos(state._evGravAngle)*1.5;e.y+=Math.sin(state._evGravAngle)*1.5;
+    }
+  }
+  // Super magnétisme — attire tout
+  if(state._evMagnet){
+    for(const e of state.enemies){if(!e)continue;const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;e.x+=dx/d*1.5;e.y+=dy/d*1.5;}
+  }
+  // Pluie de balles depuis le ciel
+  if(state._evBulletRain){
+    state._evBulletRainTimer=(state._evBulletRainTimer||0)+dt;
+    if(state._evBulletRainTimer>500){state._evBulletRainTimer=0;
+      const tx=p.x+(Math.random()-.5)*200,ty=p.y+(Math.random()-.5)*200;
+      let bd=Infinity,bx=tx,by=ty;
+      for(const e of state.enemies){const d=Math.hypot(e.x-tx,e.y-ty);if(d<bd){bd=d;bx=e.x;by=e.y;}}
+      state.bullets.push({x:bx,y:by-200,vx:0,vy:8,dmg:p.bulletDmg*1.5,size:p.bulletSize*1.2,life:60,pierce:1,enemy:false,chainLeft:0,isChain:false,frozen:0});
+    }
+  }
+  // Laser du ciel
+  if(state._evLaserSky){
+    state._evLaserTimer=(state._evLaserTimer||0)+dt;
+    if(state._evLaserTimer>800){state._evLaserTimer=0;
+      // Cibler un ennemi aléatoire
+      if(state.enemies.length>0){
+        const target=state.enemies[Math.floor(Math.random()*state.enemies.length)];
+        if(target){pts(target.x,target.y,'#ff0044',2,6);target.hp-=p.bulletDmg*3;}
+      }
+    }
+  }
+  // Distorsion temporelle — ennemis ralentis
+  if(state._evTimeSlow&&state._evTimeSlow<1){
+    for(const e of state.enemies){if(e&&!e._timeSlowed){e.speed*=state._evTimeSlow;e._timeSlowed=true;}}
+  }
+  // Clones événement — tirent automatiquement
+  if(state._evClones&&state._evClones.length){
+    for(const cl of state._evClones){
+      cl.x=p.x+(cl.x-p.x)*.9+(Math.random()-.5)*3;
+      cl.y=p.y+(cl.y-p.y)*.9+(Math.random()-.5)*3;
+    }
+  }
+  // Multivers — dupliquer les balles
+  if(state._evMultiverse){
+    const newBullets=[];
+    for(const b of state.bullets){if(!b.enemy&&Math.random()<.02){
+      newBullets.push({...b,vx:-b.vy,vy:b.vx,id:Math.random()});
+    }}
+    state.bullets.push(...newBullets);
+  }
+  // Invasion boss rain
+  if(state._evBossRain){state._evBossTimer=(state._evBossTimer||0)+dt;if(state._evBossTimer>4000){state._evBossTimer=0;spawnBoss('boss');}}
+  // Convoyeur (machine)
+  if(state._conveyorForce>0){
+    p.x+=Math.cos(state._conveyorAngle||0)*state._conveyorForce*.3;
+    p.y+=Math.sin(state._conveyorAngle||0)*state._conveyorForce*.3;
+  }
+  // Cauchemars (dream)
+  if(state._nightmareTimer>=0){
+    state._nightmareTimer=(state._nightmareTimer||0)+dt;
+    if(state._nightmareTimer>3000){state._nightmareTimer=0;
+      const{x,y}=edgePos();const cfg=ETYPES.ghost;
+      state.enemies.push({x,y,type:'ghost',hp:cfg.hp(state.wave),maxHp:cfg.hp(state.wave),speed:cfg.spd(state.wave)*1.5,size:cfg.sz,dmg:cfg.dmg,color:'rgba(200,150,255,.7)',xp:0,coins:0,id:Math.random(),gt:0});
+    }
+  }
+  // XP mult événement (géré ici directement)
+  // state._evXpMult utilisé dans gainXP
 
   // Spawn continu
   state.spawnTimer+=dt;
@@ -2428,8 +3300,7 @@ function update(dt){
   if(keys['a']||keys['arrowleft'])mx=-1;if(keys['d']||keys['arrowright'])mx=1;
   const ml=Math.hypot(mx,my)||1;
   if(mx||my){p.x+=mx/ml*p.speed;p.y+=my/ml*p.speed;}
-  p.x=Math.max(p.size,Math.min(W-p.size,p.x));
-  p.y=Math.max(p.size,Math.min(H-p.size,p.y));
+  // map infinie — pas de bords
 
   // Dash cooldown
   if(p.dashCd>0){p.dashCd-=dt;if(p.hasDash){dashBtn.classList.remove('ready');dashBtn.classList.add('cooldown');}}
@@ -2489,7 +3360,32 @@ function update(dt){
   state.bullets=state.bullets.filter(b=>{
     b.x+=b.vx;b.y+=b.vy;b.life--;
     if(b.frozen>0)b.frozen-=dt;
-    if(b.x<-30||b.x>W+30||b.y<-30||b.y>H+30||b.life<=0)return false;
+    // Tir magnétique — courbe vers ennemi le plus proche
+    if(!b.enemy&&state.player.magnetShot){
+      let be=null,bd=999;
+      for(const e of state.enemies){const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<bd){bd=d;be=e;}}
+      if(be&&bd<200){const a=Math.atan2(be.y-b.y,be.x-b.x);b.vx+=(Math.cos(a)-b.vx*.1)*.08;b.vy+=(Math.sin(a)-b.vy*.1)*.08;}
+    }
+    // Grenade — explose à l'arrivée
+    if(b.isGrenade){b.grenadeLife--;if(b.grenadeLife<=0){explodeAt(b.x,b.y,65,0);return false;}}
+    // Mine joueur — explose si ennemi proche
+    if(b.isMinePlayer){
+      for(const e of state.enemies){if(e&&Math.hypot(e.x-b.x,e.y-b.y)<25){explodeAt(b.x,b.y,80,0);return false;}}
+    }
+    // Splitter — se fractionne à mi-vie
+    if(!b.enemy&&state.player.splitBullet&&!b.hasSplit&&b.life<45&&b.life>40){
+      b.hasSplit=true;
+      const perp={vx:-b.vy*.6,vy:b.vx*.6};
+      state.bullets.push({...b,vx:b.vx+perp.vx,vy:b.vy+perp.vy,life:40,hasSplit:true,size:b.size*.7});
+      state.bullets.push({...b,vx:b.vx-perp.vx,vy:b.vy-perp.vy,life:40,hasSplit:true,size:b.size*.7});
+    }
+    // Traînée de feu
+    if(!b.enemy&&state.player.fireTrail&&Math.random()<.15){
+      state.obstacles=state.obstacles||[];
+      state.obstacles.push({type:'fire_zone',x:b.x,y:b.y,r:8,color:'rgba(255,80,0,.2)',dmg:4,solid:false,_life:1500});
+    }
+    // Supprimer si trop loin du joueur (world coords) ou vie écoulée
+    if(Math.hypot(b.x-p.x,b.y-p.y)>Math.max(W,H)*1.2||b.life<=0)return false;
     if(b.enemy){
       if(Math.hypot(b.x-p.x,b.y-p.y)<p.size+b.size){
         if(p.divineActive)return false;
@@ -2521,6 +3417,10 @@ function update(dt){
         else dmgNum(e.x,e.y,Math.round(dmg),'#ff6');
         // Entity : immunisé aux non-critiques
         if(e.immune&&!cr){pts(b.x,b.y,'#ff00ff',.6,1.5);if(b.pierce<=0)return false;b.pierce--;continue;}
+        // Combo — bonus de dégâts
+        if(state.player.combo>0)dmg*=1+state.player.combo*.05;
+        // Double mise — 50/50
+        if(state.player.doubleBet)dmg=Math.random()<.5?dmg*2:0;
         // Armure : réduit les dégâts de 50%
         if(e.armor)dmg*=.5;
         // Void : absorbe les balles non-critiques
@@ -2823,6 +3723,79 @@ function update(dt){
         for(let k=0;k<8;k++){const a=k/8*Math.PI*2+e.cosPhase;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,dmg:0,size:7,life:200,enemy:true,pierce:1,frozen:0});}
         state.bullets.push({x:e.x,y:e.y,vx:ex/ed*5,vy:ey/ed*5,dmg:0,size:9,life:200,enemy:true,pierce:2,frozen:0});
       }
+    }else if(e.type==='void_phantom'){
+      // Invisible sauf au contact — clignote
+      e.vpTimer=(e.vpTimer||0)+dt;
+      e.visible=e.vpTimer%2000<400||ed<60;
+      e.x+=ex/ed*sp;e.y+=ey/ed*sp;
+    }else if(e.type==='ember_demon'){
+      e.x+=ex/ed*sp;e.y+=ey/ed*sp;
+      // Traînée de feu
+      e.trailTimer=(e.trailTimer||0)+dt;
+      if(e.trailTimer>180){e.trailTimer=0;
+        state.obstacles=state.obstacles||[];
+        state.obstacles.push({type:'fire_zone',x:e.x,y:e.y,r:15,color:'rgba(255,80,0,.2)',dmg:6,solid:false,_life:3000});
+      }
+    }else if(e.type==='ice_golem'){
+      e.x+=ex/ed*sp*.7;e.y+=ey/ed*sp*.7;
+      // Se régénère dans les plaques de glace
+      e.igTimer=(e.igTimer||0)+dt;
+      if(e.igTimer>1000){e.igTimer=0;
+        const onIce=state.obstacles&&state.obstacles.some(ob=>ob.type==='ice_patch'&&Math.hypot(ob.x-e.x,ob.y-e.y)<ob.r);
+        if(onIce)e.hp=Math.min(e.maxHp,e.hp+15);
+      }
+    }else if(e.type==='spore'){
+      e.x+=ex/ed*sp*.8;e.y+=ey/ed*sp*.8;
+    }else if(e.type==='living_bolt'){
+      // Se téléporte aléatoirement toutes les 1.5s
+      e.boltTimer=(e.boltTimer||0)+dt;
+      if(e.boltTimer>1500){e.boltTimer=0;
+        pts(e.x,e.y,'#ddddff',1,3);
+        // Téléport vers le joueur avec offset
+        const angle=Math.random()*Math.PI*2;
+        const dist=60+Math.random()*80;
+        e.x=p.x+Math.cos(angle)*dist;e.y=p.y+Math.sin(angle)*dist;
+        pts(e.x,e.y,'#ddddff',1,3);
+      }
+    }else if(e.type==='doppel'){
+      // Copie les mouvements du joueur en miroir
+      e.doppelTimer=(e.doppelTimer||0)+dt;
+      if(joy.active){e.x+=joy.dx*sp*.9;e.y+=joy.dy*sp*.9;}
+      else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
+    }else if(e.type==='dying_star'){
+      e.starAngle=(e.starAngle||0)+dt*.0012;
+      e.x+=(p.x+Math.cos(e.starAngle)*e.starOrbit-e.x)*.05;
+      e.y+=(p.y+Math.sin(e.starAngle)*e.starOrbit-e.y)*.05;
+    }else if(e.type==='scarab'){
+      // Creuse sous terre, surgit sous le joueur
+      e.scarabTimer=(e.scarabTimer||0)+dt;
+      if(!e.underground){e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
+      if(e.scarabTimer>2000&&!e.underground){e.underground=true;e.scarabTimer=0;pts(e.x,e.y,'#cc8800',.6,3);}
+      if(e.scarabTimer>1500&&e.underground){
+        e.underground=false;e.x=p.x+(Math.random()-.5)*60;e.y=p.y+(Math.random()-.5)*60;
+        pts(e.x,e.y,'#cc8800',1,4);e.scarabTimer=0;
+      }
+    }else if(e.type==='distortion'){
+      e.x+=ex/ed*sp;e.y+=ey/ed*sp;
+    }else if(e.type==='drone'){
+      // Vol direct, ignore les obstacles
+      e.x+=ex/ed*sp*1.2;e.y+=ey/ed*sp*1.2;
+      e.droneTimer=(e.droneTimer||0)+dt;
+      if(e.droneTimer>1800){e.droneTimer=0;
+        state.bullets.push({x:e.x,y:e.y,vx:ex/ed*4,vy:ey/ed*4,dmg:0,size:5,life:100,enemy:true,pierce:0,frozen:0});
+      }
+    }else if(e.type==='dreamspec'){
+      e.x+=ex/ed*sp;e.y+=ey/ed*sp;
+      e.dreamTimer=(e.dreamTimer||0)+dt;
+      if(e.dreamTimer>2000){e.dreamTimer=0;e.dreamForm=Math.floor(Math.random()*4);}
+    }else if(e.type==='horseman'){
+      e.x+=ex/ed*sp;e.y+=ey/ed*sp;
+      // Traînée de destruction
+      if(Math.random()<.15){
+        e.horseTrail=e.horseTrail||[];
+        e.horseTrail.push({x:e.x,y:e.y,life:30});
+        if(e.horseTrail.length>12)e.horseTrail.shift();
+      }
     }else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
 
     // Orbes
@@ -2830,6 +3803,7 @@ function update(dt){
 
     // Contact
     if(Math.hypot(p.x-e.x,p.y-e.y)<p.size+e.size){
+      if(state._evPhantom){state.enemies.splice(i,1);continue;}
       if(p.divineActive){killEnemy(i);continue;}
       if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;pts(p.x,p.y,'#00aaff',1.5,5);
         if(e.type==='splitter')splitEnemy(e);state.enemies.splice(i,1);continue;}
@@ -2883,12 +3857,221 @@ function update(dt){
   state.particles=state.particles.filter(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=.05;pt.life-=dt*.004;return pt.life>0;});
   state.dmgNums=state.dmgNums.filter(d=>{d.y-=1.3;d.life-=dt*.005;return d.life>0;});
   updateObstacles(dt);
+
+  // ══════════════════════════════════════
+  // NOUVELLES ARMES — mise à jour chaque frame
+  // ══════════════════════════════════════
+
+  // 🔪 COUTEAUX orbitaux
+  if(p.knifeCount>0){
+    p.knifeAngle=(p.knifeAngle||0)+dt*.004;
+    if(!state.knives)state.knives=[];
+    state.knives=[];
+    for(let k=0;k<p.knifeCount;k++){
+      const a=p.knifeAngle+(k/p.knifeCount)*Math.PI*2;
+      const kx=p.x+Math.cos(a)*55,ky=p.y+Math.sin(a)*55;
+      state.knives.push({x:kx,y:ky,angle:a});
+      for(let i=state.enemies.length-1;i>=0;i--){
+        const e=state.enemies[i];if(!e)continue;
+        if(Math.hypot(e.x-kx,e.y-ky)<e.size+8){e.hp-=p.bulletDmg*.4*dt*.06;if(e.hp<=0)killEnemy(i);}
+      }
+    }
+  }
+
+  // 🔴 LASER BEAM continu
+  if(p.laserBeam){
+    if(!p.laserActive)p.laserActive=false;
+    p.laserCd=(p.laserCd||0)+dt;
+    if(p.laserCd>200){p.laserCd=0;
+      // Trouver ennemi le plus proche
+      let bd=Infinity,be=null;
+      for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;be=e;}}
+      if(be&&bd<W*.6){be.hp-=p.bulletDmg*.15;if(be.hp<=0){const idx=state.enemies.indexOf(be);if(idx>=0)killEnemy(idx);}
+        state._laserTarget={x:be.x,y:be.y};}
+      else state._laserTarget=null;
+    }
+  }
+
+  // ⚙️ SCIE ROTATIVE
+  if(p.sawActive){
+    p.sawAngle=(p.sawAngle||0)+dt*.003;
+    const sr=p.sawRadius||70;
+    const sx=p.x+Math.cos(p.sawAngle)*sr,sy=p.y+Math.sin(p.sawAngle)*sr;
+    state._saw={x:sx,y:sy,r:18+Math.sin(p.sawAngle*4)*3};
+    for(let i=state.enemies.length-1;i>=0;i--){
+      const e=state.enemies[i];if(!e)continue;
+      if(Math.hypot(e.x-sx,e.y-sy)<e.size+(state._saw.r||18)){
+        e.hp-=p.bulletDmg*.5*dt*.05;if(e.hp<=0)killEnemy(i);
+      }
+    }
+  }
+
+  // ⚡ RAYON OMEGA
+  if(p.beamTimer>=0){
+    p.beamTimer+=dt;
+    if(p.beamTimer>4000){p.beamTimer=0;
+      // Rayon horizontal qui traverse tout
+      state._activeBeam={timer:800,y:p.y};
+      for(let i=state.enemies.length-1;i>=0;i--){
+        const e=state.enemies[i];if(!e)continue;
+        if(Math.abs(e.y-p.y)<30){e.hp-=p.bulletDmg*3;if(e.hp<=0)killEnemy(i);}
+      }
+    }
+    if(state._activeBeam){state._activeBeam.timer-=dt;if(state._activeBeam.timer<=0)state._activeBeam=null;}
+  }
+
+  // 💥 GRENADIER
+  if(p.grenadeTimer>=0){
+    p.grenadeTimer+=dt;
+    if(p.grenadeTimer>2000){p.grenadeTimer=0;
+      // Lancer vers ennemi le plus proche
+      let be=null,bd=Infinity;
+      for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;be=e;}}
+      if(be){
+        const dx=be.x-p.x,dy=be.y-p.y,d=Math.hypot(dx,dy)||1;
+        state.bullets.push({x:p.x,y:p.y,vx:dx/d*4,vy:dy/d*4,
+          dmg:p.bulletDmg*2,size:10,life:80,pierce:99,enemy:false,
+          chainLeft:0,isChain:false,frozen:0,isGrenade:true,grenadeLife:60});
+      }
+    }
+  }
+
+  // 🏹 ARBALÈTE
+  if(p.crossbowTimer>=0){
+    p.crossbowTimer+=dt;
+    if(p.crossbowTimer>1500){p.crossbowTimer=0;
+      let be=null,bd=Infinity;
+      for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;be=e;}}
+      if(be){const dx=be.x-p.x,dy=be.y-p.y,d=Math.hypot(dx,dy)||1;
+        state.bullets.push({x:p.x,y:p.y,vx:dx/d*(p.bulletSpeed*1.8),vy:dy/d*(p.bulletSpeed*1.8),
+          dmg:p.bulletDmg*1.5,size:p.bulletSize*1.2,life:120,pierce:p.pierce+2,
+          enemy:false,chainLeft:0,isChain:false,frozen:0});}
+    }
+  }
+
+  // ⭐ SHURIKEN
+  if(p.shurikenTimer>=0){
+    p.shurikenTimer+=dt;
+    if(p.shurikenTimer>2500){p.shurikenTimer=0;
+      let be=null,bd=Infinity;
+      for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;be=e;}}
+      if(be){const dx=be.x-p.x,dy=be.y-p.y,d=Math.hypot(dx,dy)||1;
+        state.bullets.push({x:p.x,y:p.y,vx:dx/d*p.bulletSpeed*1.2,vy:dy/d*p.bulletSpeed*1.2,
+          dmg:p.bulletDmg,size:9,life:150,pierce:4,enemy:false,
+          chainLeft:4,isChain:false,frozen:0,isShuriken:true});}
+    }
+  }
+
+  // 💣 MINES
+  if(p.mineTimer>=0){
+    p.mineTimer+=dt;
+    if(p.mineTimer>3000){p.mineTimer=0;
+      state.bullets.push({x:p.x,y:p.y,vx:0,vy:0,
+        dmg:p.bulletDmg*3,size:10,life:600,pierce:99,enemy:false,
+        chainLeft:0,isChain:false,frozen:0,isMinePlayer:true});}
+  }
+
+  // 🌪️ TORNADE
+  if(p.tornadoTimer>=0){
+    p.tornadoTimer+=dt;
+    if(p.tornadoTimer>8000){p.tornadoTimer=0;
+      state._tornado={x:p.x,y:p.y,timer:3000,r:80};
+    }
+    if(state._tornado){
+      state._tornado.timer-=dt;
+      state._tornado.x+=(p.x-state._tornado.x)*.02;
+      state._tornado.y+=(p.y-state._tornado.y)*.02;
+      for(const e of state.enemies){if(!e)continue;
+        const d=Math.hypot(e.x-state._tornado.x,e.y-state._tornado.y);
+        if(d<state._tornado.r){
+          const a=Math.atan2(e.y-state._tornado.y,e.x-state._tornado.x);
+          e.x+=Math.cos(a+Math.PI*.5)*3;e.y+=Math.sin(a+Math.PI*.5)*3;
+          e.hp-=p.bulletDmg*.1*dt*.01;
+        }
+      }
+      if(state._tornado.timer<=0)state._tornado=null;
+    }
+  }
+
+  // 〰️ FOUET
+  if(p.whipTimer>=0){
+    p.whipTimer+=dt;
+    if(p.whipTimer>2000){p.whipTimer=0;
+      state._whip={timer:300,px:p.x,py:p.y};
+      for(let i=state.enemies.length-1;i>=0;i--){
+        const e=state.enemies[i];if(!e)continue;
+        const d=Math.hypot(e.x-p.x,e.y-p.y);
+        if(d<100){e.hp-=p.bulletDmg*2;const a=Math.atan2(e.y-p.y,e.x-p.x);e.x+=Math.cos(a)*60;e.y+=Math.sin(a)*60;if(e.hp<=0)killEnemy(i);}
+      }
+    }
+    if(state._whip){state._whip.timer-=dt;if(state._whip.timer<=0)state._whip=null;}
+  }
+
+  // 🐛 SANGSUE — soin par tir (géré dans fireBullet)
+  // 🎰 DOUBLE MISE — géré dans calcul dégâts
+  // 🔢 COMBO — timer de reset
+  if(p.combo>0){
+    p.comboTimer=(p.comboTimer||0)+dt;
+    if(p.comboTimer>3000){p.combo=0;p.comboTimer=0;}
+  }
+
+  // 😢 LARMES DE ISAAC — augmente stats avec kills
+  if(p.isaacTears>0){
+    p.bulletDmg=p._baseDmg*(1+p.isaacTears*.01);
+  }
+
+  // ☠️ TRAÎNÉE TOXIQUE
+  if(p.toxicTrail&&Math.random()<.08){
+    state.obstacles=state.obstacles||[];
+    state.obstacles.push({type:'toxic_pool',x:p.x,y:p.y,r:12,
+      color:'rgba(85,200,0,.18)',solid:false,dmg:4,slow:.8,_life:2000});
+  }
+
+  // 🐱 CHAT MORT
+  if(p.deadCat){
+    p.deadCatTimer=(p.deadCatTimer||0)+dt;
+    p.hp=1;p.maxHp=1;
+    if(p.deadCatTimer>30000){p.deadCat=false;p.maxHp=100;p.hp=100;}
+  }
+
+  // 📕 GRIMOIRE
+  if(p.grimoire){
+    p.grimoireTimer=(p.grimoireTimer||0)+dt;
+    if(p.grimoireTimer>10000){p.grimoireTimer=0;
+      const effects=[
+        ()=>explodeAt(p.x,p.y,80),
+        ()=>{for(const e of state.enemies)if(e)e.frozen=3000;},
+        ()=>{p.hp=Math.min(p.maxHp,p.hp+p.maxHp*.3);},
+        ()=>{state.xpMult=(state.xpMult||1)*2;setTimeout(()=>{state.xpMult/=2;},5000);},
+        ()=>{for(let k=0;k<8;k++){const a=k/8*Math.PI*2;state.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*p.bulletSpeed,vy:Math.sin(a)*p.bulletSpeed,dmg:p.bulletDmg*2,size:p.bulletSize,life:100,pierce:2,enemy:false,chainLeft:0,isChain:false,frozen:0});}},
+      ];
+      effects[Math.floor(Math.random()*effects.length)]();
+      pts(p.x,p.y,'#cc88ff',1.5,6);
+    }
+  }
+
+  // 🌀 ORBES MAGNÉTIQUES
+  if(p.orbMagnet){
+    for(const o of (state.orbs||[])){
+      for(const e of state.enemies){if(!e)continue;
+        const d=Math.hypot(e.x-o.x,e.y-o.y);
+        if(d<80){const a=Math.atan2(e.y-o.y,e.x-o.x);e.x-=Math.cos(a)*1.5;e.y-=Math.sin(a)*1.5;}
+      }
+    }
+  }
+
+  // 🔥 TRAÎNÉE DE FEU — gérée dans fireBullet (particules)
+  // 💠 FRAGMENTEUR — géré dans fireBullet
+  // ⚡ FOUDRE EN CHAÎNE — géré dans killEnemy
+
   updateHUD();
 }
 
 function fireBullet(){
   const p=state.player;
-  let tx=mouse.x,ty=mouse.y,bd=Infinity;
+  // Si pas d'ennemis, viser devant le joueur en world coords
+  let tx=p.x+(mouse.x+state.camX-p.x)||p.x+1,ty=p.y+(mouse.y+state.camY-p.y)||p.y;
+  let bd=Infinity;
   for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;tx=e.x;ty=e.y;}}
   const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy)||1;
   const sh=a=>{const c=Math.cos(a),s=Math.sin(a);
@@ -2896,6 +4079,33 @@ function fireBullet(){
   };
   sh(0);for(let i=1;i<=p.multiShot;i++){sh(i*.22);sh(-i*.22);}
   if(p.triShot){sh(.42);sh(-.42);}
+
+  // Tir miroir — copie dans la direction opposée
+  if(p.mirrorShot){
+    state.bullets.push({x:p.x,y:p.y,vx:-dx/d*p.bulletSpeed,vy:-dy/d*p.bulletSpeed,
+      dmg:p.bulletDmg*.7,size:p.bulletSize*.8,life:80,pierce:p.pierce,
+      enemy:false,chainLeft:0,isChain:false,frozen:0});
+  }
+
+  // Fléchettes — 3 tirs rapides groupés
+  if(p.dartShot){
+    for(let k=0;k<2;k++){
+      setTimeout(()=>{if(state&&state.running&&state.player.dartShot){
+        let be=null,bd=Infinity;
+        for(const e of state.enemies){const dd=Math.hypot(e.x-p.x,e.y-p.y);if(dd<bd){bd=dd;be=e;}}
+        if(be){const ddx=be.x-p.x,ddy=be.y-p.y,dd2=Math.hypot(ddx,ddy)||1;
+          state.bullets.push({x:p.x,y:p.y,vx:ddx/dd2*p.bulletSpeed*1.4,vy:ddy/dd2*p.bulletSpeed*1.4,
+            dmg:p.bulletDmg*.5,size:p.bulletSize*.6,life:70,pierce:1,enemy:false,chainLeft:0,isChain:false,frozen:0});}
+      }},(k+1)*80);
+    }
+  }
+
+  // Sangsue — soin par tir
+  if(p.lifeSteal){p.hp=Math.min(p.maxHp,p.hp+.5);}
+
+  // Splitter — les balles se fractionnent à mi-vie (géré dans update des balles)
+  // Tir magnétique — les balles courbent (géré dans update des balles)
+
   snd('shoot');
 }
 function fireTurret(t){
@@ -2905,11 +4115,12 @@ function fireTurret(t){
   state.bullets.push({x:t.x,y:t.y,vx:dx/d*7,vy:dy/d*7,dmg:state.player.bulletDmg*.6,size:5,life:80,pierce:0,enemy:false,chainLeft:0,isChain:false,frozen:0,isTurret:true});
 }
 function doDash(){
-  const p=state.player;let tx=mouse.x,ty=mouse.y;
+  const p=state.player;
+  let tx=mouse.x+state.camX,ty=mouse.y+state.camY;
   if(joy.active){tx=p.x+joy.dx*100;ty=p.y+joy.dy*100;}
   const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy)||1;
   p.x+=dx/d*95;p.y+=dy/d*95;
-  p.x=Math.max(p.size,Math.min(W-p.size,p.x));p.y=Math.max(p.size,Math.min(H-p.size,p.y));
+  // map infinie — pas de bords
   p.dashCd=3000;pts(p.x,p.y,'#00ffe7',.9,3.5);snd('dash');
 }
 function splitEnemy(e){
@@ -2933,8 +4144,71 @@ function killEnemy(i){
   const xm=state.xpMult||1;
   for(let k=0;k<gc;k++)state.xpGems.push({x:e.x+(Math.random()-.5)*18,y:e.y+(Math.random()-.5)*18,value:Math.ceil(e.xp*xm/gc)});
   if(e.coins>0)state.coinPickups.push({x:e.x,y:e.y,value:Math.round(e.coins*(state._evGoldMult||1))});
-  // bomber/kamikaze : géré dans explodeAt si appelé depuis là, sinon explosion simple
+  // Effets de mort spéciaux
   if(e.type==='bomber'||e.type==='kamikaze'||e.type==='chain_bomber')explodeAt(e.x,e.y,35,1);
+  // void_phantom — se duplique en 2 petits fantômes
+  if(e.type==='void_phantom'&&!e.splitDone){
+    for(let k=0;k<2;k++){
+      const cfg=ETYPES.void_phantom;const w=state.wave;
+      state.enemies.push({x:e.x+(k?30:-30),y:e.y,type:'void_phantom',
+        hp:cfg.hp(w)*.4,maxHp:cfg.hp(w)*.4,speed:cfg.spd(w)*1.3,
+        size:cfg.sz*.6,dmg:cfg.dmg,color:cfg.color,xp:3,coins:0,
+        id:Math.random(),vpTimer:0,visible:true,splitDone:true});
+    }
+  }
+  // spore — explose en nuage toxique
+  if(e.type==='spore'){
+    for(let k=0;k<6;k++){
+      const a=k/6*Math.PI*2;
+      state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*2,vy:Math.sin(a)*2,
+        dmg:0,size:6,life:120,enemy:true,pierce:0,frozen:0,isToxicCloud:true});
+    }
+  }
+  // distortion — se divise en 4
+  if(e.type==='distortion'&&e.distSplit<1){
+    const cfg=ETYPES.basic;
+    for(let k=0;k<4;k++){const a=k/4*Math.PI*2;const w2=state.wave;
+      state.enemies.push({x:e.x+Math.cos(a)*20,y:e.y+Math.sin(a)*20,type:'basic',
+        hp:cfg.hp(w2)*.5,maxHp:cfg.hp(w2)*.5,speed:cfg.spd(w2)*1.5,
+        size:e.size*.6,dmg:e.dmg*.5,color:'#4400cc',xp:2,coins:0,id:Math.random(),distSplit:1});
+    }
+  }
+  // dying_star — nova à la mort
+  if(e.type==='dying_star'){
+    explodeAt(e.x,e.y,80,1);
+    for(let k=0;k<8;k++){
+      const a=k/8*Math.PI*2;
+      state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*4,vy:Math.sin(a)*4,
+        dmg:0,size:7,life:90,enemy:true,pierce:1,frozen:0});
+    }
+    pts(e.x,e.y,'#ffaaff',2,8);
+  }
+  // ice_golem — éclats de glace à la mort
+  if(e.type==='ice_golem'){
+    for(let k=0;k<5;k++){
+      const a=Math.random()*Math.PI*2;
+      state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*3.5,vy:Math.sin(a)*3.5,
+        dmg:0,size:7,life:80,enemy:true,pierce:0,frozen:2000});
+    }
+  }
+  // Foudre en chaîne
+  if(state.player.chainLightning){
+    let count=0;
+    for(let j=state.enemies.length-1;j>=0&&count<3;j--){
+      const en=state.enemies[j];if(!en||en===e)continue;
+      if(Math.hypot(en.x-e.x,en.y-e.y)<180){
+        en.hp-=state.player.bulletDmg*.8;pts(en.x,en.y,'#aaaaff',1,3);count++;
+        if(en.hp<=0)killEnemy(j);
+      }
+    }
+  }
+  // Combo
+  if(state.player.combo!==undefined){state.player.combo=Math.min(40,(state.player.combo||0)+1);state.player.comboTimer=0;}
+  // Larmes de Isaac
+  if(state.player.isaacTears!==undefined){
+    if(!state.player._baseDmg)state.player._baseDmg=state.player.bulletDmg;
+    state.player.isaacTears++;
+  }
   for(let k=0;k<4;k++)pts(e.x,e.y,e.color,.7,2.5);
   snd('hit');state.enemies.splice(i,1);
 }
@@ -3095,6 +4369,21 @@ function updateHUD(){
   document.getElementById('hud-coins').textContent=state.coinsRun;
   const e=getE();const he2=document.getElementById('hud-energy');
   he2.textContent=e;he2.className='hud-val'+(e<=2?' danger':'');
+  // Timer de vague dans le HUD
+  const wt=document.getElementById('hud-wave-timer');
+  if(wt){
+    if(state&&state.running){
+      if(state.biomeBossAlive){
+        wt.textContent='⚠ TUE LE BOSS !';
+        wt.style.color='#ff4060';
+      } else {
+        const secLeft=Math.max(0,Math.ceil((60000-(state.waveTimer||0))/1000));
+        const allDead=state.enemies&&state.enemies.length===0;
+        wt.textContent=allDead?'✓ VAGUE TERMINÉE':`${secLeft}s`;
+        wt.style.color=secLeft<10?'#ff4060':'';
+      }
+    }
+  }
   // Biome actuel dans le HUD
   const bm=getCurrentBiome();
   const hb=document.getElementById('hud-biome');
@@ -3108,29 +4397,31 @@ function updateHUD(){
 ══════════════════════════════════════════════ */
 function draw(){
   const biome=getCurrentBiome();
+  const camX=state?state.camX:0, camY=state?state.camY:0;
+
   // Fond dynamique selon biome
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle=biome.bg;ctx.fillRect(0,0,W,H);
-  // Couche d'ambiance biome
   if(biome.skyColor){ctx.fillStyle=biome.skyColor;ctx.fillRect(0,0,W,H);}
-  // Particules ambiantes selon biome
+
+  // Particules ambiantes fixes (pas affectées par cam — effet parallaxe)
   if(state&&Math.random()<.04){
     const bx=Math.random()*W,by=Math.random()*H;
     ctx.beginPath();ctx.arc(bx,by,Math.random()*1.5+.3,0,Math.PI*2);
     ctx.fillStyle=biome.accent+'44';ctx.fill();
   }
-  // Grille biome
+
+  // Grille biome — se déplace avec la caméra (effet infini)
   ctx.strokeStyle=biome.grid;ctx.lineWidth=1;
-  for(let x=0;x<W;x+=38){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<H;y+=38){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-  // Obscurité événement
-  if(state&&state._evDark){
-    const p=state.player;
-    const grd=ctx.createRadialGradient(p.x,p.y,50,p.x,p.y,170);
-    grd.addColorStop(0,'rgba(0,0,0,0)');
-    grd.addColorStop(1,'rgba(0,0,0,.96)');
-    // On dessine l'obscurité APRÈS tout le reste — on la met en dernier
-  }
+  const gSize=38;
+  const offX=((camX%gSize)+gSize)%gSize;
+  const offY=((camY%gSize)+gSize)%gSize;
+  for(let x=-offX;x<W+gSize;x+=gSize){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=-offY;y<H+gSize;y+=gSize){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // ── Tout ce qui suit est dans l'espace monde (décalé par la caméra) ──
+  ctx.save();
+  ctx.translate(-camX,-camY);
 
   // Pièces
   state.coinPickups.forEach(c=>{ctx.font='13px serif';ctx.textAlign='center';ctx.fillText('🪙',c.x,c.y);ctx.textAlign='left';});
@@ -3391,6 +4682,111 @@ function draw(){
         ctx.strokeStyle=`hsla(${(t8*60+ring*120)%360},100%,70%,0.6)`;ctx.lineWidth=2;ctx.stroke();
       }
       ctx.beginPath();ctx.arc(0,0,e.size*.4,0,Math.PI*2);ctx.fillStyle='#cc00ff';ctx.shadowBlur=18;ctx.shadowColor='#cc00ff';ctx.fill();ctx.shadowBlur=0;
+    }else if(e.type==='void_phantom'){
+      // Quasi-invisible — juste un contour flou
+      ctx.globalAlpha=e.visible?0.85:0.08;
+      ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);
+      ctx.fillStyle='#001133';ctx.fill();
+      ctx.strokeStyle='rgba(0,100,255,.6)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.globalAlpha=1;
+    }else if(e.type==='ember_demon'){
+      const t9=Date.now()*.004;
+      ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);
+      const fg=ctx.createRadialGradient(0,0,0,0,0,e.size);
+      fg.addColorStop(0,'#ffcc00');fg.addColorStop(1,'#ff2200');
+      ctx.fillStyle=fg;ctx.shadowBlur=14;ctx.shadowColor='#ff4400';ctx.fill();ctx.shadowBlur=0;
+      // Cornes
+      ctx.strokeStyle='#880000';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(-e.size*.4,-e.size*.6);ctx.lineTo(-e.size*.2,-e.size*1.1);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(e.size*.4,-e.size*.6);ctx.lineTo(e.size*.2,-e.size*1.1);ctx.stroke();
+    }else if(e.type==='ice_golem'){
+      ctx.fillStyle='rgba(200,240,255,.85)';ctx.fillRect(-e.size,-e.size,e.size*2,e.size*2);
+      ctx.strokeStyle='rgba(150,220,255,.9)';ctx.lineWidth=3;ctx.strokeRect(-e.size,-e.size,e.size*2,e.size*2);
+      // Cristaux sur le corps
+      for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4;
+        ctx.beginPath();ctx.moveTo(Math.cos(a)*e.size*.5,Math.sin(a)*e.size*.5);
+        ctx.lineTo(Math.cos(a)*e.size*1.1,Math.sin(a)*e.size*1.1);
+        ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=2;ctx.stroke();
+      }
+    }else if(e.type==='spore'){
+      const ta=Date.now()*.003;
+      ctx.beginPath();ctx.arc(0,0,e.size*(0.85+Math.sin(ta)*.15),0,Math.PI*2);
+      ctx.fillStyle='rgba(102,255,34,.7)';ctx.fill();
+      ctx.strokeStyle='rgba(150,255,50,.5)';ctx.lineWidth=2;ctx.stroke();
+      // Points sur la surface
+      for(let k=0;k<5;k++){const a=k/5*Math.PI*2;
+        ctx.beginPath();ctx.arc(Math.cos(a)*e.size*.5,Math.sin(a)*e.size*.5,2,0,Math.PI*2);
+        ctx.fillStyle='rgba(200,255,100,.8)';ctx.fill();
+      }
+    }else if(e.type==='living_bolt'){
+      const tb=Date.now()*.006;
+      ctx.strokeStyle=`rgba(220,220,255,${0.7+Math.sin(tb)*.3})`;ctx.lineWidth=2;
+      // Zigzag électrique
+      ctx.beginPath();
+      for(let k=0;k<6;k++){const a=k/6*Math.PI*2+tb;
+        k===0?ctx.moveTo(Math.cos(a)*e.size,Math.sin(a)*e.size):ctx.lineTo(Math.cos(a)*e.size*(0.6+Math.random()*.4),Math.sin(a)*e.size*(0.6+Math.random()*.4));
+      }ctx.closePath();ctx.stroke();
+      ctx.beginPath();ctx.arc(0,0,e.size*.4,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.shadowBlur=12;ctx.shadowColor='#aaaaff';ctx.fill();ctx.shadowBlur=0;
+    }else if(e.type==='doppel'){
+      // Silhouette miroir du joueur
+      ctx.globalAlpha=.75;
+      ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);ctx.fillStyle='#330066';ctx.fill();
+      ctx.strokeStyle='rgba(150,0,255,.7)';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='rgba(180,0,255,.5)';ctx.font='bold '+(e.size*.7)+'px serif';ctx.textAlign='center';ctx.fillText('👤',0,e.size*.3);ctx.textAlign='left';
+      ctx.globalAlpha=1;
+    }else if(e.type==='scarab'){
+      if(e.underground){ctx.globalAlpha=.15;}
+      ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);ctx.fillStyle='#cc8800';ctx.fill();
+      ctx.strokeStyle='#886600';ctx.lineWidth=2;ctx.stroke();
+      if(!e.underground){
+        // Pattes
+        for(let k=0;k<6;k++){const a=k/6*Math.PI*2;ctx.beginPath();ctx.moveTo(Math.cos(a)*e.size*.7,Math.sin(a)*e.size*.7);ctx.lineTo(Math.cos(a)*e.size*1.4,Math.sin(a)*e.size*1.4);ctx.strokeStyle='#aa7700';ctx.lineWidth=1.5;ctx.stroke();}
+      }
+      ctx.globalAlpha=1;
+    }else if(e.type==='distortion'){
+      const td=Date.now()*.003;
+      ctx.globalAlpha=.85;
+      for(let ring=0;ring<2;ring++){
+        ctx.beginPath();ctx.arc(0,0,e.size*(1-ring*.3),0,Math.PI*2);
+        ctx.strokeStyle=`hsla(${240+td*20%120},80%,60%,.6)`;ctx.lineWidth=2;ctx.stroke();
+      }
+      ctx.beginPath();ctx.arc(0,0,e.size*.4,0,Math.PI*2);ctx.fillStyle='#2200aa';ctx.fill();
+      ctx.globalAlpha=1;
+    }else if(e.type==='drone'){
+      ctx.fillStyle='#aaaaaa';ctx.fillRect(-e.size,-e.size*.5,e.size*2,e.size);
+      ctx.strokeStyle='rgba(200,200,200,.7)';ctx.lineWidth=1.5;ctx.strokeRect(-e.size,-e.size*.5,e.size*2,e.size);
+      // Rotor
+      const te=Date.now()*.01;
+      ctx.strokeStyle='rgba(150,150,255,.4)';ctx.lineWidth=1;
+      for(let k=0;k<2;k++){ctx.beginPath();ctx.arc(k===0?-e.size*.5:e.size*.5,0,e.size*.7+Math.sin(te+k)*.2,0,Math.PI*2);ctx.stroke();}
+    }else if(e.type==='dreamspec'){
+      const forms=['#cc99ff','#ffaacc','#aaccff','#ccffaa'];
+      const fc=forms[e.dreamForm||0];
+      ctx.globalAlpha=.8;
+      if(e.dreamForm===0){ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);ctx.fillStyle=fc;ctx.fill();}
+      else if(e.dreamForm===1){ctx.fillStyle=fc;ctx.fillRect(-e.size,-e.size,e.size*2,e.size*2);}
+      else if(e.dreamForm===2){ctx.beginPath();ctx.moveTo(0,-e.size);ctx.lineTo(e.size,e.size);ctx.lineTo(-e.size,e.size);ctx.closePath();ctx.fillStyle=fc;ctx.fill();}
+      else{for(let k=0;k<5;k++){const a=k/5*Math.PI*2;k===0?ctx.moveTo(Math.cos(a)*e.size,Math.sin(a)*e.size):ctx.lineTo(Math.cos(a)*e.size,Math.sin(a)*e.size);}ctx.closePath();ctx.fillStyle=fc;ctx.fill();}
+      ctx.strokeStyle='rgba(255,200,255,.5)';ctx.lineWidth=1.5;ctx.stroke();ctx.globalAlpha=1;
+    }else if(e.type==='horseman'){
+      // Traînée rouge
+      if(e.horseTrail){for(let ti=0;ti<e.horseTrail.length;ti++){
+        const tr2=e.horseTrail[ti];
+        ctx.save();ctx.translate(tr2.x-e.x,tr2.y-e.y);
+        ctx.globalAlpha=(ti/e.horseTrail.length)*.4;
+        ctx.beginPath();ctx.arc(0,0,e.size*.6,0,Math.PI*2);ctx.fillStyle='#ff2200';ctx.fill();
+        ctx.restore();
+      }}
+      ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);ctx.fillStyle='#ff0000';ctx.shadowBlur=14;ctx.shadowColor='#ff2200';ctx.fill();ctx.shadowBlur=0;
+      ctx.strokeStyle='#880000';ctx.lineWidth=2;ctx.stroke();
+    }else if(e.type==='dying_star'){
+      const tc=Date.now()*.002;
+      // Étoile pulsante
+      ctx.beginPath();
+      for(let k=0;k<8;k++){const a=k/8*Math.PI*2;const r=k%2===0?e.size:e.size*.5+Math.sin(tc)*3;
+        k===0?ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+      }ctx.closePath();
+      ctx.fillStyle='#ffaaff';ctx.shadowBlur=16;ctx.shadowColor='#ff88ff';ctx.fill();ctx.shadowBlur=0;
     }else if(e.type==='healer'){
       ctx.beginPath();for(let i=0;i<6;i++){const a=(i/6)*Math.PI*2;i===0?ctx.moveTo(Math.cos(a)*e.size,Math.sin(a)*e.size):ctx.lineTo(Math.cos(a)*e.size,Math.sin(a)*e.size);}
       ctx.closePath();ctx.fillStyle=e.color;ctx.fill();
@@ -3450,10 +4846,108 @@ function draw(){
     ctx.globalAlpha=d.life;ctx.fillStyle=d.color;
     ctx.font=`bold ${d.size}px 'Share Tech Mono'`;ctx.textAlign='center';ctx.fillText(d.val,d.x,d.y);
   });ctx.globalAlpha=1;ctx.textAlign='left';
-  // Obscurité événement — dessinée en dernier pour tout couvrir
+
+
+  // ── NOUVELLES ARMES — RENDU ──
+
+  // Couteaux orbitaux
+  if(state.knives){
+    for(const k of state.knives){
+      ctx.save();ctx.translate(k.x,k.y);ctx.rotate(k.angle+Math.PI*.5);
+      ctx.fillStyle='#ddeeff';ctx.shadowBlur=6;ctx.shadowColor='#aaccff';
+      ctx.fillRect(-2,-10,4,20);ctx.fillStyle='#8899aa';ctx.fillRect(-3,6,6,6);
+      ctx.shadowBlur=0;ctx.restore();
+    }
+  }
+
+  // Scie rotative
+  if(p.sawActive&&state._saw){
+    const sw=state._saw;
+    ctx.save();ctx.translate(sw.x,sw.y);
+    const t_saw=Date.now()*.01;
+    ctx.rotate(t_saw);
+    for(let k=0;k<8;k++){
+      const a=k/8*Math.PI*2;
+      ctx.beginPath();ctx.moveTo(Math.cos(a)*sw.r*.6,Math.sin(a)*sw.r*.6);
+      ctx.lineTo(Math.cos(a+.4)*sw.r,Math.sin(a+.4)*sw.r);
+      ctx.lineTo(Math.cos(a-.4)*sw.r,Math.sin(a-.4)*sw.r);
+      ctx.closePath();ctx.fillStyle='rgba(200,200,200,.8)';ctx.fill();
+    }
+    ctx.beginPath();ctx.arc(0,0,sw.r*.3,0,Math.PI*2);ctx.fillStyle='#888';ctx.fill();
+    ctx.restore();
+  }
+
+  // Laser beam
+  if(p.laserBeam&&state._laserTarget){
+    ctx.save();
+    ctx.strokeStyle='rgba(255,0,68,.7)';ctx.lineWidth=3;ctx.shadowBlur=12;ctx.shadowColor='#ff0044';
+    ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(state._laserTarget.x,state._laserTarget.y);ctx.stroke();
+    ctx.strokeStyle='rgba(255,150,150,.4)';ctx.lineWidth=7;
+    ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(state._laserTarget.x,state._laserTarget.y);ctx.stroke();
+    ctx.shadowBlur=0;ctx.restore();
+  }
+
+  // Rayon Omega actif
+  if(state._activeBeam){
+    const alpha=state._activeBeam.timer/800;
+    ctx.save();
+    ctx.strokeStyle=`rgba(255,255,0,${alpha*.8})`;ctx.lineWidth=8+alpha*10;ctx.shadowBlur=20;ctx.shadowColor='#ffff00';
+    ctx.beginPath();ctx.moveTo(p.x-W,state._activeBeam.y);ctx.lineTo(p.x+W,state._activeBeam.y);ctx.stroke();
+    ctx.shadowBlur=0;ctx.restore();
+  }
+
+  // Tornade
+  if(state._tornado){
+    const t_tor=Date.now()*.005;
+    ctx.save();ctx.translate(state._tornado.x,state._tornado.y);
+    for(let ring=0;ring<3;ring++){
+      const r2=state._tornado.r*(0.3+ring*.35);
+      ctx.beginPath();ctx.arc(0,0,r2,t_tor+ring,t_tor+ring+Math.PI*1.5);
+      ctx.strokeStyle=`rgba(150,150,255,${.6-ring*.15})`;ctx.lineWidth=3-ring;ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Fouet
+  if(state._whip){
+    ctx.save();ctx.translate(p.x,p.y);
+    ctx.strokeStyle='rgba(200,150,50,.7)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(0,0,100,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Mine joueur
+  state.bullets.filter(b=>b.isMinePlayer).forEach(b=>{
+    ctx.save();ctx.translate(b.x,b.y);
+    ctx.beginPath();ctx.arc(0,0,10,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,200,0,.7)';ctx.fill();
+    ctx.strokeStyle='#ff8800';ctx.lineWidth=2;ctx.stroke();
+    // Croix danger
+    ctx.strokeStyle='#cc4400';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);ctx.moveTo(0,-5);ctx.lineTo(0,5);ctx.stroke();
+    ctx.restore();
+  });
+
+  // Shuriken — rendu spécial
+  state.bullets.filter(b=>b.isShuriken).forEach(b=>{
+    ctx.save();ctx.translate(b.x,b.y);
+    ctx.rotate(Date.now()*.015);
+    for(let k=0;k<4;k++){const a=k/4*Math.PI*2;
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*b.size,Math.sin(a)*b.size);
+      ctx.lineTo(Math.cos(a+.8)*b.size*.6,Math.sin(a+.8)*b.size*.6);ctx.closePath();
+      ctx.fillStyle='#ccccdd';ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // ── Fin de l'espace monde ──
+  ctx.restore();
+
+  // Effets plein écran (espace écran — pas affectés par la caméra)
+  // Obscurité événement
   if(state&&state._evDark&&state.player){
-    const p=state.player;
-    const grd=ctx.createRadialGradient(p.x,p.y,60,p.x,p.y,180);
+    const px=state.player.x-camX, py=state.player.y-camY;
+    const grd=ctx.createRadialGradient(px,py,60,px,py,180);
     grd.addColorStop(0,'rgba(0,0,0,0)');
     grd.addColorStop(.7,'rgba(0,0,0,.85)');
     grd.addColorStop(1,'rgba(0,0,0,.98)');
