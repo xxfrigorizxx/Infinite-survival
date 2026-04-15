@@ -4,7 +4,7 @@
   "description": "Jeu de survie infini — PRISM UPDATE",
   "start_url": "./index.html",
   "display": "fullscreen",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#04080f",
   "theme_color": "#00ffe7",
   "icons": [

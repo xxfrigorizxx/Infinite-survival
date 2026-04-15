@@ -225,8 +225,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .codex-header{flex-shrink:0;padding:10px 12px 4px;text-align:center;width:100%;}
 #codex-screen h2{font-family:'Orbitron',sans-serif;color:var(--codex);text-shadow:0 0 16px var(--codex);font-size:clamp(.95rem,4.2vw,1.28rem);letter-spacing:.1em;}
 .codex-sub{color:#567;font-size:.6rem;}
-#codex-tabs{display:flex;gap:5px;padding:6px 10px 0;flex-shrink:0;width:100%;max-width:400px;align-self:center;}
-.ctab{flex:1;font-family:'Orbitron',sans-serif;font-size:clamp(.52rem,2vw,.63rem);font-weight:700;background:transparent;border:1px solid #334;color:#567;padding:6px;cursor:pointer;-webkit-appearance:none;transition:all .2s;}
+#codex-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px 0;flex-shrink:0;width:100%;}
+.ctab{flex:1;min-width:calc(33% - 4px);font-family:'Orbitron',sans-serif;font-size:clamp(.48rem,1.8vw,.6rem);font-weight:700;background:transparent;border:1px solid #334;color:#567;padding:5px 4px;cursor:pointer;-webkit-appearance:none;transition:all .2s;white-space:nowrap;text-align:center;}
 .ctab.active{border-color:var(--codex);color:var(--codex);background:rgba(136,136,255,.08);}
 #codex-grid-wrap{flex:1;overflow-y:auto;width:100%;padding:6px 10px 4px;display:flex;flex-direction:column;align-items:center;}
 .codex-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%;max-width:400px;}
@@ -361,6 +361,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div class="sbox"><div class="sbox-lbl">MEILLEURE VAGUE</div><div class="sbox-val" id="st-best">-</div></div>
   </div>
   <div class="coins-row">🪙 +<span id="st-coins-earned">0</span> pièces gagnées<br><span style="font-size:.65rem;color:#567;">kills + bonus survie</span></div>
+  <!-- TITRE GAGNÉ -->
+  <div id="run-title-earned" style="display:none;width:100%;max-width:350px;text-align:center;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);padding:10px;margin-bottom:4px;"></div>
   <!-- BUILD DU RUN -->
   <div id="run-build" style="width:100%;max-width:350px;background:rgba(0,255,231,.04);border:1px solid rgba(0,255,231,.15);padding:8px 10px;display:none;">
     <div style="font-family:'Orbitron',sans-serif;font-size:.6rem;color:#567;letter-spacing:.12em;margin-bottom:6px;">⬆ BUILD DU RUN</div>
@@ -406,6 +408,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <button class="ctab" onclick="switchCodexTab('shop')">🛒 Boutique</button>
     <button class="ctab" onclick="switchCodexTab('biomes')">🌍 Biomes</button>
     <button class="ctab" onclick="switchCodexTab('events')">⚡ Événements</button>
+    <button class="ctab" onclick="switchCodexTab('mutations')">🔄 Mutations</button>
+    <button class="ctab" onclick="switchCodexTab('titles')">🏆 Titres</button>
   </div>
   <div id="codex-grid-wrap"><div class="codex-grid" id="codex-grid"></div></div>
   <div class="back-bar"><button class="back-btn" onclick="closeCodex()">← RETOUR</button></div>
@@ -432,7 +436,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <button id="prof-save-btn" onclick="saveProfileName()">✓ ENTRER DANS LE JEU</button>
     <div id="prof-existing" style="display:none;">
       <div id="prof-stats-detail"></div>
-      <button id="prof-reset-btn" onclick="confirmReset()" style="margin-top:12px;font-family:'Share Tech Mono',monospace;background:transparent;border:1px solid var(--hot);color:var(--hot);padding:8px;width:100%;cursor:pointer;font-size:.72rem;-webkit-appearance:none;opacity:.7;">🗑 RÉINITIALISER TOUTES MES DONNÉES</button>
+      <!-- Sélecteur de titres -->
+    <div id="prof-titles-section" style="margin-top:12px;width:100%;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:.58rem;color:#567;letter-spacing:.12em;margin-bottom:8px;">🏆 MES TITRES</div>
+      <div id="prof-titles-list" style="display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto;"></div>
+    </div>
+    <button id="prof-reset-btn" onclick="confirmReset()"  style="margin-top:12px;font-family:'Share Tech Mono',monospace;background:transparent;border:1px solid var(--hot);color:var(--hot);padding:8px;width:100%;cursor:pointer;font-size:.72rem;-webkit-appearance:none;opacity:.7;">🗑 RÉINITIALISER TOUTES MES DONNÉES</button>
     </div>
   </div>
 </div>
@@ -532,7 +541,8 @@ window._fbSave=async function(name,score,wave,kills,date){
         }
       }
     }
-    const data={name:String(name),score:Number(score),wave:Number(wave||0),kills:Number(kills||0),date:String(date||''),ts:Date.now()};
+    const titleObj=getActiveTitle();
+    const data={name:String(name),score:Number(score),wave:Number(wave||0),kills:Number(kills||0),date:String(date||''),ts:Date.now(),title:titleObj?titleObj.id:'',titleName:titleObj?titleObj.name:'',titleColor:titleObj?titleObj.color:'',titleIcon:titleObj?titleObj.icon:''};
     await set(r,data);
     console.log('[FB] ✅ Score sauvegardé dans Firebase!',data);
   }catch(err){
@@ -571,14 +581,17 @@ window._renderLBData=function(lb){
       el.innerHTML=lb.slice(0,10).map((e,i)=>`
         <div class="lb-row ${i===0?'gr':''}">
           <span class="lb-rank">${m[i]||i+1}</span>
-          <span class="lb-name">${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
+          <span class="lb-name">${e.titleIcon?e.titleIcon+' ':''}<span style="color:${e.titleColor||'#cde'};">${e.titleName||''}</span> ${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
           <span class="lb-score">${(e.score||0).toLocaleString()}</span>
         </div>`).join('');
     } else {
       el.innerHTML=lb.slice(0,10).map((e,i)=>`
         <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?.2:.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
           <span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:${i===0?'var(--gold)':'#456'};width:22px;flex-shrink:0;text-align:center;">${m[i]||i+1}</span>
-          <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
+          <div style="flex:1;overflow:hidden;">
+            <div style="font-size:.55rem;color:${e.titleColor||'#567'};">${e.titleIcon||''} ${e.titleName||''}</div>
+            <div style="color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</div>
+          </div>
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-family:'Orbitron',sans-serif;color:${i===0?'var(--gold)':'var(--neon)'};font-size:.72rem;font-weight:700;">${(e.score||0).toLocaleString()}</div>
             <div style="color:#456;font-size:.55rem;">Vague ${e.wave||0} · ${e.kills||0} kills</div>
@@ -728,6 +741,26 @@ function doReset(){
   setTimeout(openProfile, 300);
 }
 
+function renderProfileTitles(){
+  const earned=JSON.parse(localStorage.getItem('surv_earned_titles')||'[]');
+  const activeId=getPrf()?.title||'';
+  const list=document.getElementById('prof-titles-list');
+  if(!list)return;
+  if(earned.length===0){
+    list.innerHTML='<div style="color:#456;font-size:.62rem;text-align:center;padding:8px;">Aucun titre débloqué — joue pour en gagner !</div>';
+    return;
+  }
+  list.innerHTML=TITLES.filter(t=>earned.includes(t.id)).map(t=>`
+    <div onclick="equipTitle('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border:1px solid ${t.id===activeId?t.color:'rgba(255,255,255,.08)'};background:${t.id===activeId?'rgba(204,68,255,.08)':'transparent'};border-radius:2px;">
+      <span style="font-size:.9rem;">${t.icon}</span>
+      <div style="flex:1;">
+        <div style="font-family:'Orbitron',sans-serif;font-size:.62rem;color:${t.color};letter-spacing:.08em;">${t.name}</div>
+        <div style="font-size:.52rem;color:#567;">${t.desc}</div>
+      </div>
+      ${t.id===activeId?'<span style="color:#00ff88;font-size:.55rem;">✅</span>':''}
+    </div>`).join('');
+}
+
 function openProfile(firstTime=false){
   const p=getPrf();
   const inp=document.getElementById('prof-name-input');
@@ -754,6 +787,7 @@ function openProfile(firstTime=false){
     det.innerHTML=`🎮 Parties : <b>${p.gamesPlayed||0}</b><br>⚔ Meilleure vague : <b>${p.bestWave||0}</b><br>💀 Total kills : <b>${(p.totalKills||0).toLocaleString()}</b><br>🪙 Pièces totales : <b>${(p.totalCoins||0).toLocaleString()}</b>`;
   }
   document.getElementById('profile-modal').classList.add('show');
+  renderProfileTitles();
   setTimeout(()=>inp.focus(),300);
 }
 
@@ -1701,8 +1735,8 @@ function closeCodex(){
 }
 function switchCodexTab(tab){
   codexTab=tab;
-  const labels={enemies:'ennemi',upgrades:'upgrade',shop:'boutique',biomes:'biome',events:'vénement'};
-  document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().includes(labels[tab]||tab)));
+  const labels={enemies:'ennemi',upgrades:'upgrade',shop:'boutique',biomes:'biome',events:'vénement',mutations:'utation',titles:'itre'};
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().includes(labels[tab]||tab)||( tab==='titles'&&t.textContent.includes('Titres'))));
   renderCodexGrid();
 }
 function renderCodexGrid(){
@@ -1712,15 +1746,42 @@ function renderCodexGrid(){
   let items=[], cat='';
   if(codexTab==='enemies'){items=CODEX_ENEMIES;cat='enemies';}
   else if(codexTab==='upgrades'){items=CODEX_UPGRADES;cat='upgrades';}
-  else if(codexTab==='biomes'){items=CODEX_BIOMES;cat='biomes';}
+  else if(codexTab==='biomes'){
+    // Biomes de base + biomes procéduraux
+    const packCodex=getBiomeContentPack().codex||[];
+    items=[...CODEX_BIOMES,...packCodex];
+    cat='biomes';
+  }
   else if(codexTab==='events'){items=CODEX_EVENTS;cat='events';}
   else if(codexTab==='mutations'){items=CODEX_MUTATIONS;cat='mutations';}
+  else if(codexTab==='titles'){
+    // Rendu spécial pour les titres
+    const earned=JSON.parse(localStorage.getItem('surv_earned_titles')||'[]');
+    const activeId=getPrf()?.title||'';
+    grid.innerHTML=TITLES.map(t=>{
+      const unlocked=earned.includes(t.id);
+      const active=t.id===activeId;
+      const onclick2=unlocked?`onclick="equipTitle('${t.id}')"` :'';
+      const border2=active?`border-color:${t.color};box-shadow:0 0 10px ${t.color}44;`:'';
+      const statusTxt=active?'✅ ÉQUIPÉ':'Cliquer pour équiper';
+      return`<div class="cc${unlocked?'':' locked'}" style="${border2}" ${onclick2}>
+        <div class="cc-icon">${unlocked?t.icon:'🔒'}</div>
+        <div class="cc-name" style="${unlocked?'color:'+t.color:''}">${unlocked?t.name:'???'}</div>
+        <div class="cc-desc">${unlocked?t.desc+'<br><span style=\'color:#567;font-size:.5rem\'>'+statusTxt+'</span>':t.desc}</div>
+      </div>`;
+    }).join('');
+    const total=TITLES.length;
+    const got=earned.length;
+    countEl.textContent=got+'/'+total+' titres';
+    return;
+  }
   else{items=SHOP_ITEMS.map(i=>({id:i.id,icon:i.icon,name:i.name,desc:i.desc,hint:'Ouvre la boutique'}));cat='shop';}
   const catData=d[cat]||{};
   // Compteur total toutes catégories
   const total=Object.values(d).reduce((a,c)=>a+Object.keys(c).length,0);
+  const _packC=(getBiomeContentPack().codex||[]).length;
   const totalAll=CODEX_ENEMIES.length+CODEX_UPGRADES.length+SHOP_ITEMS.length+
-    CODEX_BIOMES.length+CODEX_EVENTS.length+CODEX_MUTATIONS.length;
+    CODEX_BIOMES.length+_packC+CODEX_EVENTS.length+CODEX_MUTATIONS.length+TITLES.length;
   countEl.textContent=`${total}/${totalAll}`;
   grid.innerHTML=items.map(it=>{
     const entry=catData[it.id];
@@ -2804,7 +2865,16 @@ function resizeCanvas(){
 }
 
 window.addEventListener('resize',()=>{ resizeCanvas(); });
-window.addEventListener('orientationchange',()=>{ setTimeout(resizeCanvas,300); });
+window.addEventListener('orientationchange',()=>{
+  setTimeout(()=>{
+    resizeCanvas();
+    // Recentrer la caméra sur le joueur après rotation
+    if(state&&state.running&&state.player){
+      state.camX=state.player.x-W/2;
+      state.camY=state.player.y-H/2;
+    }
+  },300);
+});
 
 /* ── JOYSTICK ── */
 const jZone=document.getElementById('joystick-zone');
@@ -2863,7 +2933,7 @@ function mkState(){
     _evGoldMult:1,_evBossRain:false,_evBossTimer:0,_evXpMult:1,_evHealRate:0,
     spawnInterval:1700,spawnTimer:0,
     coinsRun:0,xpMult:1,coinMult:1,
-    stats:{totalDmg:0,crits:0,bossKills:0,killTypes:{},dmgPeak:0,longestCombo:0},
+    stats:{totalDmg:0,crits:0,bossKills:0,killTypes:{},dmgPeak:0,longestCombo:0,xpSkipped:0,xpCollected:0,dashCount:0,wavesNoHit:0,lastHitWave:0,coinsCollected:0,orbKills:0,nearDeathKills:0},
     runUpgrades:[],  // upgrades équipés ce run
     turrets:[],
     player:{
@@ -2948,6 +3018,15 @@ const BIOMES=[
     desc:'Ennemis invisibles. Critiques obligatoires.'
   },
   {
+    id:'cosmic',    name:'COSMIQUE',       icon:'🌌',
+    bg:'#020208',   grid:'rgba(200,0,255,.04)',   accent:'#cc00ff',
+    skyColor:'rgba(100,0,200,.07)',
+    unlockWave:35,
+    enemies:['cosmic','fallen','minigod','entity','megaboss','graviton'],
+    upgrades:['godmode','n_singularity','invincible','n_eternal','n_apocalypse'],
+    desc:'Les dieux sont là. Bonne chance.'
+  },
+  {
     id:'desert',    name:'DÉSERT MAUDIT',  icon:'🏜️',
     bg:'#120800',   grid:'rgba(255,160,0,.04)',   accent:'#ff9900',
     skyColor:'rgba(200,100,0,.06)',
@@ -2992,16 +3071,6 @@ const BIOMES=[
     upgrades:['godmode','n_apocalypse','n_eternal','invincible','n_armageddon'],
     desc:'La fin du monde. Tout est permis.'
   },
-  {
-    id:'cosmic',    name:'COSMIQUE',       icon:'🌌',
-    bg:'#020208',   grid:'rgba(200,0,255,.04)',   accent:'#cc00ff',
-    skyColor:'rgba(100,0,200,.07)',
-    unlockWave:35,
-    enemies:['cosmic','fallen','minigod','entity','megaboss','graviton'],
-    upgrades:['godmode','n_singularity','invincible','n_eternal','n_apocalypse'],
-    desc:'Les dieux sont là. Bonne chance.'
-  },
-  ...getBiomeContentPack().biomes
 ];
 
 const EVENTS=[
@@ -3618,789 +3687,70 @@ function updateObstacles(dt){
 }
 
 // ── CODEX BIOMES ──
-const CODEX_BIOMES=BIOMES.map(b=>{
-  const i=BIOMES.findIndex(x=>x.id===b.id);
-  const startWave=i<=0?1:i*15;
-  return{id:b.id,icon:b.icon,name:b.name,desc:b.desc,hint:'Atteint vague '+startWave};
-});
-
-// ── CODEX MUTATIONS ──
-const CODEX_MUTATIONS=[];
-for(const[biomeId,muts] of Object.entries(BIOME_MUTATIONS)){
-  const biome=BIOMES.find(b=>b.id===biomeId)||{icon:'❓',name:biomeId};
-  muts.forEach((m,i)=>CODEX_MUTATIONS.push({
-    id:biomeId+'_mut'+i,
-    icon:biome.icon,
-    name:m.name,
-    desc:m.desc,
-    hint:'Survivre à '+(i+1)+' boucle'+(i>0?'s':'')+' en '+biome.name
-  }));
-}
-
-// ── CODEX ÉVÉNEMENTS ──
-const CODEX_EVENTS=EVENTS.map(e=>({
-  id:e.id, icon:e.icon, name:e.name, desc:e.desc,
-  hint:'Subir cet événement en jeu'
-}));
-
-// Biome actuel — progression dans l'ordre selon la vague
-function getBiome(wave){
-  // Chaque segment = 15 vagues, boucle sur tous les biomes
-  const idx=Math.floor(wave/15) % BIOMES.length;
-  return BIOMES[idx];
-}
-
-function getBiomeLoop(){
-  if(!state)return 0;
-  return Math.floor(state.wave/(15*BIOMES.length));
-}
-
-function getCurrentBiome(){
-  // Utiliser le biome sauvegardé dans state (change seulement à wave%15)
-  // Pas recalculer à chaque frame
-  if(state&&state.biome)return state.biome;
-  if(!state)return BIOMES[0];
-  return getBiome(state.wave);
-}
-
-// Choisir un événement aléatoire (pas le même deux fois de suite)
-let _lastEventId=null;
-function pickEvent(){
-  const pool=EVENTS.filter(e=>e.id!==_lastEventId);
-  return pool[Math.floor(Math.random()*pool.length)];
-}
-
-// Lancer un événement
-function startEvent(ev){
-  if(!state)return;
-  if(state.currentEvent)endEvent(state.currentEvent);
-  state.currentEvent=ev;
-  state.eventTimer=ev.duration;
-  _lastEventId=ev.id;
-  ev.onStart(state);
-  showEventBanner(ev);
-  discoverEntry('events',ev.id);
-  snd('boss');
-}
-
-function endEvent(ev){
-  if(!ev)return;
-  ev.onEnd(state);
-  state.currentEvent=null;
-  state.eventTimer=0;
-  hideEventBanner();
-}
-
-function showEventBanner(ev){
-  let bar=document.getElementById('event-bar');
-  if(!bar){
-    bar=document.createElement('div');
-    bar.id='event-bar';
-    bar.style.cssText=`position:absolute;top:0;left:0;right:0;z-index:50;padding:4px 8px;display:flex;align-items:center;gap:8px;font-family:'Orbitron',sans-serif;font-size:clamp(.52rem,2vw,.66rem);font-weight:700;letter-spacing:.08em;border-bottom:1px solid;transition:all .3s;`;
-    document.getElementById('game-screen').appendChild(bar);
-  }
-  bar.style.background=ev.color+'22';
-  bar.style.borderColor=ev.color+'88';
-  bar.style.color=ev.color;
-  bar.innerHTML=`<span style="font-size:1rem">${ev.icon}</span><span>${ev.name}</span><span style="opacity:.7;font-size:.55rem;font-family:'Share Tech Mono',monospace;">${ev.desc}</span><span id="event-timer" style="margin-left:auto;font-size:.58rem;opacity:.8"></span>`;
-  bar.style.display='flex';
-}
-
-function hideEventBanner(){
-  const bar=document.getElementById('event-bar');
-  if(bar)bar.style.display='none';
-}
-
-/* ═══ ENEMY UPDATE — 100 ennemis (eupd_*) · mécaniques par famille (vi%20) + registre ═══ */
-const ENEMY_MECHANICS=(function(){
-  const M={};
-  function sh(st,x,y,vx,vy,sz,lf,pr){
-    st.bullets.push({x,y,vx,vy,dmg:0,size:sz,life:lf,enemy:true,pierce:pr||0,frozen:0});
-  }
-  function tickFam(fam,vi,e,dt,p,st,ux,uy,ed,sp){
-    const w=st.wave,iv=760+(vi*29)%2200,n=3+(vi%6),bs=e._bsz||e.size||12;
-    const spd=2.45+(vi%9)*.14;
-    e._nxc=(e._nxc||0)+dt;
-    if(fam===0){
-      e.x+=ux*sp;e.y+=uy*sp;
-      if(e._nxc>iv){e._nxc=0;for(let k=0;k<n;k++){const a=k/n*6.2831853+vi*.35;sh(st,e.x,e.y,Math.cos(a)*spd,Math.sin(a)*spd,4+vi%5,110+vi%55,vi%3);}pts(e.x,e.y,e.color,.3,2);}
-      return;
-    }
-    if(fam===1){
-      e._oa=(e._oa||0)+dt*.00185;
-      const R=64+(vi%7)*11,tx=p.x+Math.cos(e._oa)*R,ty=p.y+Math.sin(e._oa)*R;
-      const dx=tx-e.x,dy=ty-e.y,dm=Math.hypot(dx,dy)||1;
-      e.x+=dx/dm*sp*1.05;e.y+=dy/dm*sp*1.05;
-      if(ed<52+(vi%4)*8){e.x+=ux*sp*2.1;e.y+=uy*sp*2.1;}
-      if(e._nxc>iv*.85){e._nxc=0;sh(st,e.x,e.y,ux*4.6,uy*4.6,5,130,0);}
-      return;
-    }
-    if(fam===2){
-      if(ed<185-(vi%4)*12){e.x-=ux*sp*.9;e.y-=uy*sp*.9;}else{e.x+=ux*sp*.5;e.y+=uy*sp*.5;}
-      if(e._nxc>iv){e._nxc=0;sh(st,e.x,e.y,ux*5.2,uy*5.2,5+(vi%3),150+(vi%40),1);}
-      return;
-    }
-    if(fam===3){
-      const sd=Math.sin((e._nxc+vi*40)*.0038)*sp*1.1;
-      e.x+=ux*sp*.5+(-uy)*sd;e.y+=uy*sp*.5+ux*sd;
-      if(e._nxc>iv*.4){e._nxc=0;const o=.35+vi*.02;sh(st,e.x,e.y,-uy*4.2-o,ux*4.2+o,5,95,0);sh(st,e.x,e.y,uy*4.2-o,-ux*4.2+o,5,95,0);}
-      return;
-    }
-    if(fam===4){
-      const ang=Math.atan2(uy,ux)+Math.sin(e._nxc*.0047+vi)*1.28;
-      e.x+=Math.cos(ang)*sp;e.y+=Math.sin(ang)*sp;
-      if(e._nxc>iv*.55){e._nxc=0;sh(st,e.x,e.y,Math.cos(ang)*4,Math.sin(ang)*4,5,125,0);}
-      return;
-    }
-    if(fam===5){
-      if(e._nxc>iv){e._nxc=0;const a=Math.random()*6.2831853,d=88+(vi%9)*9;e.x=p.x+Math.cos(a)*d;e.y=p.y+Math.sin(a)*d;pts(e.x,e.y,e.color,.9,3);}
-      else{e.x+=ux*sp*.72;e.y+=uy*sp*.72;}
-      return;
-    }
-    if(fam===6){
-      e.x+=ux*sp;
-      if(e._nxc>280+(vi%5)*40){e._nxc=0;st.particles.push({x:e.x,y:e.y,vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45,color:'#55cc44',life:2.6,size:5+(vi%4),toxic:true,dmg:2+(vi%5)});}
-      return;
-    }
-    if(fam===7){
-      e.x+=ux*sp;
-      if(ed<58&&e._nxc>520-(vi%4)*40){e._nxc=0;const stl=Math.min(st.coinsRun||0,1+(vi%4));st.coinsRun=Math.max(0,(st.coinsRun||0)-stl);if(stl)dmgNum(p.x,p.y-10,'-'+stl+'🪙','#ffcc00');}
-      return;
-    }
-    if(fam===8){
-      e.x+=ux*sp;
-      if(ed<155&&e._nxc>240){e._nxc=0;const k=22+(vi%6)*3;p.x+=ux*k;p.y+=uy*k;pts(p.x,p.y,'#aac8ff',.55,3);}
-      return;
-    }
-    if(fam===9){
-      e._sa=(e._sa||0)+.085+vi*.0003;
-      e.x+=Math.cos(e._sa)*sp*.42+ux*sp*.32;e.y+=Math.sin(e._sa)*sp*.42+uy*sp*.32;
-      if(e._nxc>iv){e._nxc=0;for(let k=0;k<n;k++){const a=e._sa+k*.75+vi*.1;sh(st,e.x,e.y,Math.cos(a)*spd*.95,Math.sin(a)*spd*.95,4,100+vi%30,0);}}
-      return;
-    }
-    if(fam===10){
-      e._vx=(e._vx||ux);e._vy=(e._vy||uy);
-      if(ed<55||ed>320-(vi%5)*15){e._vx=-e._vx+ux*.25;e._vy=-e._vy+uy*.25;}
-      const vm=Math.hypot(e._vx,e._vy)||1;
-      e.x+=e._vx/vm*sp*.95;e.y+=e._vy/vm*sp*.95;
-      if(e._nxc>iv*.7){e._nxc=0;sh(st,e.x,e.y,ux*3.8,uy*3.8,5,115,0);}
-      return;
-    }
-    if(fam===11){
-      e.size=bs*(1+.19*Math.sin(e._nxc*.0052+vi*.4));
-      e.x+=ux*sp;e.y+=uy*sp;
-      if(e._nxc>iv){e._nxc=0;for(let k=0;k<6;k++){const a=k/6*6.2831853;sh(st,e.x,e.y,Math.cos(a)*2.7,Math.sin(a)*2.7,4,90,0);}}
-      return;
-    }
-    if(fam===12){
-      e.x+=ux*sp;
-      if(e._nxc>220){e._nxc=0;st.particles.push({x:e.x,y:e.y,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,color:'#ff7722',life:2.2,size:6+(vi%3),toxic:true,dmg:3});}
-      return;
-    }
-    if(fam===13){
-      e.x+=ux*sp;
-      for(const b of st.bullets){if(!b.enemy&&Math.hypot(b.x-e.x,b.y-e.y)<72+vi%20){const d=Math.hypot(e.x-b.x,e.y-b.y)||1;b.vx+=(e.x-b.x)/d*.32;b.vy+=(e.y-b.y)/d*.32;}}
-      if(e._nxc>iv){e._nxc=0;sh(st,e.x,e.y,ux*4.4,uy*4.4,5,140,1);}
-      return;
-    }
-    if(fam===14){
-      e.x+=ux*sp*.82;
-      if(e._nxc>iv*.9){e._nxc=0;st.bullets.push({x:e.x,y:e.y,vx:0,vy:0,dmg:0,size:6+(vi%5),life:320+vi%80,enemy:true,pierce:0,frozen:0,isMine:true});}
-      return;
-    }
-    if(fam===15){
-      e._accT=(e._accT||0)+dt;
-      const acc=1+Math.min(1.85,e._accT*.0004);
-      e.x+=ux*sp*acc;e.y+=uy*sp*acc;
-      e._nxShot=(e._nxShot||0)+dt;
-      if(e._nxShot>iv){e._nxShot=0;sh(st,e.x,e.y,ux*3.2,uy*3.2,4,100,0);}
-      return;
-    }
-    if(fam===16){
-      e.x+=ux*sp*.88;
-      if(e._nxc>iv){e._nxc=0;e.hp=Math.min(e.maxHp,e.hp+7+w*.25);pts(e.x,e.y,'#66ff99',.4,2);}
-      return;
-    }
-    if(fam===17){
-      e.x+=ux*sp;
-      if(e._nxc>iv*.65){e._nxc=0;sh(st,e.x,e.y,ux*4,uy*4,5,125,0);sh(st,e.x,e.y,-ux*4,-uy*4,5,125,0);sh(st,e.x,e.y,-uy*4,ux*4,5,125,0);sh(st,e.x,e.y,uy*4,-ux*4,5,125,0);}
-      return;
-    }
-    if(fam===18){
-      e.x+=ux*sp*.78;
-      if(e._nxc>iv){e._nxc=0;const o=.35+vi*.015;sh(st,e.x,e.y,ux*4.5+(-uy)*o,uy*4.5+ux*o,5,120,0);sh(st,e.x,e.y,ux*4.5,uy*4.5,5,120,0);sh(st,e.x,e.y,ux*4.5-(-uy)*o,uy*4.5-ux*o,5,120,0);}
-      return;
-    }
-    if(fam===19){
-      if(ed<110){e.x-=ux*sp*2.4;e.y-=uy*sp*2.4;}else{e.x+=ux*sp*.62;e.y+=uy*sp*.62;}
-      if(e._nxc>iv*.5){e._nxc=0;sh(st,e.x,e.y,ux*4.1,uy*4.1,5,135,0);}
-      return;
-    }
-    e.x+=ux*sp;e.y+=uy*sp;
-  }
-  function enemyUpdateNudge(vi,e,dt,p,st,ux,uy,ed,sp){
-    const r=vi%25;
-    e._nxN=(e._nxN||0)+dt;
-    if(r===0&&e._nxN>480){e._nxN=0;e.x+=(-uy)*sp*.35;e.y+=ux*sp*.35;}
-    if(r===1&&ed<105){e.x-=ux*sp*.14;e.y-=uy*sp*.14;}
-    if(r===2&&e._nxN>620){e._nxN=0;pts(e.x,e.y,'#ffffff',.22,2);}
-    if(r===3&&ed>240){e.x+=ux*sp*.1;e.y+=uy*sp*.1;}
-    if(r===4){e.x+=Math.sin(e._nxN*.002+vi)*sp*.16;e.y+=Math.cos(e._nxN*.002+vi)*sp*.16;}
-    if(r===5&&e._nxN>540){e._nxN=0;sh(st,e.x,e.y,-uy*2.4,ux*2.4,3,75,0);}
-    if(r===6&&ed<80){e.x+=(-uy)*sp*.18;e.y+=ux*sp*.18;}
-    if(r===7&&e._nxN>700){e._nxN=0;sh(st,e.x,e.y,ux*2.7,uy*2.7,3,85,0);}
-    if(r===8){e.x+=uy*sp*.1*Math.sin(vi+e._nxN*.001);e.y-=ux*sp*.1*Math.sin(vi+e._nxN*.001);}
-    if(r===9&&ed>300&&e._nxN>360){e._nxN=0;e.x-=ux*sp*.25;e.y-=uy*sp*.25;}
-    if(r===10&&e._nxN>510){e._nxN=0;st.particles.push({x:e.x,y:e.y,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,color:e.color,life:1.6,size:4,toxic:false,dmg:0});}
-    if(r===11&&ed<130){e.x+=ux*sp*.08;e.y+=uy*sp*.08;}
-    if(r===12&&e._nxN>440){e._nxN=0;sh(st,e.x,e.y,Math.cos(vi)*2.2,Math.sin(vi)*2.2,3,80,0);}
-    if(r===13){e.x+=(-ux+uy)*sp*.06*Math.sin(e._nxN*.003);}
-    if(r===14&&ed>180){e.y+=Math.sin(e._nxN*.0027+vi)*sp*.12;}
-    if(r===15&&e._nxN>580){e._nxN=0;for(let k=0;k<2;k++){const a=(vi+k)*2.1;sh(st,e.x,e.y,Math.cos(a)*2.5,Math.sin(a)*2.5,3,70,0);}}
-    if(r===16&&ed<95){p.x+=ux*.22;p.y+=uy*.22;}
-    if(r===17&&e._nxN>650){e._nxN=0;pts(e.x,e.y,'#aaffff',.35,2.5);}
-    if(r===18){e.x+=ux*sp*Math.sin(e._nxN*.0011)*.07;e.y+=uy*sp*Math.sin(e._nxN*.0011)*.07;}
-    if(r===19&&ed>220&&e._nxN>400){e._nxN=0;e.x+=(-uy)*sp*.22;e.y+=ux*sp*.22;}
-    if(r===20&&e._nxN>520){e._nxN=0;sh(st,e.x,e.y,ux*2.9+uy*.4,uy*2.9-ux*.4,3,72,0);}
-    if(r===21&&ed<70){e.x-=(-uy)*sp*.2;e.y-=ux*sp*.2;}
-    if(r===22&&e._nxN>600){e._nxN=0;sh(st,e.x,e.y,-ux*2.6,-uy*2.6,3,68,0);}
-    if(r===23){e.x+=(Math.random()-.5)*sp*.04;e.y+=(Math.random()-.5)*sp*.04;}
-    if(r===24&&e._nxN>560){e._nxN=0;for(let k=0;k<4;k++){const a=k/4*6.2831853+vi*.5;sh(st,e.x,e.y,Math.cos(a)*1.9,Math.sin(a)*1.9,3,60,0);}}
-  }
-  for(let i=1;i<=100;i++){
-    const vi=i-1,fam=vi%20;
-    const id='eupd_'+String(i).padStart(3,'0');
-    M[id]={
-      init(e,w){e._nxc=Math.random()*600;e._bsz=e.size;},
-      tick(e,dt,p,st,ex,ey,ed,sp,idx){
-        const ux=ex/ed,uy=ey/ed;
-        tickFam(fam,vi,e,dt,p,st,ux,uy,ed,sp);
-        enemyUpdateNudge(vi,e,dt,p,st,ux,uy,ed,sp);
-      }
-    };
-  }
-  return M;
-})();
-
-let ENEMY_UPDATE_PACK_CACHE=null;
-function getEnemyUpdatePack(){
-  if(ENEMY_UPDATE_PACK_CACHE)return ENEMY_UPDATE_PACK_CACHE;
-  const ADJ=['Furtif','Brisé','Voilé','Sifflant','Figé','Putréfié','Radieux','Glacial','Chaotique','Funeste','Errant','Titanesque','Infime','Vortex','Oublié','Miroitant','Sombre','Cristallin','Brûlant','Gelé','Ombral','Ruiné','Stellaire','Salin','Ferrique'];
-  const SUB=['Griffe','Spore','Nodule','Astre','Shard','Drone','Veine','Masque','Onde','Culte','Relique','Garde','Echo','Faucheur','Spectre','Filament','Carapace','Siphon','Vril','Gantelet'];
-  const ICONS=['🔮','⚗️','👾','🦠','🕸️','⛓️','🗡️','🛡️','💀','🌑','🔥','💧','⚡','🪬','🌀','🦇','🐍','🪨','🌊','🌪️','⭐️','☄️','🧿','🩻','🫀','🧬','🪼','🦂','🐙','🦀','🦎','🐊','🕷️','🦟','🪲','🪳'];
-  const famDesc=[
-    'Rafales radiales synchronisées.','Orbite large puis ruée soudaine.','Maintient la portée et tire en visée.',
-    'Dérive latérale avec salve croisée.','Trajectoire sinusoïdale imprévisible.','Téléportation sur un anneau autour de toi.',
-    'Dépose un nuage toxique au sol.','Aspire quelques pièces si tu restes trop près.','Onde de choc qui te repousse.',
-    'Spirale de projectiles qui s\'élargit.','Rebonds sur des axes invisibles.','Sa silhouette pulse — zone d\'impact variable.',
-    'Trainée de braises qui brûlent brièvement.','Courte attraction sur tes projectiles puis riposte.','Pose des micro-mines statiques.',
-    'Accélère sans cesse tant qu\'il te voit.','Régénère une fraction de ses PV par cycle.','Salve en croix (quatre directions).',
-    'Triple tir en éventail serré.','Recule en dash si tu t\'approches trop.'
-  ];
-  const etypes={},codex=[];
-  for(let i=1;i<=100;i++){
-    const vi=i-1,id='eupd_'+String(i).padStart(3,'0');
-    // Même plage de déblocage que le bloc étendu (mutant → le_néant : vagues ~20–100)
-    const uw=20+Math.floor((vi*80)/99);
-    const hue=(vi*47)%360;
-    etypes[id]={
-      hp:(w)=>30+w*5.5+vi*.1,
-      spd:(w)=>1.03+w*.044+vi*.00035,
-      sz:10+(vi%8),
-      dmg:9+Math.floor(vi/7),
-      color:`hsl(${hue},58%,54%)`,
-      xp:11+Math.floor(vi/4),
-      coins:vi%5===0?1:0,
-      unlockWave:uw,
-      enemyUpdateMech:true
-    };
-    const nm=(ADJ[vi%ADJ.length]+' '+SUB[(vi*3)%SUB.length]+' '+String(i).padStart(2,'0')).toUpperCase();
-    codex.push({id,icon:ICONS[vi%ICONS.length],name:nm,desc:'Enemy Update — unité '+String(i).padStart(3,'0')+'. '+famDesc[vi%20],hint:'Apparaît à partir de la vague '+uw});
-  }
-  ENEMY_UPDATE_PACK_CACHE={etypes,codex};
-  return ENEMY_UPDATE_PACK_CACHE;
-}
-
-const ETYPES={
-  // ── EXISTANTS ──
-  basic:    {hp:(w)=>28+w*8,   spd:(w)=>1.2+w*.07, sz:12,dmg:12,color:'#ff4060',xp:8,  coins:0, unlockWave:1},
-  fast:     {hp:(w)=>16+w*4,   spd:(w)=>2.4+w*.09, sz:8, dmg:8, color:'#ff9020',xp:6,  coins:0, unlockWave:1},
-  tank:     {hp:(w)=>80+w*18,  spd:(w)=>0.7+w*.04, sz:20,dmg:25,color:'#8040ff',xp:20, coins:1, unlockWave:2},
-  shooter:  {hp:(w)=>38+w*10,  spd:(w)=>0.9+w*.05, sz:13,dmg:10,color:'#20d0ff',xp:15, coins:1, unlockWave:4},
-  zigzag:   {hp:(w)=>24+w*6,   spd:(w)=>1.9+w*.08, sz:10,dmg:10,color:'#ffee00',xp:10, coins:0, unlockWave:6},
-  splitter: {hp:(w)=>48+w*11,  spd:(w)=>1.0+w*.06, sz:16,dmg:15,color:'#ff6688',xp:18, coins:1, unlockWave:8},
-  ghost:    {hp:(w)=>32+w*8,   spd:(w)=>1.5+w*.07, sz:11,dmg:12,color:'#cc88ff',xp:14, coins:0, unlockWave:9},
-  healer:   {hp:(w)=>55+w*13,  spd:(w)=>0.8+w*.05, sz:14,dmg:10,color:'#00ff88',xp:22, coins:1, unlockWave:11},
-  charger:  {hp:(w)=>42+w*10,  spd:(w)=>1.1+w*.06, sz:13,dmg:20,color:'#ffaa00',xp:16, coins:1, unlockWave:7},
-  bomber:   {hp:(w)=>30+w*7,   spd:(w)=>1.3+w*.06, sz:12,dmg:0, color:'#ff4400',xp:12, coins:1, unlockWave:12},
-  swarm:    {hp:(w)=>12+w*3,   spd:(w)=>2.8+w*.1,  sz:7, dmg:6, color:'#88ff00',xp:5,  coins:0, unlockWave:10},
-  elite:    {hp:(w)=>100+w*25, spd:(w)=>1.6+w*.08, sz:17,dmg:22,color:'#ffdd00',xp:40, coins:2, unlockWave:15},
-  boss:     {hp:(w)=>280+w*55, spd:(w)=>0.55+w*.03,sz:28,dmg:38,color:'#ff2080',xp:90, coins:5, unlockWave:1},
-  megaboss: {hp:(w)=>700+w*100,spd:(w)=>0.4+w*.02, sz:38,dmg:55,color:'#ff0040',xp:200,coins:10,unlockWave:20},
-  // ── 20 NOUVEAUX ──
-  // Vague 3 — Mime : copie ta vitesse exacte
-  mimic:    {hp:(w)=>20+w*5,   spd:(w)=>1.0+w*.06, sz:11,dmg:10,color:'#00ffcc',xp:12, coins:0, unlockWave:3},
-  // Vague 5 — Sniper : tire depuis très loin, précis
-  sniper:   {hp:(w)=>25+w*6,   spd:(w)=>0.5+w*.03, sz:10,dmg:18,color:'#ff00aa',xp:14, coins:1, unlockWave:5},
-  // Vague 6 — Bouclier : a un bouclier frontal qui bloque les balles
-  shielder: {hp:(w)=>60+w*14,  spd:(w)=>0.9+w*.04, sz:15,dmg:16,color:'#4488ff',xp:20, coins:1, unlockWave:6},
-  // Vague 8 — Colle : ralentit le joueur au contact
-  gluey:    {hp:(w)=>35+w*9,   spd:(w)=>1.0+w*.05, sz:14,dmg:8, color:'#aaff44',xp:13, coins:1, unlockWave:8},
-  // Vague 9 — Magnétique : attire les balles du joueur
-  magnet:   {hp:(w)=>50+w*12,  spd:(w)=>0.8+w*.04, sz:14,dmg:12,color:'#ff88ff',xp:18, coins:0, unlockWave:9},
-  // Vague 10 — Kamikaze : fonce + explose au contact
-  kamikaze: {hp:(w)=>15+w*4,   spd:(w)=>3.2+w*.12, sz:9, dmg:30,color:'#ff2200',xp:10, coins:0, unlockWave:10},
-  // Vague 11 — Invisible : disparaît périodiquement
-  stealth:  {hp:(w)=>30+w*8,   spd:(w)=>1.6+w*.07, sz:10,dmg:14,color:'#aaaaaa',xp:15, coins:1, unlockWave:11},
-  // Vague 13 — Boomerang : envoie un projectile qui revient
-  boomer:   {hp:(w)=>40+w*9,   spd:(w)=>1.0+w*.05, sz:13,dmg:10,color:'#ff8833',xp:17, coins:1, unlockWave:13},
-  // Vague 14 — Toxique : laisse une traînée de poison
-  toxic:    {hp:(w)=>45+w*11,  spd:(w)=>1.1+w*.05, sz:13,dmg:12,color:'#55ff00',xp:18, coins:1, unlockWave:14},
-  // Vague 15 — Miroir : renvoie les balles
-  mirror:   {hp:(w)=>55+w*13,  spd:(w)=>0.7+w*.04, sz:15,dmg:8, color:'#ccffff',xp:22, coins:1, unlockWave:15},
-  // Vague 16 — Jumeau : spawn toujours par paire liée
-  twin:     {hp:(w)=>35+w*8,   spd:(w)=>1.4+w*.07, sz:11,dmg:12,color:'#ff99cc',xp:14, coins:1, unlockWave:16},
-  // Vague 17 — Titan : immense, immunisé à l'explosion
-  titan:    {hp:(w)=>200+w*40, spd:(w)=>0.5+w*.025,sz:24,dmg:35,color:'#886644',xp:60, coins:3, unlockWave:17},
-  // Vague 18 — Spectre : traverse les murs (rebondit)
-  specter:  {hp:(w)=>40+w*9,   spd:(w)=>1.8+w*.08, sz:11,dmg:12,color:'#8888ff',xp:16, coins:1, unlockWave:18},
-  // Vague 19 — Nécromant : ressuscite un ennemi mort voisin
-  necro:    {hp:(w)=>65+w*15,  spd:(w)=>0.7+w*.04, sz:15,dmg:10,color:'#aa00ff',xp:28, coins:2, unlockWave:19},
-  // Vague 20 — Graviton : crée un champ de gravité qui attire le joueur
-  graviton: {hp:(w)=>70+w*16,  spd:(w)=>0.6+w*.03, sz:16,dmg:14,color:'#00aaff',xp:30, coins:2, unlockWave:20},
-  // Vague 22 — Parasite : se colle à un autre ennemi et le boost
-  parasite: {hp:(w)=>20+w*5,   spd:(w)=>2.0+w*.09, sz:8, dmg:8, color:'#ff5566',xp:12, coins:1, unlockWave:22},
-  // Vague 24 — Titan Glacé : gèle les balles et ralentit la zone
-  icetitan: {hp:(w)=>180+w*38, spd:(w)=>0.45+w*.02,sz:22,dmg:28,color:'#aaeeff',xp:55, coins:3, unlockWave:24},
-  // Vague 26 — Démon : vole les PV du joueur à distance
-  demon:    {hp:(w)=>80+w*18,  spd:(w)=>1.2+w*.06, sz:16,dmg:20,color:'#cc0022',xp:35, coins:2, unlockWave:26},
-  // Vague 28 — Dieu Mineur : boss de milieu + attaques multiples
-  minigod:  {hp:(w)=>400+w*80, spd:(w)=>0.7+w*.04, sz:26,dmg:40,color:'#ffaa00',xp:120,coins:8, unlockWave:28},
-  // Vague 32 — Entité : ne peut être tué qu'avec des critiques
-  entity:   {hp:(w)=>120+w*28, spd:(w)=>1.3+w*.06, sz:18,dmg:30,color:'#ff00ff',xp:80, coins:5, unlockWave:32},
-  // ── 20 NOUVEAUX ENNEMIS ──
-  // Vague 2 — Armure : carapace dure, réduit les dégâts de 50%
-  armored:  {hp:(w)=>60+w*14,  spd:(w)=>0.8+w*.04, sz:15,dmg:14,color:'#aaaacc',xp:16, coins:1, unlockWave:2},
-  // Vague 4 — Dash ennemi : se téléporte brusquement vers toi
-  dasher:   {hp:(w)=>22+w*5,   spd:(w)=>1.4+w*.07, sz:10,dmg:12,color:'#ff6600',xp:12, coins:0, unlockWave:4},
-  // Vague 5 — Piégeur : pose des mines invisibles
-  trapper:  {hp:(w)=>30+w*7,   spd:(w)=>0.9+w*.04, sz:12,dmg:0, color:'#cc8800',xp:14, coins:1, unlockWave:5},
-  // Vague 7 — Aspirateur : absorbe les gemmes XP autour
-  absorber: {hp:(w)=>45+w*10,  spd:(w)=>1.1+w*.05, sz:14,dmg:12,color:'#00cccc',xp:18, coins:1, unlockWave:7},
-  // Vague 9 — Explosive en chaîne : explose et déclenche les bombers proches
-  chain_bomber:{hp:(w)=>25+w*6,spd:(w)=>1.2+w*.06, sz:11,dmg:0, color:'#ff6600',xp:14, coins:1, unlockWave:9},
-  // Vague 10 — Régénérant : se régénère tant qu'il est vivant
-  regen_e:  {hp:(w)=>70+w*16,  spd:(w)=>1.0+w*.05, sz:14,dmg:14,color:'#88ff88',xp:22, coins:2, unlockWave:10},
-  // Vague 11 — Éclair : tire 3 balles rapides en rafale
-  striker:  {hp:(w)=>35+w*8,   spd:(w)=>1.3+w*.06, sz:12,dmg:8, color:'#ffff44',xp:16, coins:1, unlockWave:11},
-  // Vague 12 — Bouclier mobile : protège les ennemis proches
-  guardian: {hp:(w)=>80+w*18,  spd:(w)=>0.8+w*.04, sz:17,dmg:16,color:'#4499ff',xp:28, coins:2, unlockWave:12},
-  // Vague 13 — Illusionniste : crée de faux clones de lui-même
-  illusionist:{hp:(w)=>40+w*9, spd:(w)=>1.5+w*.07, sz:12,dmg:10,color:'#ff88cc',xp:20, coins:2, unlockWave:13},
-  // Vague 14 — Vampirique : vole les PV au joueur au contact
-  vampire:  {hp:(w)=>55+w*12,  spd:(w)=>1.4+w*.07, sz:13,dmg:15,color:'#880033',xp:22, coins:2, unlockWave:14},
-  // Vague 15 — Colosse : énorme, lent, frappe en zone
-  colossus: {hp:(w)=>150+w*35, spd:(w)=>0.55+w*.03,sz:22,dmg:40,color:'#996633',xp:55, coins:3, unlockWave:15},
-  // Vague 17 — Fantôme de Feu : laisse une traînée de feu
-  fireghost:{hp:(w)=>45+w*10,  spd:(w)=>1.7+w*.08, sz:12,dmg:14,color:'#ff5500',xp:20, coins:2, unlockWave:17},
-  // Vague 19 — Araignée : tire une toile ralentissante
-  spider:   {hp:(w)=>50+w*11,  spd:(w)=>1.2+w*.06, sz:13,dmg:10,color:'#884400',xp:22, coins:2, unlockWave:19},
-  // Vague 21 — Cristal : immunisé aux balles de face, vulnérable de côté
-  crystal:  {hp:(w)=>90+w*20,  spd:(w)=>0.7+w*.04, sz:16,dmg:18,color:'#88ddff',xp:35, coins:3, unlockWave:21},
-  // Vague 23 — Voleur : vole tes pièces au contact
-  thief:    {hp:(w)=>28+w*6,   spd:(w)=>2.2+w*.09, sz:9, dmg:6, color:'#ffcc00',xp:15, coins:2, unlockWave:23},
-  // Vague 25 — Titan de Feu : mega tank avec aura brûlante
-  firetitan:{hp:(w)=>250+w*50, spd:(w)=>0.45+w*.02,sz:25,dmg:40,color:'#ff4400',xp:80, coins:5, unlockWave:25},
-  // Vague 27 — Void : efface les balles qui le touchent
-  void_e:   {hp:(w)=>100+w*22, spd:(w)=>1.0+w*.05, sz:17,dmg:22,color:'#220044',xp:45, coins:3, unlockWave:27},
-  // Vague 30 — Berserker : accélère chaque fois qu'il est touché
-  berserker_e:{hp:(w)=>85+w*20,spd:(w)=>1.0+w*.05, sz:15,dmg:28,color:'#ff3300',xp:50, coins:4, unlockWave:30},
-  // Vague 35 — Ange Déchu : boss volant, tire en spirale
-  fallen:   {hp:(w)=>500+w*90, spd:(w)=>0.8+w*.04, sz:30,dmg:50,color:'#ffffff',xp:150,coins:15,unlockWave:35},
-  // Vague 40 — Dieu Cosmique : boss final ultime
-  cosmic:   {hp:(w)=>900+w*150,spd:(w)=>0.5+w*.03, sz:40,dmg:70,color:'#cc00ff',xp:300,coins:25,unlockWave:40},
-  // ── ENNEMIS DES NOUVEAUX BIOMES ──
-  // 🏜️ Désert — Scarabée : creuse sous terre et surgit sous le joueur
-  scarab:      {hp:(w)=>50+w*11, spd:(w)=>1.4+w*.06,sz:12,dmg:16,color:'#cc8800',xp:20,coins:2,unlockWave:40, biome:'desert'},
-  // 🕳️ Abîme — Distorsion : se divise en 4 quand touché
-  distortion:  {hp:(w)=>40+w*9,  spd:(w)=>1.2+w*.06,sz:13,dmg:14,color:'#2200aa',xp:22,coins:2,unlockWave:50, biome:'abyss'},
-  // ⚙️ Usine — Drone : vole au-dessus, immunisé aux obstacles
-  drone:       {hp:(w)=>45+w*10, spd:(w)=>1.8+w*.07,sz:11,dmg:12,color:'#aaaaaa',xp:18,coins:2,unlockWave:60, biome:'machine'},
-  // 💭 Rêve — Spectre de Rêve : change de forme aléatoirement
-  dreamspec:   {hp:(w)=>55+w*12, spd:(w)=>1.5+w*.07,sz:13,dmg:15,color:'#cc99ff',xp:25,coins:2,unlockWave:70, biome:'dream'},
-  // ☄️ Apocalypse — Cavalier : ultra-rapide, laisse une traînée de destruction
-  horseman:    {hp:(w)=>80+w*18, spd:(w)=>2.5+w*.09,sz:14,dmg:30,color:'#ff0000',xp:40,coins:3,unlockWave:80, biome:'apocalypse'},
-  // ── ENNEMIS EXCLUSIFS AUX BIOMES ──
-  // 🌌 Vide — Fantôme des abysses : invisible sauf au contact, se duplique à la mort
-  void_phantom:{hp:(w)=>35+w*8, spd:(w)=>1.6+w*.07,sz:11,dmg:14,color:'#001133',xp:18,coins:1,unlockWave:1,  biome:'void'},
-  // 🔥 Enfer — Démon de braise : laisse une traînée de feu, immunisé au gel
-  ember_demon: {hp:(w)=>55+w*12,spd:(w)=>1.3+w*.06,sz:14,dmg:18,color:'#ff2200',xp:22,coins:2,unlockWave:15, biome:'inferno'},
-  // ❄️ Glacier — Golem de glace : se régénère dans les plaques, explose en éclats en mourant
-  ice_golem:   {hp:(w)=>90+w*20,spd:(w)=>0.6+w*.03,sz:18,dmg:20,color:'#cceeff',xp:30,coins:2,unlockWave:30, biome:'glacier'},
-  // ☣️ Marais — Spore toxique : éclate en nuage empoisonné à la mort
-  spore:       {hp:(w)=>30+w*7, spd:(w)=>1.1+w*.05,sz:13,dmg:8, color:'#66ff22',xp:14,coins:1,unlockWave:45, biome:'toxic'},
-  // ⚡ Tempête — Éclair vivant : se téléporte aléatoirement, chaque touche décharge
-  living_bolt: {hp:(w)=>40+w*9, spd:(w)=>2.0+w*.08,sz:10,dmg:16,color:'#ddddff',xp:20,coins:2,unlockWave:60, biome:'storm'},
-  // 🌑 Ombre — Doppelgänger : copie exacte du joueur qui imite ses mouvements
-  doppel:      {hp:(w)=>60+w*14,spd:(w)=>2.8+w*.06,sz:12,dmg:20,color:'#330066',xp:35,coins:3,unlockWave:75, biome:'shadow'},
-  // 🌌 Cosmique — Étoile mourante : orbit autour du joueur, explose en nova à la mort
-  dying_star:  {hp:(w)=>150+w*30,spd:(w)=>0.9+w*.04,sz:16,dmg:25,color:'#ffaaff',xp:60,coins:4,unlockWave:90, biome:'cosmic'},
-  // ══════════════════════════════════════════════════════════
-  // 75 NOUVEAUX ENNEMIS — vague 20+
-  // ══════════════════════════════════════════════════════════
-
-  // ── MUTANTS (vague 20-30) ──
-  mutant:      {hp:(w)=>70+w*16,  spd:(w)=>1.6+w*.07, sz:14,dmg:18,color:'#88ff44',xp:25,coins:2,unlockWave:20},
-  brute:       {hp:(w)=>130+w*28, spd:(w)=>0.9+w*.04, sz:20,dmg:32,color:'#cc4400',xp:38,coins:3,unlockWave:21},
-  leaper:      {hp:(w)=>45+w*10,  spd:(w)=>2.8+w*.1,  sz:10,dmg:20,color:'#aaff00',xp:18,coins:1,unlockWave:22},
-  stalker:     {hp:(w)=>55+w*12,  spd:(w)=>1.8+w*.08, sz:11,dmg:15,color:'#334433',xp:20,coins:1,unlockWave:22},
-  hive_mind:   {hp:(w)=>80+w*18,  spd:(w)=>0.7+w*.04, sz:16,dmg:12,color:'#88aa00',xp:30,coins:2,unlockWave:23},
-  acid_blob:   {hp:(w)=>60+w*14,  spd:(w)=>1.0+w*.05, sz:15,dmg:14,color:'#aaff22',xp:22,coins:2,unlockWave:24},
-  shrieker:    {hp:(w)=>40+w*9,   spd:(w)=>1.5+w*.07, sz:11,dmg:8, color:'#ff88aa',xp:16,coins:1,unlockWave:25},
-  warper:      {hp:(w)=>65+w*14,  spd:(w)=>1.3+w*.06, sz:12,dmg:16,color:'#4444ff',xp:24,coins:2,unlockWave:25},
-  crusher:     {hp:(w)=>160+w*35, spd:(w)=>0.6+w*.03, sz:22,dmg:45,color:'#884422',xp:55,coins:4,unlockWave:26},
-  plague_rat:  {hp:(w)=>25+w*5,   spd:(w)=>3.0+w*.11, sz:8, dmg:10,color:'#887700',xp:10,coins:0,unlockWave:26},
-
-  // ── ÉLÉMENTAIRES (vague 27-35) ──
-  fire_wisp:   {hp:(w)=>50+w*11,  spd:(w)=>2.0+w*.08, sz:10,dmg:14,color:'#ff6600',xp:20,coins:1,unlockWave:27},
-  ice_wraith:  {hp:(w)=>60+w*13,  spd:(w)=>1.4+w*.06, sz:12,dmg:12,color:'#88ddff',xp:22,coins:1,unlockWave:27},
-  storm_hawk:  {hp:(w)=>55+w*12,  spd:(w)=>3.2+w*.11, sz:10,dmg:16,color:'#aaaaff',xp:20,coins:1,unlockWave:28},
-  earth_golem: {hp:(w)=>200+w*40, spd:(w)=>0.4+w*.02, sz:24,dmg:40,color:'#886644',xp:65,coins:4,unlockWave:28},
-  lightning_eel:{hp:(w)=>45+w*10, spd:(w)=>2.5+w*.09, sz:9, dmg:18,color:'#ddddff',xp:18,coins:1,unlockWave:29},
-  void_walker: {hp:(w)=>85+w*19,  spd:(w)=>1.1+w*.05, sz:15,dmg:20,color:'#220033',xp:32,coins:2,unlockWave:29},
-  magma_beast: {hp:(w)=>120+w*25, spd:(w)=>0.8+w*.04, sz:18,dmg:30,color:'#ff3300',xp:42,coins:3,unlockWave:30},
-  frost_giant: {hp:(w)=>180+w*38, spd:(w)=>0.5+w*.025,sz:22,dmg:35,color:'#99ccff',xp:58,coins:4,unlockWave:30},
-  toxic_cloud: {hp:(w)=>35+w*8,   spd:(w)=>0.6+w*.03, sz:20,dmg:6, color:'#66ff00',xp:14,coins:1,unlockWave:31},
-  thunder_bull:{hp:(w)=>140+w*30, spd:(w)=>1.5+w*.07, sz:18,dmg:35,color:'#ccaaff',xp:50,coins:3,unlockWave:31},
-
-  // ── ROBOTIQUES (vague 32-42) ──
-  sentinel_bot:{hp:(w)=>90+w*20,  spd:(w)=>0.8+w*.04, sz:16,dmg:22,color:'#778899',xp:30,coins:2,unlockWave:32},
-  missile_mech:{hp:(w)=>110+w*24, spd:(w)=>0.7+w*.035,sz:17,dmg:25,color:'#aabbcc',xp:38,coins:3,unlockWave:33},
-  nano_swarm:  {hp:(w)=>15+w*3,   spd:(w)=>3.5+w*.12, sz:6, dmg:8, color:'#ccffcc',xp:6, coins:0,unlockWave:33},
-  tank_mech:   {hp:(w)=>250+w*50, spd:(w)=>0.4+w*.02, sz:26,dmg:50,color:'#667788',xp:80,coins:5,unlockWave:34},
-  laser_drone: {hp:(w)=>65+w*14,  spd:(w)=>2.0+w*.08, sz:11,dmg:20,color:'#ff4488',xp:24,coins:2,unlockWave:35},
-  shield_bot:  {hp:(w)=>100+w*22, spd:(w)=>0.9+w*.045,sz:16,dmg:18,color:'#4466aa',xp:35,coins:2,unlockWave:36},
-  bomb_mech:   {hp:(w)=>80+w*18,  spd:(w)=>0.7+w*.035,sz:15,dmg:0, color:'#ff8800',xp:28,coins:2,unlockWave:37},
-  spider_bot:  {hp:(w)=>70+w*15,  spd:(w)=>1.8+w*.08, sz:13,dmg:16,color:'#995544',xp:26,coins:2,unlockWave:37},
-  stealth_mech:{hp:(w)=>85+w*19,  spd:(w)=>1.5+w*.07, sz:13,dmg:22,color:'#334455',xp:30,coins:2,unlockWave:38},
-  plasma_core: {hp:(w)=>150+w*33, spd:(w)=>0.6+w*.03, sz:20,dmg:38,color:'#00ffcc',xp:55,coins:4,unlockWave:38},
-
-  // ── DÉMONIQUES (vague 40-50) ──
-  imp:         {hp:(w)=>45+w*10,  spd:(w)=>2.8+w*.1,  sz:9, dmg:14,color:'#cc2200',xp:18,coins:1,unlockWave:40},
-  hellhound:   {hp:(w)=>80+w*18,  spd:(w)=>2.5+w*.09, sz:13,dmg:25,color:'#882200',xp:30,coins:2,unlockWave:40},
-  succubus:    {hp:(w)=>70+w*16,  spd:(w)=>1.6+w*.07, sz:12,dmg:20,color:'#ff44aa',xp:28,coins:2,unlockWave:41},
-  balrog:      {hp:(w)=>300+w*60, spd:(w)=>0.6+w*.03, sz:28,dmg:55,color:'#ff2200',xp:100,coins:7,unlockWave:42},
-  shadow_fiend:{hp:(w)=>90+w*20,  spd:(w)=>2.0+w*.08, sz:13,dmg:25,color:'#110011',xp:34,coins:3,unlockWave:42},
-  bone_archer: {hp:(w)=>55+w*12,  spd:(w)=>0.8+w*.04, sz:12,dmg:15,color:'#ddccaa',xp:22,coins:2,unlockWave:43},
-  lich:        {hp:(w)=>120+w*26, spd:(w)=>0.7+w*.035,sz:17,dmg:22,color:'#8844cc',xp:45,coins:3,unlockWave:43},
-  demon_lord:  {hp:(w)=>450+w*90, spd:(w)=>0.7+w*.035,sz:32,dmg:65,color:'#cc0000',xp:150,coins:12,unlockWave:45},
-  nightmare:   {hp:(w)=>100+w*22, spd:(w)=>1.8+w*.08, sz:14,dmg:28,color:'#220022',xp:38,coins:3,unlockWave:45},
-  void_herald: {hp:(w)=>130+w*28, spd:(w)=>1.2+w*.06, sz:17,dmg:30,color:'#440088',xp:50,coins:4,unlockWave:46},
-
-  // ── COSMIQUES (vague 48-60) ──
-  star_eater:  {hp:(w)=>200+w*40, spd:(w)=>0.8+w*.04, sz:22,dmg:40,color:'#ffaaff',xp:70,coins:5,unlockWave:48},
-  nebula_spawn:{hp:(w)=>60+w*13,  spd:(w)=>1.8+w*.08, sz:12,dmg:18,color:'#aaaaff',xp:24,coins:2,unlockWave:48},
-  black_hole_e:{hp:(w)=>350+w*70, spd:(w)=>0.3+w*.015,sz:30,dmg:60,color:'#000033',xp:120,coins:9,unlockWave:50},
-  pulsar:      {hp:(w)=>80+w*18,  spd:(w)=>1.5+w*.07, sz:14,dmg:22,color:'#ffff88',xp:30,coins:2,unlockWave:50},
-  quasar:      {hp:(w)=>160+w*35, spd:(w)=>1.0+w*.05, sz:19,dmg:35,color:'#ff88ff',xp:60,coins:5,unlockWave:52},
-  dimension_ripper:{hp:(w)=>110+w*24,spd:(w)=>1.4+w*.07,sz:16,dmg:28,color:'#8800ff',xp:42,coins:3,unlockWave:53},
-  void_titan:  {hp:(w)=>600+w*120,spd:(w)=>0.4+w*.02, sz:36,dmg:75,color:'#110022',xp:200,coins:15,unlockWave:55},
-  astral_ghost:{hp:(w)=>75+w*16,  spd:(w)=>2.2+w*.09, sz:12,dmg:20,color:'#ccccff',xp:28,coins:2,unlockWave:55},
-  omega_sentinel:{hp:(w)=>250+w*50,spd:(w)=>0.9+w*.045,sz:24,dmg:50,color:'#ffccff',xp:90,coins:7,unlockWave:57},
-  universe_eater:{hp:(w)=>1000+w*200,spd:(w)=>0.3+w*.015,sz:45,dmg:90,color:'#000000',xp:350,coins:25,unlockWave:60},
-
-  // ── ANCIENS DIEUX (vague 60-80) ──
-  elder_thing: {hp:(w)=>400+w*80, spd:(w)=>0.6+w*.03, sz:30,dmg:60,color:'#226622',xp:140,coins:10,unlockWave:60},
-  herald_doom: {hp:(w)=>500+w*100,spd:(w)=>0.7+w*.035,sz:32,dmg:70,color:'#882200',xp:170,coins:13,unlockWave:62},
-  time_wraith: {hp:(w)=>150+w*32, spd:(w)=>2.0+w*.08, sz:16,dmg:35,color:'#aaaaff',xp:58,coins:4,unlockWave:64},
-  reality_bender:{hp:(w)=>180+w*38,spd:(w)=>1.2+w*.06,sz:19,dmg:40,color:'#ff88ff',xp:68,coins:5,unlockWave:65},
-  chaos_spawn: {hp:(w)=>120+w*25, spd:(w)=>2.5+w*.09, sz:14,dmg:30,color:'#ff4400',xp:46,coins:3,unlockWave:67},
-  entropy_lord:{hp:(w)=>700+w*140,spd:(w)=>0.5+w*.025,sz:38,dmg:85,color:'#220000',xp:230,coins:18,unlockWave:68},
-  void_prophet:{hp:(w)=>200+w*40, spd:(w)=>1.0+w*.05, sz:20,dmg:42,color:'#440044',xp:75,coins:6,unlockWave:70},
-  ancient_evil:{hp:(w)=>350+w*70, spd:(w)=>0.8+w*.04, sz:28,dmg:65,color:'#330000',xp:120,coins:9,unlockWave:72},
-  fate_warden: {hp:(w)=>250+w*50, spd:(w)=>1.4+w*.07, sz:22,dmg:50,color:'#ffffff',xp:90,coins:7,unlockWave:75},
-  oblivion:    {hp:(w)=>800+w*160,spd:(w)=>0.4+w*.02, sz:40,dmg:95,color:'#000000',xp:280,coins:22,unlockWave:77},
-
-  // ── ULTIMES (vague 80+) ──
-  armageddon_spawn:{hp:(w)=>300+w*60,spd:(w)=>1.5+w*.07,sz:22,dmg:55,color:'#ff1100',xp:110,coins:8,unlockWave:80},
-  end_bringer: {hp:(w)=>500+w*100,spd:(w)=>1.0+w*.05, sz:30,dmg:80,color:'#440000',xp:180,coins:14,unlockWave:82},
-  death_angel: {hp:(w)=>400+w*80, spd:(w)=>1.8+w*.08, sz:26,dmg:70,color:'#ffffff',xp:145,coins:11,unlockWave:85},
-  omega_god:   {hp:(w)=>1200+w*240,spd:(w)=>0.5+w*.025,sz:42,dmg:100,color:'#ffff00',xp:400,coins:30,unlockWave:88},
-  infinity_spawn:{hp:(w)=>200+w*40,spd:(w)=>3.0+w*.11,sz:15,dmg:45,color:'#00ffff',xp:75,coins:5,unlockWave:90},
-  eternal_dread:{hp:(w)=>600+w*120,spd:(w)=>0.8+w*.04,sz:34,dmg:90,color:'#003300',xp:210,coins:16,unlockWave:92},
-  genesis_worm:{hp:(w)=>900+w*180,spd:(w)=>0.6+w*.03, sz:38,dmg:95,color:'#ff00ff',xp:310,coins:24,unlockWave:95},
-  absolute_zero:{hp:(w)=>500+w*100,spd:(w)=>1.2+w*.06,sz:28,dmg:75,color:'#00aaff',xp:180,coins:14,unlockWave:97},
-  the_nothing: {hp:(w)=>2000+w*400,spd:(w)=>0.3+w*.015,sz:50,dmg:120,color:'#000000',xp:600,coins:50,unlockWave:100},
-};
-Object.assign(ETYPES,getBiomeContentPack().etypes);
-Object.assign(ETYPES,getEnemyUpdatePack().etypes);
-(function(){
-  const c2=getEnemyUpdatePack();
-  for(let ci=0;ci<c2.codex.length;ci++)CODEX_ENEMIES.push(c2.codex[ci]);
-})();
-
-function edgePos(){
-  // Spawn autour de la caméra (pas juste les bords du canvas)
-  const cx=(state&&state.camX)||0, cy=(state&&state.camY)||0;
-  const margin=50;
-  const s=Math.floor(Math.random()*4);
-  if(s===0)return{x:cx+Math.random()*W,       y:cy-margin};
-  if(s===1)return{x:cx+W+margin,               y:cy+Math.random()*H};
-  if(s===2)return{x:cx+Math.random()*W,       y:cy+H+margin};
-  return        {x:cx-margin,                  y:cy+Math.random()*H};
-}
-
-function spawnEnemy(){
-  const w=state.wave;
-  const currentBiomeId=getCurrentBiome().id;
-
-  // Construire le pool avec poids
-  // Les ennemis récents ont moins de poids — ils s'intègrent progressivement
-  const pool=[];
-  for(const t of Object.keys(ETYPES)){
-    if(t==='boss'||t==='megaboss')continue;
-    const cfg=ETYPES[t];
-    if(cfg.unlockWave>w)continue;
-    // Ennemis exclusifs biome — seulement dans leur biome
-    if(cfg.biome&&cfg.biome!==currentBiomeId)continue;
-
-    // Poids selon l'âge de l'ennemi dans le jeu
-    const wavesAgo=w-cfg.unlockWave;
-    let weight;
-    if(cfg.biome){
-      // Ennemis biome : bonus dans leur biome
-      weight=8;
-    } else if(wavesAgo>=20){
-      // Ennemi présent depuis longtemps → poids plein
-      weight=10;
-    } else if(wavesAgo>=10){
-      // Ennemi récent → poids moyen (s'intègre)
-      weight=5;
-    } else if(wavesAgo>=5){
-      // Ennemi très récent → poids faible (apparaît rarement)
-      weight=2;
-    } else {
-      // Ennemi tout nouveau → poids minimal (apparaît parfois)
-      weight=1;
-    }
-    for(let i=0;i<weight;i++) pool.push(t);
-  }
-
-  if(!pool.length)return;
-  const type=pool[Math.floor(Math.random()*pool.length)];
-  const{x,y}=edgePos();
-  const cfg=ETYPES[type];
-  const _gm=state&&state._evGiants?3:1;
-  const e={x,y,type,hp:cfg.hp(w)*_gm,maxHp:cfg.hp(w)*_gm,speed:cfg.spd(w),size:cfg.sz*(_gm>1?2:1),dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()};
-  // Extras par type
-  if(type==='shooter')e.st=0;
-  if(type==='ghost')e.gt=0;
-  if(type==='healer')e.ht=0;
-  if(type==='charger'){e.ct=0;e.charging=false;e.chvx=0;e.chvy=0;}
-  if(type==='bomber')e.bomberHp=true;
-  if(type==='sniper')e.st=Math.random()*2000;
-  if(type==='stealth'){e.st=0;e.visible=true;}
-  if(type==='boomer')e.st=0;
-  if(type==='specter'){e.svx=(Math.random()-.5)*cfg.spd(w)*2;e.svy=(Math.random()-.5)*cfg.spd(w)*2;}
-  if(type==='entity')e.immune=true;
-  // nouveaux
-  if(type==='armored'){e.armor=true;e.armorHp=e.maxHp;}
-  if(type==='dasher'){e.dashT=0;e.dashCd=Math.random()*1500;}
-  if(type==='trapper'){e.trapT=0;}
-  if(type==='absorber'){e.absT=0;}
-  if(type==='chain_bomber'){e.cbT=0;}
-  if(type==='regen_e'){e.regenT=0;}
-  if(type==='striker'){e.stT=Math.random()*1500;}
-  if(type==='guardian'){e.guardT=0;}
-  if(type==='illusionist'){e.illT=0;e.clones=[];}
-  if(type==='vampire'){e.vampT=0;}
-  if(type==='fireghost'){e.fgT=0;}
-  if(type==='spider'){e.spT=0;}
-  if(type==='crystal'){e.angle=Math.random()*Math.PI*2;}
-  if(type==='thief'){e.stolen=0;}
-  if(type==='firetitan'){e.ftT=0;}
-  if(type==='void_e'){e.voidT=0;}
-  if(type==='berserker_e'){e.bersHits=0;}
-  if(type==='fallen'){e.falT=0;e.falAngle=0;}
-  if(type==='cosmic'){e.cosT=0;e.cosPhase=0;}
-  // Biome exclusifs
-  if(type==='void_phantom'){e.visible=true;e.vpTimer=0;e.splitDone=false;}
-  if(type==='ember_demon'){e.trailTimer=0;}
-  if(type==='ice_golem'){e.igTimer=0;}
-  if(type==='spore'){e.sporeReady=true;}
-  if(type==='living_bolt'){e.boltTimer=0;}
-  if(type==='doppel'){e.doppelTimer=0;}
-  if(type==='dying_star'){e.starAngle=0;e.starOrbit=120;}
-  if(type==='scarab'){e.underground=false;e.scarabTimer=0;}
-  if(type==='distortion'){e.distSplit=0;}
-  if(type==='drone'){e.droneTimer=0;}
-  if(type==='dreamspec'){e.dreamForm=Math.floor(Math.random()*4);e.dreamTimer=0;}
-  if(type==='horseman'){e.horseTrail=[];}
-  if(cfg.enemyUpdateMech){const mh=ENEMY_MECHANICS[type];if(mh&&mh.init)mh.init(e,w);}
-  // Nouveaux
-  if(type==='leaper'){e.leapT=0;}
-  if(type==='stalker'){e.stalkT=0;e.stalkPhase='follow';}
-  if(type==='hive_mind'){e.hiveT=0;}
-  if(type==='shrieker'){e.shriekT=0;}
-  if(type==='warper'){e.warpT=0;}
-  if(type==='plague_rat'){e.ratT=0;}
-  if(type==='fire_wisp'){e.wispT=0;}
-  if(type==='lightning_eel'){e.eelT=0;}
-  if(type==='void_walker'){e.vwT=0;}
-  if(type==='thunder_bull'){e.tbCharge=false;e.tbT=0;}
-  if(type==='sentinel_bot'){e.sbT=0;}
-  if(type==='missile_mech'){e.mmT=0;}
-  if(type==='laser_drone'){e.ldT=0;}
-  if(type==='shield_bot'){e.shielded=true;e.shieldHp=60+state.wave*8;}
-  if(type==='bomb_mech'){e.bmT=0;}
-  if(type==='stealth_mech'){e.stmT=0;e.visible=true;}
-  if(type==='plasma_core'){e.pcT=0;}
-  if(type==='imp'){e.impT=0;}
-  if(type==='succubus'){e.sucT=0;}
-  if(type==='lich'){e.lichT=0;}
-  if(type==='nightmare'){e.nmT=0;}
-  if(type==='bone_archer'){e.baT=0;}
-  if(type==='pulsar'){e.pulT=0;}
-  if(type==='quasar'){e.qsT=0;}
-  if(type==='dimension_ripper'){e.drT=0;}
-  if(type==='astral_ghost'){e.agT=0;e.agVis=true;}
-  if(type==='time_wraith'){e.twT=0;}
-  if(type==='chaos_spawn'){e.csT=0;}
-  if(type==='void_prophet'){e.vpT=0;}
-  if(type==='fate_warden'){e.fwT=0;}
-  if(type==='armageddon_spawn'){e.asT=0;}
-  if(type==='death_angel'){e.daT=0;}
-  if(type==='infinity_spawn'){e.isT=0;}
-  if(type==='genesis_worm'){e.gwT=0;e.gwSegments=[];}
-  if(type==='the_nothing'){e.tnT=0;}
-  if(type==='twin'){
-    // Spawn son jumeau
-    const{x:tx2,y:ty2}=edgePos();
-    const twin2={x:tx2,y:ty2,type:'twin',hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:'#ffbbdd',xp:cfg.xp,coins:cfg.coins,id:Math.random()};
-    twin2.twinId=e.id;e.twinId=twin2.id;
-    state.enemies.push(twin2);discoverEntry('enemies','twin');
-  }
-  state.enemies.push(e);
-  discoverEntry('enemies',type);
-}
-
-function spawnWave(){
-  const w=state.wave;
-  // Cap exponentiel : ~6 au niveau 1, double tous les ~8 niveaux
-  const cap=Math.min(Math.floor(6*Math.pow(1.09,w-1)), 120);
-  state._waveCap=cap; // garder pour le spawn continu
-  if(state.enemies.length>=cap)return;
-  // Spawn initial : remplir la moitié du cap
-  const initCount=Math.max(Math.floor(cap/2), 3);
-  for(let i=0;i<initCount&&state.enemies.length<cap;i++)spawnEnemy();
-  // Essaim à partir de vague 5
-  if(w>=5&&Math.random()<.4&&state.enemies.length<cap-5){
-    const swarmCount=Math.min(Math.floor(w/3), 12);
-    for(let i=0;i<swarmCount;i++){
-      const{x,y}=edgePos();const cfg=ETYPES.swarm;
-      state.enemies.push({x,y,type:'swarm',hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()});
-      discoverEntry('enemies','swarm');
-    }
-  }
-  if(w>=15&&w%15===0){spawnBoss('boss');}
-  if(w>=30&&w%30===0){spawnBoss('megaboss');}
-  if(w>=10&&Math.random()<.3)spawnElite();
-}
-
-
-// Boss spécial de fin de biome selon le biome actuel
-const BIOME_BOSS={
-  void:     {type:'entity',   name:'ENTITÉ DU VIDE',     scale:2.5},
-  inferno:  {type:'firetitan',name:'TITAN INFERNAL',     scale:2.2},
-  glacier:  {type:'icetitan', name:'SEIGNEUR GLACIAL',   scale:2.2},
-  toxic:    {type:'colossus', name:'COLOSSE TOXIQUE',    scale:2.0},
-  storm:    {type:'minigod',  name:'DIEU DE LA TEMPÊTE', scale:2.3},
-  shadow:   {type:'fallen',   name:'OMBRE ABSOLUE',      scale:2.0},
-  desert:     {type:'titan',    name:'PHARAON DES SABLES',   scale:2.2},
-  abyss:      {type:'graviton', name:'SEIGNEUR DE L\'ABÎME',   scale:2.5},
-  machine:    {type:'guardian', name:'COLOSSE MÉCANIQUE',       scale:2.3},
-  dream:      {type:'doppel',   name:'L\'AUTRE MOI',            scale:2.0},
-  apocalypse: {type:'fallen',   name:'ANGE DE L\'APOCALYPSE',  scale:3.0},
-  cosmic:   {type:'cosmic',   name:'DIEU COSMIQUE',      scale:2.5},
-};
-Object.assign(BIOME_BOSS,getBiomeContentPack().bossMap);
-
-function spawnBiomeBoss(){
-  const biome=getCurrentBiome();
-  const bb=BIOME_BOSS[biome.id]||{type:'megaboss',name:'BOSS',scale:2};
-  const w=state.wave;
-  const{x,y}=edgePos();
-  const cfg=ETYPES[bb.type]||ETYPES.megaboss;
-  const boss={
-    x,y,
-    type:bb.type,
-    hp:  cfg.hp(w)*bb.scale*1.5,
-    maxHp:cfg.hp(w)*bb.scale*1.5,
-    speed:cfg.spd(w)*.8,
-    size: cfg.sz*bb.scale,
-    dmg:  cfg.dmg*1.3,
-    color:biome.accent,
-    xp:   cfg.xp*3,
-    coins:cfg.coins*3,
-    isBiomeBoss:true,
-    biomeBossName:bb.name,
-    id:Math.random()
-  };
-  // Initialiser extras selon le type
-  if(bb.type==='entity')boss.immune=true;
-  if(bb.type==='cosmic'){boss.cosT=0;boss.cosPhase=0;}
-  if(bb.type==='fallen'){boss.falT=0;boss.falAngle=0;}
-  state.enemies.push(boss);
-  state.biomeBossAlive=true;
-  snd('boss');
-  // Banner spécial
-  const b=document.getElementById('wave-banner');
-  if(b){
-    b.textContent=`⚠ BOSS — ${bb.name} ⚠`;
-    b.style.color=biome.accent;
-    b.style.background=biome.accent+'22';
-    b.style.borderColor=biome.accent;
-    b.classList.add('show');
-  }
-  discoverEntry('enemies',bb.type);
-}
-
-function spawnBoss(type='boss'){
-  const w=state.wave,{x,y}=edgePos();
-  const cfg=ETYPES[type];
-  state.enemies.push({x,y,type,hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins});
-  snd('boss');discoverEntry('enemies',type);
-}
-function spawnElite(){
-  const w=state.wave,{x,y}=edgePos();const cfg=ETYPES.elite;
-  state.enemies.push({x,y,type:'elite',hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins});
-  discoverEntry('enemies','elite');
-}
-
-/* ══════════════════════════════════════════════
-   LOGIQUE DE JEU
-══════════════════════════════════════════════ */
-
-/* ══════════════════════════════════════════════
-   SYSTÈME DE SYNERGIES
-══════════════════════════════════════════════ */
-const SYNERGIES=[
-  {ids:['w_laser','w2_chain_1'],   name:'LASER ENCHAÎNÉ',  bonus:'Laser rebondit entre ennemis',   effect:s=>{s.player.chainCount=(s.player.chainCount||2)+2;}},
-  {ids:['w_knife','w2_orb_1'],     name:'LAMES ORBITALES', bonus:'Couteaux font 2x dégâts',        effect:s=>{s.player.knifeExplode=true;}},
-  {ids:['w2_explode_1','w2_freeze_1'],name:'SUPERNOVA GLACIALE',bonus:'Explosion gèle les ennemis',effect:s=>{s.player.freeze=true;s.player.explodeRadius=(s.player.explodeRadius||55)*1.5;}},
-  {ids:['c_glass_c','w2_chain_1'], name:'VERRE BRISÉ',     bonus:'Balles rebondissent x8',         effect:s=>{s.player.chainCount=(s.player.chainCount||2)+6;}},
-  {ids:['c_fury_1','c_combo_1'],   name:'MACHINE DE GUERRE',bonus:'Combo x2 rapide',               effect:s=>{s.player.comboMult=(s.player.comboMult||.05)+.05;}},
-  {ids:['s_vamp_1','c_berserk_1'], name:'VAMPIRE ENRAGÉ',  bonus:'+30% dégâts si PV pleins',       effect:s=>{s.player.fullHpBonus=true;}},
-  {ids:['w2_turret_1','w_saw'],    name:'ARSENAL',         bonus:'Tourelles tirent 2x plus vite',  effect:s=>{s.player.turretFireRate=.5;}},
-  {ids:['f_pierce_4','w2_explode_1'],name:'PERCÉE EXPLOSIVE',bonus:'Chaque ennemi traversé explose',effect:s=>{s.player.pierceExplode=true;}},
-  {ids:['c_isaac','c_fury_1'],     name:'LARMES DE RAGE',  bonus:'Furie = XP aussi',               effect:s=>{s.player.furyXp=true;}},
-  {ids:['w2_blizzard','w_saw'],    name:'SCIE GELANTE',    bonus:'Scie gèle les ennemis',          effect:s=>{s.player.sawFreeze=true;}},
-  {ids:['f_proj_5','w2_nova_1'],   name:'DÉLUGE NOVA',     bonus:'Nova déclenche 12 projectiles',  effect:s=>{s.player.novaShot=true;}},
-  {ids:['c_glass_c','s_vamp_1'],   name:'PACTE MORTEL',    bonus:'Kill = +5 PV (verre: 1 PV max)', effect:s=>{s.player.vamp=(s.player.vamp||0)+5;}},
-  {ids:['w2_aura_1','w2_freeze_1'],name:'FROIDEUR ARDENTE',bonus:'Aura gèle ET brûle',             effect:s=>{s.player.auraFreeze=true;}},
-  {ids:['w_boomerang','f_bounce_2'],name:'INFINI',         bonus:'Boomerang rebondit indéfiniment', effect:s=>{s.player.pierce+=5;}},
-  {ids:['f_spread_3','w2_explode_1'],name:'APOCALYPSE 360°',bonus:'Chaque balle explose',          effect:s=>{s.player.explode=true;}},
+const CODEX_BIOMES=[
+  {id:'void',icon:'🌌',name:'LE VIDE',desc:"Le biome de départ. Espace vide infini.",hint:'Biome de base'},
+  {id:'inferno',icon:'🔥',name:'ENFER',desc:"Ennemis de feu. Explosions partout. Dangereux !",hint:'Biome de base'},
+  {id:'glacier',icon:'❄️',name:'GLACIER',desc:"Ennemis glacés. Tout ralentit.",hint:'Biome de base'},
+  {id:'toxic',icon:'☣️',name:'MARAIS TOXIQUE',desc:"Empoisonnement constant. Régénération essentielle.",hint:'Biome de base'},
+  {id:'storm',icon:'⚡',name:'TEMPÊTE',desc:"Tout va très vite. Réflexes au maximum.",hint:'Biome de base'},
+  {id:'shadow',icon:'🌑',name:'OMBRE',desc:"Ennemis invisibles. Critiques obligatoires.",hint:'Biome de base'},
+  {id:'cosmic',icon:'🌌',name:'COSMIQUE',desc:"Les dieux sont là. Bonne chance.",hint:'Biome de base'},
+  {id:'desert',icon:'🏜️',name:'DÉSERT MAUDIT',desc:"Chaleur écrasante. Les rapides dominent ici.",hint:'Biome de base'},
+  {id:'abyss',icon:'🕳️',name:'ABÎME',desc:"Gravité déformée. Les trous noirs règnent.",hint:'Biome de base'},
+  {id:'machine',icon:'⚙️',name:'USINE INFERNALE',desc:"Acier et rouages. Les tourelles sont essentielles.",hint:'Biome de base'},
+  {id:'dream',icon:'💭',name:'RÊVE BRISÉ',desc:"Rien est réel. Méfie-toi des faux ennemis.",hint:'Biome de base'},
+  {id:'apocalypse',icon:'☄️',name:'APOCALYPSE',desc:"La fin du monde. Tout est permis.",hint:'Biome de base'},
 ];
+const CODEX_MUTATIONS=[
+  {id:'void_rifts',icon:'🔄',name:'FISSURES',desc:"Des failles téléportent les ennemis",hint:'Boucle 2+'},
+  {id:'fire_zones',icon:'🔄',name:'ZONES DE FEU',desc:"Des zones de braise brûlent en permanence",hint:'Boucle 2+'},
+  {id:'ice_patches',icon:'🔄',name:'PLAQUES DE GLACE',desc:"Plaques glissantes — tu dérapes dessus",hint:'Boucle 2+'},
+  {id:'ice_spikes',icon:'🔄',name:'PICS DE GLACE',desc:"Des pics bloquent les passages",hint:'Boucle 2+'},
+  {id:'toxic_pools',icon:'🔄',name:'MARES TOXIQUES',desc:"Des flaques de poison font des dégâts",hint:'Boucle 2+'},
+  {id:'toxic_trees',icon:'🔄',name:'ARBRES VENIMEUX',desc:"Des arbres bloquent et empoisonnent",hint:'Boucle 2+'},
+  {id:'wind_currents',icon:'🔄',name:'COURANTS DE VENT',desc:"Des vents poussent le joueur",hint:'Boucle 2+'},
+  {id:'void_traps',icon:'🔄',name:'PIÈGES DU VIDE',desc:"Des pièges invisibles téléportent à un endroit aléatoire",hint:'Boucle 2+'},
+  {id:'sand_storms',icon:'🔄',name:'TEMPÊTES DE SABLE',desc:"Des tourbillons de sable ralentissent et aveuglent",hint:'Boucle 2+'},
+  {id:'quicksand',icon:'🔄',name:'SABLES MOUVANTS',desc:"Des zones de sables mouvants piègent le joueur",hint:'Boucle 2+'},
+  {id:'abyss_holes',icon:'🔄',name:'TROUS DIMENSIONNELS',desc:"Des trous téléportent tout ce qui les touche",hint:'Boucle 2+'},
+  {id:'gravity_flip',icon:'🔄',name:'INVERSION DE GRAVITÉ',desc:"La gravité attire vers le haut périodiquement",hint:'Boucle 2+'},
+  {id:'turret_walls',icon:'🔄',name:'TOURELLES FIXES',desc:"Des tourelles ennemies tirent depuis les murs",hint:'Boucle 2+'},
+  {id:'conveyor',icon:'🔄',name:'TAPIS ROULANTS',desc:"Des tapis poussent le joueur dans une direction",hint:'Boucle 2+'},
+  {id:'illusion_walls',icon:'🔄',name:'MURS ILLUSOIRES',desc:"Des murs faux apparaissent — certains sont vrais !",hint:'Boucle 2+'},
+  {id:'nightmares',icon:'🔄',name:'CAUCHEMARS',desc:"Des ennemis fantômes apparaissent de nulle part",hint:'Boucle 2+'},
+  {id:'cracks',icon:'🔄',name:'FISSURES DE FIN',desc:"Des fissures dans le sol libèrent de la lave",hint:'Boucle 2+'},
+  {id:'black_holes',icon:'🔄',name:'TROUS NOIRS',desc:"Des trous noirs aspirent tout",hint:'Boucle 2+'},
+];
+
+const CODEX_EVENTS=[
+  {id:'horde',icon:'👾',name:'HORDE DÉMENTE',desc:"Spawn x5 plus rapide !",hint:'Événement aléatoire'},
+  {id:'speedup',icon:'⚡',name:'ACCÉLÉRATION',desc:"Tous les ennemis +80% vitesse !",hint:'Événement aléatoire'},
+  {id:'darkness',icon:'🌑',name:'OBSCURITÉ',desc:"Vision réduite à 150px autour de toi !",hint:'Événement aléatoire'},
+  {id:'xpfrenzy',icon:'✨',name:'FRÉNÉSIE XP',desc:"x5 XP ! Monte de niveau en quelques secondes !",hint:'Événement aléatoire'},
+  {id:'freeze',icon:'❄️',name:'GRAND GEL',desc:"Tous les ennemis gelés 8 secondes !",hint:'Événement aléatoire'},
+  {id:'shrink',icon:'🔬',name:'RÉTRÉCISSEMENT',desc:"Toi et tes balles rapetissent — mais +100% vitesse !",hint:'Événement aléatoire'},
+  {id:'mirror_dmg',icon:'🪞',name:'MIROIR DE DÉGÂTS',desc:"Tous les dégâts reçus sont renvoyés aux ennemis proches !",hint:'Événement aléatoire'},
+  {id:'bullet_rain',icon:'🌧️',name:'PLUIE DE BALLES',desc:"Tes balles tombent du ciel toutes les 0.5s !",hint:'Événement aléatoire'},
+  {id:'time_warp',icon:'⌛',name:'DISTORSION TEMPORELLE',desc:"Le temps ralentit pour tout le monde — sauf toi !",hint:'Événement aléatoire'},
+  {id:'magnet_ev',icon:'🧲',name:'SUPER MAGNÉTISME',desc:"Tout est attiré vers toi — XP, pièces, ET ennemis !",hint:'Événement aléatoire'},
+  {id:'phantom',icon:'👻',name:'FANTÔME',desc:"Tu traverses les ennemis sans prendre de dégâts !",hint:'Événement aléatoire'},
+  {id:'overdrive',icon:'🔥⚡',name:'SURDÉCUPLEMENT',desc:"+300% dégâts mais PV descend à 1 !",hint:'Événement aléatoire'},
+  {id:'clone_ev',icon:'👥',name:'ARMÉE DE CLONES',desc:"3 clones de toi apparaissent et tirent aussi !",hint:'Événement aléatoire'},
+  {id:'quake',icon:'🌍',name:'SÉISME',desc:"Le sol tremble — tous les ennemis sont ralentis et étourdis !",hint:'Événement aléatoire'},
+  {id:'blood_moon',icon:'🌕',name:'LUNE DE SANG',desc:"Ennemis +50% HP mais +200% XP et pièces !",hint:'Événement aléatoire'},
+  {id:'rewind',icon:'⏮️',name:'REMBOBINAGE',desc:"Tous les ennemis retournent à leur position de spawn !",hint:'Événement aléatoire'},
+  {id:'shield_ev',icon:'🛡️',name:'BOUCLIER DIVIN',desc:"Invincible complet pendant 12 secondes !",hint:'Événement aléatoire'},
+  {id:'gravity_storm',icon:'🌀',name:'TEMPÊTE GRAVITATIONNELLE',desc:"La gravité tourne — tous les ennemis valsent aléatoirement !",hint:'Événement aléatoire'},
+  {id:'nuke',icon:'💥',name:'FRAPPE NUCLÉAIRE',desc:"Explosion massive qui tue tous les ennemis proches !",hint:'Événement aléatoire'},
+  {id:'curse',icon:'💀',name:'MALÉDICTION',desc:"Tes PV descendent lentement — mais x10 XP !",hint:'Événement aléatoire'},
+  {id:'laser_sky',icon:'🔴',name:'PLUIE LASER',desc:"Des lasers tombent du ciel sur les ennemis !",hint:'Événement aléatoire'},
+  {id:'coin_flood',icon:'💰',name:'DÉLUGE DE PIÈCES',desc:"Des pièces pleuvent partout sur la map !",hint:'Événement aléatoire'},
+  {id:'rage',icon:'😡',name:'RAGE TOTALE',desc:"Tous les ennemis foncent vers toi en berserker !",hint:'Événement aléatoire'},
+  {id:'multiverse',icon:'🌐',name:'MULTIVERS',desc:"Chaque balle se duplique à mi-chemin !",hint:'Événement aléatoire'},
+  {id:'titan_rise',icon:'🗿',name:'ÉVEIL DES TITANS',desc:"3 titans géants surgissent immédiatement !",hint:'Événement aléatoire'},
+];
+
+// Les biomes procéduraux sont dans getBiomeContentPack().codex
 
 let _synergyIds=new Set();
 function checkSynergy(newId){
@@ -4439,6 +3789,155 @@ function showSynergyFlash(syn){
   el.style.opacity='1';
   clearTimeout(el._t);
   el._t=setTimeout(()=>{el.style.opacity='0';},2500);
+}
+
+
+/* ══════════════════════════════════════════════
+   SYSTÈME DE TITRES
+══════════════════════════════════════════════ */
+const TITLES=[
+  // ── SURVIE ──
+  {id:'pacifiste',    name:'PACIFISTE',       color:'#aaeeff', icon:'🕊️',
+   desc:"Tu as survécu sans te battre.",
+   check:s=>s.stats.wavesNoHit>=5},
+  {id:'fantome',      name:'FANTÔME',         color:'#ccaaff', icon:'👻',
+   desc:"Intouchable. Ils ne t'ont jamais eu.",
+   check:s=>s.stats.wavesNoHit>=10},
+  {id:'suicidaire',   name:'SUICIDAIRE',      color:'#ff4466', icon:'💀',
+   desc:"Tu refuses ce que le monde t'offre.",
+   check:s=>(s.stats.xpSkipped||0)>=5},
+  {id:'runner',       name:'COUREUR',         color:'#ffaa00', icon:'🏃',
+   desc:"Toujours en mouvement. Jamais rattrapé.",
+   check:s=>(s.stats.dashCount||0)>=50},
+  {id:'ultra_runner', name:'ULTRA-RUNNER',    color:'#ff8800', icon:'⚡',
+   desc:"La téléportation, c'est pour les amateurs.",
+   check:s=>(s.stats.dashCount||0)>=200},
+  // ── EXPLORATION ──
+  {id:'touriste',     name:'TOURISTE',        color:'#88ddff', icon:'📸',
+   desc:'Tu as vu des endroits que peu osent visiter.',
+   check:s=>{ try{return s.wave>=(15*getAllBiomes().length);}catch(e){return false;} }},
+  {id:'voyageur',     name:'GRAND VOYAGEUR',  color:'#00ffe7', icon:'🌍',
+   desc:"La boucle est bouclée. Deux fois.",
+   check:s=>{ try{return s.wave>=(15*getAllBiomes().length*2);}catch(e){return false;} }},
+  {id:'eternel',      name:'ÉTERNEL',         color:'#ffffff', icon:'∞',
+   desc:"Certains jouent. Toi, tu existes.",
+   check:s=>{ try{return s.wave>=(15*getAllBiomes().length*5);}catch(e){return false;} }},
+  // ── COMBAT ──
+  {id:'massacreur',   name:'MASSACREUR',      color:'#ff4400', icon:'⚔️',
+   desc:"Une partie. Mille morts.",
+   check:s=>s.kills>=1000},
+  {id:'exterminateur',name:'EXTERMINATEUR',   color:'#ff0000', icon:'💥',
+   desc:"Cinq mille. Ils n'avaient aucune chance.",
+   check:s=>s.kills>=5000},
+  {id:'dieu_mort',    name:'DIEU DE MORT',    color:'#880000', icon:'☠️',
+   desc:"Dix mille ennemis. Une seule partie.",
+   check:s=>s.kills>=10000},
+  {id:'boss_slayer',  name:'CHASSEUR',        color:'#ffd700', icon:'👹',
+   desc:"Les boss tombent un par un.",
+   check:s=>s.stats.bossKills>=10},
+  {id:'critique',     name:'CRITIQUE',        color:'#ffdd00', icon:'🎯',
+   desc:"Chaque frappe compte. Surtout celles-là.",
+   check:s=>s.stats.crits>=500},
+  {id:'godlike',      name:'GODLIKE',         color:'#ffd700', icon:'👑',
+   desc:"Là où la plupart abandonnent.",
+   check:s=>s.wave>=100},
+  {id:'immortel',     name:'IMMORTEL',        color:'#00ff88', icon:'♾️',
+   desc:"Le cycle est complet. Il recommence.",
+   check:s=>{ try{return s.wave>=(15*getAllBiomes().length);}catch(e){return false;} }},
+  {id:'legende',      name:'LÉGENDE',         color:'#cc00ff', icon:'🌟',
+   desc:"Deux boucles. Le jeu ne t'effraie plus.",
+   check:s=>{ try{return s.wave>=(15*getAllBiomes().length*2);}catch(e){return false;} }},
+  // ── BUILD ──
+  {id:'collectionneur',name:'COLLECTIONNEUR', color:'#4488ff', icon:'📦',
+   desc:"Ton inventaire déborde. Tous les styles.",
+   check:s=>s.runUpgrades&&s.runUpgrades.length>=20},
+  {id:'minimaliste',  name:'MINIMALISTE',     color:'#aaaaaa', icon:'🔲',
+   desc:"Moins c'est plus. Tu l'as prouvé.",
+   check:s=>s.wave>=30&&s.runUpgrades&&s.runUpgrades.length<5},
+  {id:'mythe',        name:'MYTHIQUE',        color:'#cc00ff', icon:'💎',
+   desc:"Cinq objets que peu voient. Tous équipés.",
+   check:s=>s.runUpgrades&&s.runUpgrades.filter(u=>u.rarity==='mythic').length>=5},
+  {id:'alchimiste',   name:'ALCHIMISTE',      color:'#ffaa44', icon:'⚗️',
+   desc:"Des synergies que personne n'avait prévues.",
+   check:s=>s.runUpgrades&&s.runUpgrades.filter(u=>u.rarity==='legendary'||u.rarity==='mythic').length>=8},
+  // ── DRÔLES ──
+  {id:'masochiste',   name:'MASOCHISTE',      color:'#ff6688', icon:'🩸',
+   desc:"Déjà terminé ? Vraiment ?",
+   check:s=>s.wave<=1},
+  {id:'riche',        name:'RICHARD',         color:'#ffd700', icon:'🤑',
+   desc:"L'argent ne t'a pas sauvé.",
+   check:s=>s.coinsRun>=10000},
+  {id:'balle_perdue', name:'BALLE PERDUE',    color:'#888888', icon:'🎱',
+   desc:"Tu as survécu sans faire vraiment mal.",
+   check:s=>s.wave>=50&&s.runUpgrades&&!s.runUpgrades.some(u=>u.id.includes('dmg'))},
+  {id:'chaos',        name:'AGENT DU CHAOS',  color:'#ff4400', icon:'🃏',
+   desc:"Le désordre, c'est ta stratégie.",
+   check:s=>s.runUpgrades&&s.runUpgrades.some(u=>u.id.startsWith('funny'))},
+  {id:'solitaire',    name:'SOLITAIRE',       color:'#667788', icon:'🔇',
+   desc:"Tu n'as jamais rien laissé orbiter autour de toi.",
+   check:s=>s.wave>=20&&s.runUpgrades&&!s.runUpgrades.some(u=>u.id.includes('orb'))},
+];
+
+// Sauvegarder le titre actif
+const KTITLE='surv_title';
+function getTitle(){return localStorage.getItem(KTITLE)||'';}
+function setTitle(id){localStorage.setItem(KTITLE,id);}
+
+// Calculer le titre mérité pour cette partie
+function computeTitle(s){
+  // Prendre le titre le plus rare/cool (dernier dans la liste = plus rare)
+  let best=null;
+  for(const t of TITLES){
+    try{if(t.check(s))best=t;}catch(e){}
+  }
+  return best;
+}
+
+// Afficher le titre dans l'écran de fin
+function showRunTitle(s){
+  const t=computeTitle(s);
+  if(!t)return;
+  unlockTitle(t.id); // Sauvegarder dans les titres débloqués
+  // Proposer d'équiper ce titre
+  const el=document.getElementById('run-title-earned');
+  if(el){
+    el.style.display='block';
+    el.innerHTML=`<div style="font-size:.6rem;color:#567;letter-spacing:.1em;margin-bottom:4px;">TITRE GAGNÉ</div>
+      <div style="font-size:1.1rem;">${t.icon} <span style="font-family:'Orbitron',sans-serif;color:${t.color};text-shadow:0 0 10px ${t.color};">${t.name}</span></div>
+      <div style="font-size:.58rem;color:#89a;margin:3px 0 8px;">${t.desc}</div>
+      <button onclick="equipTitle('${t.id}')" style="font-family:'Orbitron',sans-serif;font-size:.6rem;background:transparent;border:1px solid ${t.color};color:${t.color};padding:5px 14px;cursor:pointer;letter-spacing:.08em;">⚡ ÉQUIPER CE TITRE</button>`;
+  }
+  return t;
+}
+
+function equipTitle(id){
+  setTitle(id);
+  const t=TITLES.find(t=>t.id===id);
+  if(!t)return;
+  const prf=getPrf();
+  if(prf){prf.title=id;savePrf(prf);}
+  renderProfileBadge();
+  // Rafraîchir le codex si ouvert
+  if(codexTab==='titles')renderCodexGrid();
+  const el=document.getElementById('run-title-earned');
+  if(el)el.innerHTML=`<div style="color:#00ff88;font-size:.65rem;letter-spacing:.08em;">✅ ${t.icon} ${t.name} équipé !</div>`;
+}
+
+function unlockTitle(id){
+  const earned=JSON.parse(localStorage.getItem('surv_earned_titles')||'[]');
+  if(!earned.includes(id)){
+    earned.push(id);
+    localStorage.setItem('surv_earned_titles',JSON.stringify(earned));
+  }
+}
+
+// Obtenir le titre actif avec ses infos
+function getActiveTitle(){
+  const id=getTitle();
+  if(!id)return null;
+  const prf=getPrf();
+  if(prf&&prf.title)return TITLES.find(t=>t.id===prf.title)||null;
+  return TITLES.find(t=>t.id===id)||null;
 }
 
 function tryStart(){
@@ -4523,6 +4022,8 @@ function update(dt){
   if(waveReady&&!state.biomeBossAlive){
     state.waveTimer=0;
     state.spawnTimer=0;
+    // Vague passée sans être touché
+    if(state.stats.lastHitWave<state.wave)state.stats.wavesNoHit=(state.stats.wavesNoHit||0)+1;
     state.wave++;
     showWaveBanner(state.wave);
     spawnWave();
@@ -4663,7 +4164,8 @@ function update(dt){
   const spawnInterval=Math.max(200, 1000-state.wave*20);
   if(state.spawnTimer>spawnInterval){
     state.spawnTimer=0;
-    const cap=state._waveCap||Math.floor(6*Math.pow(1.09,state.wave-1));
+    // Toujours spawner — mais max 300 à l'écran pour les perfs mobiles
+    const cap=Math.min(300+getBiomeLoop()*50, state._waveCap||99999);
     if(state.enemies.length<cap){
       const n=Math.max(1,Math.floor(cap/8))*(state._evSpawnMult||1);
       for(let i=0;i<n&&state.enemies.length<cap;i++)spawnEnemy();
@@ -4671,7 +4173,7 @@ function update(dt){
   }
   // Limites performance (conserver les entrées les plus récentes : push en fin de tableau)
   if(state.particles.length>180){while(state.particles.length>180)state.particles.shift();}
-  if(state.xpGems.length>300){while(state.xpGems.length>300)state.xpGems.shift();}
+  if(state.xpGems.length>300){const removed=state.xpGems.splice(0,state.xpGems.length-300);state.stats.xpSkipped=(state.stats.xpSkipped||0)+removed.length;}
   if(state.coinPickups.length>300){while(state.coinPickups.length>300)state.coinPickups.shift();}
   if(state.dmgNums.length>25){while(state.dmgNums.length>25)state.dmgNums.shift();}
 
@@ -5516,7 +5018,7 @@ function fireTurret(t){snd('turret');
   const dx=tx-t.x,dy=ty-t.y,d=Math.hypot(dx,dy)||1;
   state.bullets.push({x:t.x,y:t.y,vx:dx/d*7,vy:dy/d*7,dmg:state.player.bulletDmg*.6,size:5,life:80,pierce:0,enemy:false,chainLeft:0,isChain:false,frozen:0,isTurret:true});
 }
-function doDash(){
+function doDash(){if(state)state.stats.dashCount=(state.stats.dashCount||0)+1;
   const p=state.player;
   let tx=mouse.x+state.camX,ty=mouse.y+state.camY;
   if(joy.active){tx=p.x+joy.dx*100;ty=p.y+joy.dy*100;}
@@ -5645,7 +5147,7 @@ function explodeAt(x,y,dmg,_depth){
   const nb=Math.min(6,8-(_depth||0)*2);
   for(let k=0;k<nb;k++)pts(x,y,'#ff6010',.8,2.5);
 }
-function gainXP(v){
+function gainXP(v){state.stats.xpCollected=(state.stats.xpCollected||0)+v;
   const p=state.player;p.xp+=v*(state._evXpMult||1);
   if(p.xp>=p.xpNext){p.xp-=p.xpNext;p.xpNext=Math.floor(p.xpNext*1.32);p.level++;state.paused=true;showUpgrades();snd('levelup');}
 }
@@ -5730,6 +5232,8 @@ function gameOver(){
     `${state.coinsRun} kills <span style="color:#567">+</span> ${timeBonus} survie <span style="color:#567">=</span> ${totalCoins} total`;
   document.getElementById('game-screen').style.display='none';
   updateEnergyUI();
+  // Afficher le titre gagné
+  showRunTitle(state);
   // Afficher le build du run
   const buildEl=document.getElementById('run-build');
   const buildList=document.getElementById('run-build-list');
