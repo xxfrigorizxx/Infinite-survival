@@ -272,7 +272,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— PRISM UPDATE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— LAUNCH UPDATE —</p>
   <p>Survie infinie · +100 ennemis · 62 secteurs · Codex &amp; boucle à jour</p>
   <div id="profile-badge" onclick="openProfile()">
     <div class="pb-av" id="pb-av">?</div>
@@ -6524,24 +6524,36 @@ let _installPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();
   _installPrompt=e;
-  // install btn toujours visible dans options
 });
 window.addEventListener('appinstalled',()=>{
   _installPrompt=null;
+  // Changer le texte du bouton après installation
+  const btn=document.getElementById('install-btn');
+  if(btn){btn.textContent='✅ APP INSTALLÉE';btn.style.opacity='.5';btn.onclick=null;}
 });
 function installPWA(){
   if(_installPrompt){
+    // Chrome Android — prompt natif
     _installPrompt.prompt();
     _installPrompt.userChoice.then(r=>{
       if(r.outcome==='accepted'){
         const btn=document.getElementById('install-btn');
-        if(btn)btn.style.display='none';
+        if(btn){btn.textContent='✅ APP INSTALLÉE';btn.style.opacity='.5';btn.onclick=null;}
       }
       _installPrompt=null;
     });
+  } else if(navigator.standalone||window.matchMedia('(display-mode: standalone)').matches){
+    // Déjà installée
+    const btn=document.getElementById('install-btn');
+    if(btn){btn.textContent='✅ DÉJÀ INSTALLÉE';btn.style.opacity='.5';}
   } else {
-    // Fallback — instructions manuelles
-    alert('Pour installer:\n\n📱 Android: Menu Chrome (⋮) → "Ajouter à l\'écran d\'accueil"\n\n🍎 iOS: Bouton Partage → "Sur l\'écran d\'accueil"');
+    // iOS ou navigateur sans prompt — instructions
+    const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(isIOS){
+      alert('Pour installer sur iOS :\n\n1. Appuie sur le bouton Partage ⬆\n2. Choisis "Sur l\'écran d\'accueil"\n3. Appuie sur Ajouter');
+    } else {
+      alert('Pour installer :\n\n📱 Chrome Android : Menu (⋮) → "Ajouter à l\'écran d\'accueil"\n\n🖥️ Chrome PC : icône ⊕ dans la barre d\'adresse');
+    }
   }
 }
 
