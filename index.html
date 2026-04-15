@@ -81,6 +81,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mbtn{font-family:'Orbitron',sans-serif;font-size:clamp(.56rem,2.3vw,.68rem);font-weight:700;background:transparent;border:1px solid;padding:8px 0;cursor:pointer;letter-spacing:.06em;transition:all .2s;-webkit-appearance:none;flex:1;}
 #shop-btn{border-color:var(--coin);color:var(--coin);}#shop-btn:active{background:rgba(244,166,29,.1);}
 #codex-btn{border-color:var(--codex);color:var(--codex);}#codex-btn:active{background:rgba(136,136,255,.1);}
+#options-btn-main{border-color:#cc44ff!important;color:#cc44ff!important;}#options-btn-main:active{background:rgba(204,68,255,.1)!important;}
 #regen-timer{font-size:.62rem;color:#567;min-height:12px;}
 #leaderboard{width:100%;max-width:290px;margin:0 auto;}
 #leaderboard h3{font-family:'Orbitron',sans-serif;font-size:.62rem;color:#456;letter-spacing:.13em;margin-bottom:5px;text-align:center;}
@@ -289,7 +290,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <button class="mbtn" id="codex-btn" onclick="openCodex()">📖 CODEX</button>
     </div>
     <div class="menu-row" style="margin-top:4px;">
-      <button class="mbtn" onclick="openOptions()" style="width:100%;border-color:#cc44ff;color:#cc44ff;">⚙ OPTIONS</button>
+      <button class="mbtn" id="options-btn-main" onclick="openOptions()" style="width:100%;">⚙ OPTIONS</button>
     </div>
     <!-- ── Panneau Options ── -->
     <div id="options-panel" style="display:none;flex-direction:column;align-items:stretch;gap:14px;width:100%;padding:14px 12px;background:rgba(0,255,231,.04);border:1px solid rgba(0,255,231,.15);border-radius:4px;margin-top:4px;box-sizing:border-box;">
@@ -303,10 +304,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
         <input type="range" class="opt-slider" id="opt-zoom" min="40" max="120" value="78"
           oninput="setZoom(this.value)">
       </div>
+      <button id="install-btn" class="mbtn" onclick="installPWA()" style="width:100%;border-color:#00ff88;color:#00ff88;margin-top:2px;">📲 INSTALLER L'APP</button>
       <button class="mbtn" onclick="closeOptions()" style="width:100%;margin-top:2px;">✓ FERMER</button>
-    </div>
-    <div class="menu-row" style="margin-top:4px;">
-      <button class="mbtn" id="install-btn" onclick="installPWA()" style="width:100%;border-color:#00ff88;color:#00ff88;display:none;">📲 INSTALLER L'APP</button>
     </div>
     <div id="regen-timer"></div>
   </div>
@@ -6525,12 +6524,9 @@ let _installPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();
   _installPrompt=e;
-  const btn=document.getElementById('install-btn');
-  if(btn)btn.style.display='';
+  // install btn toujours visible dans options
 });
 window.addEventListener('appinstalled',()=>{
-  const btn=document.getElementById('install-btn');
-  if(btn)btn.style.display='none';
   _installPrompt=null;
 });
 function installPWA(){
