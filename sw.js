@@ -1,4 +1,4 @@
-const CACHE='survivor-prism-v1';
+const CACHE='survivor-launch-v1';
 const ASSETS=[
   './',
   './index.html',
