@@ -222,8 +222,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— ARSENAL UPDATE —</p>
-  <p>Survie infinie · Biomes dynamiques · Événements spéciaux</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— MISE À JOUR « ATLAS DES 50 SECTEURS » —</p>
+  <p>Survie infinie · 62 secteurs nommés · Codex &amp; boucle alignés sur l’atlas</p>
   <div id="profile-badge" onclick="openProfile()">
     <div class="pb-av" id="pb-av">?</div>
     <div class="pb-info"><div class="pb-name" id="pb-name">Créer mon profil</div><div class="pb-stats" id="pb-stats">Aucune partie jouée</div></div>
@@ -687,6 +687,189 @@ function markCodexSeen(category,id){
   setCodexData(d);
 }
 
+let BIOME_CONTENT_PACK_CACHE=null;
+function applyExclusiveArch(e,dt,p,ex,ey,ed,sp){
+  const cfg=ETYPES[e.type];
+  const ar=cfg&&cfg.arch;
+  if(!ar)return false;
+  if(ar==='wobble_chase'){
+    e._wa=(e._wa||0)+dt;
+    const ox=Math.sin(e._wa*.007)*.55,oy=Math.cos(e._wa*.007)*.55;
+    e.x+=(ex/ed+ox)*sp;e.y+=(ey/ed+oy)*sp;
+    return true;
+  }
+  if(ar==='orbit_skirmish'){
+    e._oa=(e._oa||0)+dt*.002;
+    const R=85+Math.sin(e._oa)*18;
+    const tx=p.x+Math.cos(e._oa*1.2)*R,ty=p.y+Math.sin(e._oa*1.2)*R;
+    const dx=tx-e.x,dy=ty-e.y,dm=Math.hypot(dx,dy)||1;
+    e.x+=dx/dm*sp;e.y+=dy/dm*sp;
+    if(ed<60){e.x+=ex/ed*sp*2.1;e.y+=ey/ed*sp*2.1;}
+    return true;
+  }
+  if(ar==='tp_skirmish'){
+    e._tpT=(e._tpT||0)+dt;
+    if(e._tpT>2200){
+      e._tpT=0;
+      const ang=Math.random()*Math.PI*2,dst=70+Math.random()*100;
+      e.x=p.x+Math.cos(ang)*dst;e.y=p.y+Math.sin(ang)*dst;
+      pts(e.x,e.y,e.color,.8,3);
+    }
+    e.x+=ex/ed*sp*.75;e.y+=ey/ed*sp*.75;
+    return true;
+  }
+  if(ar==='spiral_in'){
+    e._sa=(e._sa||0)+dt*.004;
+    const bend=Math.sin(e._sa);
+    e.x+=(Math.cos(e._sa)*bend+ex/ed)*sp*.75;
+    e.y+=(Math.sin(e._sa)*bend+ey/ed)*sp*.75;
+    return true;
+  }
+  if(ar==='sidestep_chase'){
+    const px=-ey/ed,py=ex/ed;
+    e._sd=(e._sd||0)+dt;
+    const side=Math.sin(e._sd*.004)*.35;
+    e.x+=(ex/ed+px*side)*sp;e.y+=(ey/ed+py*side)*sp;
+    return true;
+  }
+  if(ar==='sniperlite'){
+    e.x+=ex/ed*sp*(ed>200?.35:ed<120?-.25:.6);
+    e.y+=ey/ed*sp*(ed>200?.35:ed<120?-.25:.6);
+    e._sl=(e._sl||0)+dt;
+    if(e._sl>2100&&ed<380){e._sl=0;
+      const spd=3.8;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:5,life:160,enemy:true,pierce:0,frozen:0});
+    }
+    return true;
+  }
+  if(ar==='vortex_loose'){
+    e._va=(e._va||0)+dt*.0018;
+    const R=140+Math.cos(e._va)*40;
+    e.x+=(p.x+Math.cos(e._va)*R-e.x)*.04*sp;
+    e.y+=(p.y+Math.sin(e._va)*R-e.y)*.04*sp;
+    return true;
+  }
+  if(ar==='pulse_jitter'){
+    const j=(Math.random()-.5)*.18;
+    e.x+=(ex/ed+j)*sp;e.y+=(ey/ed-j)*sp;
+    return true;
+  }
+  return false;
+}
+function getBiomeContentPack(){
+  if(BIOME_CONTENT_PACK_CACHE)return BIOME_CONTENT_PACK_CACHE;
+  function mutCombo(bid,v){
+    if(v%3===0)return[
+      {id:bid+'_a',name:'Chaleur',desc:'Braises au sol',init:s=>{s.obstacles=s.obstacles||[];for(let i=0;i<4;i++)s.obstacles.push({type:'fire_zone',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,r:18+Math.random()*22,color:'rgba(255,90,40,.22)',dmg:6,solid:false});}},
+      {id:bid+'_b',name:'Glace',desc:'Plaques glissantes',init:s=>{s.obstacles=s.obstacles||[];for(let i=0;i<5;i++)s.obstacles.push({type:'ice_patch',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,r:24+Math.random()*26,color:'rgba(170,230,255,.2)',solid:false,slippery:true});}}
+    ];
+    if(v%3===1)return[
+      {id:bid+'_a',name:'Toxines',desc:'Mares acides',init:s=>{s.obstacles=s.obstacles||[];for(let i=0;i<4;i++)s.obstacles.push({type:'toxic_pool',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,r:20+Math.random()*22,color:'rgba(55,200,40,.22)',dmg:5,solid:false});}},
+      {id:bid+'_b',name:'Ombres',desc:'Zones impénétrables',init:s=>{s.obstacles=s.obstacles||[];for(let i=0;i<3;i++)s.obstacles.push({type:'void_zone',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,r:22+Math.random()*26,color:'rgba(0,0,0,.62)',solid:true});}}
+    ];
+    return[
+      {id:bid+'_a',name:'Foudre',desc:'Orages',init:s=>{s.obstacles=s.obstacles||[];for(let i=0;i<3;i++)s.obstacles.push({type:'lightning_zone',x:Math.random()*W*.8+W*.1,y:Math.random()*H*.8+H*.1,r:24+Math.random()*20,color:'rgba(180,180,255,.28)',dmg:7,solid:false});}},
+      {id:bid+'_b',name:'Failles',desc:'Distorsions',init:s=>{s.obstacles=s.obstacles||[];for(let i=0;i<2;i++)s.obstacles.push({type:'void_rift',x:Math.random()*W*.7+W*.15,y:Math.random()*H*.7+H*.15,r:15,color:'rgba(100,0,180,.45)',riftTimer:0});}}
+    ];
+  }
+  const EXT_BIOME_NAMES=[
+    'VALLÉE DES FOURS ÉTEINTS','MARÉCAGE DU VERRE BRISÉ','CITADELLE DES VENTS FROIDS','FORÊT PÉTRIFIÉE D\'ASHUR','DUNES POURPRES','ABÎME DU SOUFRE BLANC','LAGON DES MÉDUSES MORTES','STEPPES AUX OSSEMENTS BLANCS','NÉCROPOLE FLOTTANTE','CANYON DES ÉCLAIRS FIGÉS',
+    'JUNGLE DE MOUSSE ACIDE','PLATEAU DES GÉODES VIVANTES','GOUFFRE DU MIROIR NOIR','RIVES DU FLEUVE DORT','TOURBIÈRE DES LANTERNES','DÉSERT DE SEL SANGLANT','CARRIÈRE DES COLOSSES','TEMPLE SUBMERGÉ D\'ORPHÉE','GRÈS ROUGES DE KHARON','TOUNDRA DES AIGUILLES',
+    'CAVERNES DU CHANT DES RATS','ARCHIPEL DES ÉPAVES','VOLCAN DE CENDRE FINE','PRAIRIE MÉTALLIQUE','BOIS DE CHARBON VIVANT','RAVIN DES PENDULES','OASIS AUX YEUX CLOS','ARÈNE DE SABLE NOIR','GLACIER QUI SAIGNE','MANGROVE ÉLECTRIQUE',
+    'HAUTS PLATEAUX DU SILENCE','RUINES DU CADRAN SOLAIRE','MER D\'HUILE STAGNANTE','COLLINE DES MILLE CROIX','SIPHON DES ABYSSES VERTS','PÉNINSULE DE BRUME DORÉE','DÔME DE CRISTAL FÊLÉ','SERRE AUX RACINES D\'ACIER','VALLON DES PERLES TOXIQUES','ROCHEUSES DU TONNERRE SOURD',
+    'LABYRINTHE DES STATUES MUETTES','MARAIS AUX RÉFLETS VIOLETS','ÎLOT DU CRI UNIQUE','DÉSOLATION CALCINÉE','BANQUISE ÉVENTRÉE','JUNGLE SUSPENDUE','TOMBEAU SOUS LE DOUBLE SOLEIL','PLIS TECTONIQUES DE LÉTHÉ','CÔTE DES NAUFRAGES BLEUS','SEUIL DU DERNIER CERCLE',
+    'BAS-FOND DU CRISTAL LIQUIDE','SAVANE DES AIGUILLES ROUILLÉES','GROTTE AUX RACINES DE FER','PASSERELLE DES ÂMES ÉGARÉES','FALAISE DES CORBEAUX DE CENDRE','BASSIN DES LUNES MORTES','CIME DES CLOCHES NOYÉES','DÉFILÉ DES LAMES DE GLACE','ANTRE DU VER SOYEUX','TERMINUS DE L\'ORBE GRIS'
+  ];
+  const EXT_BIOME_DESCS=[
+    'Cendres encore chaudes sous des voûtes noircies ; la chaleur ment.',
+    'Eaux stagnantes qui coupent les pieds comme du verre.',
+    'Remparts éventrés ; le vent hurle dans les salles vides.',
+    'Arbres figés en pierre ; chaque branche est une lame.',
+    'Sable teinté de pourpre au coucher d\'un soleil malade.',
+    'Vapeurs blanches qui rongent la gorge et la vue.',
+    'Flaques irisées où flottent des formes translucides.',
+    'Blancheurs osseuses à perte de vue ; le ciel semble bas.',
+    'Îlots de débris qui dérivent sans courant ni vent.',
+    'Falaises striées d\'éclairs figés dans la roche.',
+    'Mousse qui grignote le métal et la peau.',
+    'Cristaux qui pulsent faiblement, comme des cœurs.',
+    'Surfaces noires qui renvoient un autre ciel.',
+    'Eau dormante qui ne reflète plus les étoiles.',
+    'Lueurs pâles qui attirent plus qu\'elles n\'éclairent.',
+    'Cristaux de sel rouges comme des blessures.',
+    'Blocs taillés trop grands pour toute échelle humaine.',
+    'Colonnes immergées ; des cloches sonnent sous l\'eau.',
+    'Falaises rouges striées de veines sombres.',
+    'Glaces en aiguilles qui tombent sans bruit.',
+    'Échos de grincements dans le noir total.',
+    'Coques rouillées empilées comme des collines.',
+    'Cendre si fine qu\'on s\'y enfonce jusqu\'aux genoux.',
+    'Herbes d\'acier qui bruissent au moindre pas.',
+    'Charbons encore vivants sous une écorce d\'arbre.',
+    'Balanciers de pierre au-dessus du vide.',
+    'Palmiers blancs aux fruits fermés à jamais.',
+    'Sable noir qui absorbe la lumière des projectiles.',
+    'Glaces bleues striées de veines pourpres.',
+    'Racines et câbles vivants dans l\'eau salée.',
+    'Silence si dense qu\'il pèse sur les épaules.',
+    'Cadrans brisés plantés dans le sable comme des tombes.',
+    'Surface huileuse qui retient les silhouettes.',
+    'Butte couverte de croix de bois sans noms.',
+    'Gouffre vert d\'où monte une odeur de cuivre.',
+    'Brume dorée qui cache des silhouettes multiples.',
+    'Dôme translucide fissuré ; la pluie tombe à l\'intérieur.',
+    'Serre où les racines percent le béton comme des fils.',
+    'Perles toxiques qui roulent seules dans les creux.',
+    'Roches striées où le tonnerre ronfle sans éclair.',
+    'Statues sans visage alignées sur des kilomètres.',
+    'Reflets violets qui inversent la direction des bruits.',
+    'Rocher nu d\'où part un seul cri, une seule fois.',
+    'Terre craquelée ; pas une herbe, pas un insecte.',
+    'Banquise déchirée comme une toile déchirée.',
+    'Canopées suspendues au-dessus d\'un vide bleu.',
+    'Deux soleils morts au zénith ; ombre double.',
+    'Plis de roche où la mémoire s\'efface pas à pas.',
+    'Plage d\'épaves teintées d\'un bleu électrique.',
+    'Dernier passage avant l\'absence de carte.'
+  ];
+  const EXT_ICONS=['🌋','💠','🏰','🪵','🏜️','🌫️','🪼','🦴','⚰️','⚡','🍄','💎','🪞','🌊','🏮','🧂','🗿','🛕','🪨','❄️','🦇','🚢','🔥','🔩','🌲','⏳','🏝️','🏟️','🩸','🌿','🤐','☀️','🛢️','✝️','🐍','🌅','🔮','🫧','💧','⛰️','🗿','🟣','📡','☠️','🧊','🌳','🌑','🪨','🌊','⭕'];
+  const EXT_ARCH_LABEL={'wobble_chase':'trajectoire ondulée','orbit_skirmish':'orbite puis ruée','tp_skirmish':'téléportations furtives','spiral_in':'spirale refermante','sidestep_chase':'esquive latérale','sniperlite':'tir à distance','vortex_loose':'orbite large','pulse_jitter':'mouvement saccadé'};
+  const EXT_CREATURE_NAMES=[
+    'Charbonnier des fours','Lézard de verre','Gardien des courants','Sculpteur pétrifié','Rampant des dunes','Fumeur du gouffre','Filament des lagons','Rôdeur des steppes','Nocturne flottant','Éclateur du canyon',
+    'Champignonneur acide','Géode hurlante','Reflet du gouffre','Noyé du fleuve','Porteur de lanternes','Lépre du sel','Colosse des carrières','Vestale immergée','Ombre de Kharon','Piqueur de toundra',
+    'Chante-rats','Écumeur d\'épaves','Cendre-mâchoire','Faucheur d\'acier','Charbon vivant','Penduleur','Veilleur des paumes','Gladiateur du sable','Saigneur de glace','Électre-mangrove',
+    'Silencieux du plateau','Horloger des ruines','Noyé d\'huile','Croix-marchand','Serpent du siphon','Brume-dorée','Fêleur de dôme','Racine d\'acier','Perle empoisonnée','Tonnerre sourd',
+    'Statue errante','Violet rampant','Cri unique','Calciné errant','Eventreur de glace','Suspendu','Double-ombre','Oublié de Léthé','Naufrageur bleu','Veilleur du seuil',
+    'Couleur du bassin','Aiguille rousse','Racine de fer','Passager égaré','Corbeau de cendre','Lune morte','Cloche noyée','Lame suspendue','Ver soyeux','Orbe gris'
+  ];
+  const archs=['wobble_chase','orbit_skirmish','tp_skirmish','spiral_in','sidestep_chase','sniperlite','vortex_loose','pulse_jitter'];
+  const btypes=['titan','megaboss','entity','cosmic','fallen','graviton','minigod','colossus','icetitan','firetitan','guardian','boss'];
+  const upCycle=[['speed1','dmg1','shield1','regen2'],['explode1','aura1','n_phoenix'],['freeze1','slow1','shield1'],['n_poison','vamp1','siphon1'],['chain1','speed3','dash1'],['n_shadow','crit3','pierce2'],['turret1','n_overload','dmg2'],['n_echo','n_chaos','crit3'],['godmode','invincible','dmg4a'],['n_gravity','pierce3','vamp2']];
+  const enemyBases=['basic','fast','zigzag','shooter','mimic','dasher','gluey','charger','stealth','necro'];
+  const biomes=[],etypes={},bossMap={},mutMap={},codex=[];
+  for(let i=0;i<50;i++){
+    const bid='extb_'+String(i+1).padStart(2,'0');
+    const name=EXT_BIOME_NAMES[i];
+    const icon=EXT_ICONS[i];
+    const hue=(i*47)%360;
+    const bg=`hsl(${hue},18%,9%)`;
+    const grid=`hsla(${hue},35%,42%,.048)`;
+    const accent=`hsl(${(hue+40)%360},70%,55%)`;
+    const sky=i%3===0?`hsla(${hue},40%,28%,.08)`:null;
+    const exType='bio_'+bid;
+    const arch=archs[i%archs.length];
+    const archLabel=EXT_ARCH_LABEL[arch]||arch;
+    const hpM=26+i*.35,spdB=1.05+i*.006,szB=10+(i%6),dmgB=9+Math.floor(i/6),xpB=11+Math.floor(i/5);
+    const col=`hsl(${(hue+22)%360},62%,48%)`;
+    etypes[exType]={hp:(w)=>hpM+w*6.5,spd:(w)=>spdB+w*.048,sz:szB,dmg:dmgB,color:col,xp:xpB,coins:1+(i%3===0?1:0),unlockWave:1,biome:bid,arch};
+    bossMap[bid]={type:btypes[i%btypes.length],name:'SEIGNEUR · '+name,scale:2.05+(i%8)*.04};
+    mutMap[bid]=mutCombo(bid,i);
+    biomes.push({id:bid,name,icon,bg,grid,accent,skyColor:sky,unlockWave:1,enemies:[exType,...enemyBases.slice(0,5)],upgrades:upCycle[i%upCycle.length],desc:EXT_BIOME_DESCS[i]});
+    codex.push({id:exType,icon:icon,name:EXT_CREATURE_NAMES[i],desc:'Prédateur exclusif du secteur « '+name+' ». Se déplace avec une '+archLabel+'.',hint:'Biome : '+name});
+  }
+  BIOME_CONTENT_PACK_CACHE={biomes,etypes,bossMap,mutMap,codex};
+  return BIOME_CONTENT_PACK_CACHE;
+}
+
 // Définition du codex — ennemis
 const CODEX_ENEMIES=[
   {id:'basic',      icon:'🔴',name:'BASIQUE',         desc:'Fonce droit sur toi. L\'ennemi de base.',          hint:'Tué 1 fois'},
@@ -840,6 +1023,10 @@ const CODEX_ENEMIES=[
   {id:'the_nothing',icon:'⬛',name:'LE NÉANT',         desc:'Le boss ultime. 2000 PV de base. Inévitable.',  hint:'Vague 100'},
   {id:'dying_star',   icon:'🌟',name:'ÉTOILE MOURANTE',    desc:'Orbite autour de toi. Explose en nova à la mort.',    hint:'Biome : Cosmique'},
 ];
+(function(){
+  const p=getBiomeContentPack();
+  for(const c of p.codex)CODEX_ENEMIES.push(c);
+})();
 
 // Définition du codex — upgrades (résumé des 50 upgrades)
 const CODEX_UPGRADES=[
@@ -1548,7 +1735,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
-const SHOP_VERSION='v2'; // Changer ce numéro force un reset de la boutique pour tous
+const SHOP_VERSION='v3'; // Atlas 50 secteurs — incrémenter pour forcer reset boutique (localStorage)
 
 // Vérifier la version au chargement — reset si version différente
 (function checkShopVersion(){
@@ -1556,7 +1743,7 @@ const SHOP_VERSION='v2'; // Changer ce numéro force un reset de la boutique pou
     localStorage.removeItem(KSH);
     localStorage.removeItem('surv_coins');
     localStorage.setItem(KSH_VER,SHOP_VERSION);
-    console.log('Boutique réinitialisée — nouvelle version');
+    console.log('Mise à jour v3 — Atlas des 50 secteurs (boutique réinitialisée)');
   }
 })();
 const SHOP_ITEMS=[
@@ -2702,6 +2889,7 @@ const BIOMES=[
     upgrades:['godmode','n_singularity','invincible','n_eternal','n_apocalypse'],
     desc:'Les dieux sont là. Bonne chance.'
   },
+  ...getBiomeContentPack().biomes
 ];
 
 const EVENTS=[
@@ -2931,11 +3119,7 @@ const EVENTS=[
 // Obstacles persistants dans le monde (zones, pièges, météorites...)
 // state.obstacles = [{type, x, y, r, ...}]
 
-// Niveau de mutation = nombre de boucles complètes
-function getBiomeLoop(){
-  if(!state)return 0;
-  return Math.floor(state.wave/(15*12)); // 12 biomes × 15 vagues = 180 vagues = 1 boucle
-}
+// Niveau de mutation = nombre de boucles complètes (getBiomeLoop défini plus bas avec BIOMES.length)
 
 // Mutations disponibles par biome (s'accumulent)
 const BIOME_MUTATIONS={
@@ -3170,6 +3354,7 @@ const BIOME_MUTATIONS={
     },
   ],
 };
+Object.assign(BIOME_MUTATIONS,getBiomeContentPack().mutMap);
 
 // Appliquer les mutations pour le biome+boucle actuel
 function applyBiomeMutations(biomeId, loopCount){
@@ -3321,10 +3506,11 @@ function updateObstacles(dt){
 }
 
 // ── CODEX BIOMES ──
-const CODEX_BIOMES=BIOMES.map(b=>({
-  id:b.id, icon:b.icon, name:b.name, desc:b.desc,
-  hint:'Atteint vague '+(b.id==='void'?1:['void','inferno','glacier','toxic','storm','shadow','cosmic'].indexOf(b.id)*15)
-}));
+const CODEX_BIOMES=BIOMES.map(b=>{
+  const i=BIOMES.findIndex(x=>x.id===b.id);
+  const startWave=i<=0?1:i*15;
+  return{id:b.id,icon:b.icon,name:b.name,desc:b.desc,hint:'Atteint vague '+startWave};
+});
 
 // ── CODEX MUTATIONS ──
 const CODEX_MUTATIONS=[];
@@ -3347,14 +3533,13 @@ const CODEX_EVENTS=EVENTS.map(e=>({
 
 // Biome actuel — progression dans l'ordre selon la vague
 function getBiome(wave){
-  // Chaque biome dure 15 vagues, boucle sur les 12 biomes à l'infini
+  // Chaque segment = 15 vagues, boucle sur tous les biomes
   const idx=Math.floor(wave/15) % BIOMES.length;
   return BIOMES[idx];
 }
 
 function getBiomeLoop(){
   if(!state)return 0;
-  // 1 boucle complète = 12 biomes × 15 vagues = 180 vagues
   return Math.floor(state.wave/(15*BIOMES.length));
 }
 
@@ -3625,6 +3810,7 @@ const ETYPES={
   absolute_zero:{hp:(w)=>500+w*100,spd:(w)=>1.2+w*.06,sz:28,dmg:75,color:'#00aaff',xp:180,coins:14,unlockWave:97},
   the_nothing: {hp:(w)=>2000+w*400,spd:(w)=>0.3+w*.015,sz:50,dmg:120,color:'#000000',xp:600,coins:50,unlockWave:100},
 };
+Object.assign(ETYPES,getBiomeContentPack().etypes);
 
 function edgePos(){
   // Spawn autour de la caméra (pas juste les bords du canvas)
@@ -3809,6 +3995,7 @@ const BIOME_BOSS={
   apocalypse: {type:'fallen',   name:'ANGE DE L\'APOCALYPSE',  scale:3.0},
   cosmic:   {type:'cosmic',   name:'DIEU COSMIQUE',      scale:2.5},
 };
+Object.assign(BIOME_BOSS,getBiomeContentPack().bossMap);
 
 function spawnBiomeBoss(){
   const biome=getCurrentBiome();
@@ -4093,6 +4280,7 @@ function update(dt){
   // Limites performance (conserver les entrées les plus récentes : push en fin de tableau)
   if(state.particles.length>180){while(state.particles.length>180)state.particles.shift();}
   if(state.xpGems.length>300){while(state.xpGems.length>300)state.xpGems.shift();}
+  if(state.coinPickups.length>300){while(state.coinPickups.length>300)state.coinPickups.shift();}
   if(state.dmgNums.length>25){while(state.dmgNums.length>25)state.dmgNums.shift();}
 
   // Mouvement joueur
@@ -4603,7 +4791,8 @@ function update(dt){
         e.horseTrail.push({x:e.x,y:e.y,life:30});
         if(e.horseTrail.length>12)e.horseTrail.shift();
       }
-    }else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
+    }else if(applyExclusiveArch(e,dt,p,ex,ey,ed,sp)){}
+    else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
 
     // Orbes
     for(const o of state.orbs){if(Math.hypot(o.x-e.x,o.y-e.y)<(e.size||12)+(o.size||7)){e.hp-=.5;if(e.hp<=0){killEnemy(i);break;}}}
