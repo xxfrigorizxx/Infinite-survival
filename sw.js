@@ -1,8 +1,10 @@
-const CACHE='survivor-codex-v1';
+const CACHE='survivor-v2-sfx';
 const ASSETS=[
   './',
   './index.html',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap'
 ];
 
@@ -24,7 +26,6 @@ self.addEventListener('activate',e=>{
 
 // Fetch — cache d'abord, réseau ensuite
 self.addEventListener('fetch',e=>{
-  // Firebase toujours en réseau
   if(e.request.url.includes('firebase')||e.request.url.includes('googleapis.com/identitytoolkit')){
     return;
   }
@@ -32,7 +33,6 @@ self.addEventListener('fetch',e=>{
     caches.match(e.request).then(cached=>{
       if(cached)return cached;
       return fetch(e.request).then(resp=>{
-        // Mettre en cache les nouvelles ressources statiques
         if(resp.ok&&e.request.method==='GET'){
           const clone=resp.clone();
           caches.open(CACHE).then(c=>c.put(e.request,clone));
