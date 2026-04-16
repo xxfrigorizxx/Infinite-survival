@@ -180,8 +180,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .codex-header{flex-shrink:0;padding:10px 12px 4px;text-align:center;width:100%;}
 #codex-screen h2{font-family:'Orbitron',sans-serif;color:var(--codex);text-shadow:0 0 16px var(--codex);font-size:clamp(.95rem,4.2vw,1.28rem);letter-spacing:.1em;}
 .codex-sub{color:#567;font-size:.6rem;}
-#codex-tabs{display:flex;gap:5px;padding:6px 10px 0;flex-shrink:0;width:100%;max-width:400px;align-self:center;}
-.ctab{flex:1;font-family:'Orbitron',sans-serif;font-size:clamp(.52rem,2vw,.63rem);font-weight:700;background:transparent;border:1px solid #334;color:#567;padding:6px;cursor:pointer;-webkit-appearance:none;transition:all .2s;}
+#codex-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 5px;padding:6px 10px 0;flex-shrink:0;width:100%;max-width:400px;align-self:center;}
+.ctab{font-family:'Orbitron',sans-serif;font-size:clamp(.48rem,1.85vw,.58rem);font-weight:700;background:transparent;border:1px solid #334;color:#567;padding:7px 4px;cursor:pointer;-webkit-appearance:none;transition:all .2s;min-width:0;text-align:center;line-height:1.15;}
 .ctab.active{border-color:var(--codex);color:var(--codex);background:rgba(136,136,255,.08);}
 #codex-grid-wrap{flex:1;overflow-y:auto;width:100%;padding:6px 10px 4px;display:flex;flex-direction:column;align-items:center;}
 .codex-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%;max-width:400px;}
@@ -2825,7 +2825,7 @@ function mkState(){
     running:false,paused:false,
     wave:1,kills:0,elapsed:0,waveTimer:0,
     camX:0,camY:0,
-    biomeBossAlive:false,waveCleared:false,
+    biomeBossAlive:false,_biomeBossSpawned:false,waveCleared:false,
     currentEvent:null,eventTimer:0,eventCooldown:15,
     biome:null,biomeTransition:0,obstacles:[],
     _evSpawnMult:1,_evEnemySpeedMult:1,_evGiants:false,_evDark:false,
@@ -4371,7 +4371,10 @@ const BIOME_BOSS={
 Object.assign(BIOME_BOSS,getBiomeContentPack().bossMap);
 
 function spawnBiomeBoss(){
+  if(!state||!state.running)return;
+  if(state.enemies.some(e=>e&&e.isBiomeBoss))return;
   const biome=getCurrentBiome();
+  if(!biome)return;
   const bb=BIOME_BOSS[biome.id]||{type:'megaboss',name:'BOSS',scale:2};
   const w=state.wave;
   const{x,y}=edgePos();
@@ -4397,6 +4400,7 @@ function spawnBiomeBoss(){
   if(bb.type==='fallen'){boss.falT=0;boss.falAngle=0;}
   state.enemies.push(boss);
   state.biomeBossAlive=true;
+  state._biomeBossSpawned=true;
   snd('boss');
   // Banner spécial
   const b=document.getElementById('wave-banner');
@@ -4478,8 +4482,14 @@ function update(dt){
   // La vague de changement de biome est wave%15===0 — bloquée jusqu'au boss biome
   // Le boss biome est spawné à la fin de wave%15===14 (avant le changement)
   const isBiomeChangeWave = state.wave%15===0 && state.wave>0;
-  const waveReady = (state.waveTimer>20000 && !isBiomeChangeWave && !state.biomeBossAlive) ||
-                    (isBiomeChangeWave && !state.biomeBossAlive && !state.enemies.some(e=>e.isBiomeBoss));
+  const onBiomeBossWave = state.wave%15===14 && state.wave>0;
+  const hasBiomeBossEntity = state.enemies.some(e=>e&&e.isBiomeBoss);
+  // Vague 14 : ne pas avancer au timer tant que le boss n'a pas encore été spawné cette vague
+  const blockTimerAdvanceOnBossWave = onBiomeBossWave && !state._biomeBossSpawned;
+  // Vagues « multiple de 15 » : exiger aussi waveTimer>20s, sinon la condition restait vraie à chaque frame
+  // (ex. vague 15 juste après le boss) et la vague montait de plusieurs crans d’un coup → plantage / état cassé.
+  const waveReady = (state.waveTimer>20000 && !isBiomeChangeWave && !state.biomeBossAlive && !blockTimerAdvanceOnBossWave) ||
+                    (isBiomeChangeWave && state.waveTimer>20000 && !state.biomeBossAlive && !state.enemies.some(e=>e&&e.isBiomeBoss));
 
   // Boss biome tué → avancer immédiatement
   if(state.biomeBossAlive){
@@ -4500,7 +4510,8 @@ function update(dt){
     if(state.wave%15===0){p.hp=Math.min(p.maxHp,p.hp+Math.floor(p.maxHp*.15));pts(p.x,p.y,'#00ff88',1.2,5);}
     if(state.wave%15===14){
       state.biomeBossAlive=false;
-      setTimeout(()=>{ if(state.running)spawnBiomeBoss(); },2500);
+      state._biomeBossSpawned=false;
+      if(state.running)spawnBiomeBoss();
     }
     // Changement de biome toutes les 15 vagues
     if(state.wave%15===0){
@@ -5784,9 +5795,11 @@ function updateHUD(){
 
 function drawMiniMap(){
   const mc=document.getElementById('mini-canvas');
-  if(!mc||!state||!state.running||!state.player)return;
+  if(!mc||!state||!state.player)return;
+  if(!state.running&&!state.paused)return;
   const mx=mc.getContext('2d');
-  const mw=80,mh=80,RANGE=320;
+  if(!mx)return;
+  const mw=80,mh=80,RANGE=520;
   const px=state.player.x,py=state.player.y;
   mx.clearRect(0,0,mw,mh);
   mx.fillStyle='rgba(4,8,15,.95)';mx.fillRect(0,0,mw,mh);
@@ -6393,6 +6406,7 @@ function draw(){
     ctx.fillStyle=prog>=1?'#00ffe7':'rgba(0,255,231,.42)';ctx.fillRect(bx,by,bw*prog,bh);
     ctx.strokeStyle='rgba(0,255,231,.28)';ctx.lineWidth=1;ctx.strokeRect(bx,by,bw,bh);
   }
+  if(state&&state.player&&(state.running||state.paused))drawMiniMap();
 }
 
 /* ══════════════════════════════════════════════
