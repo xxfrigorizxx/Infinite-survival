@@ -227,7 +227,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— ENEMY + CODEX UPDATE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— SCALING INFINI · ENTROPIE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · Codex &amp; boucle à jour</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -1810,7 +1810,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
-const SHOP_VERSION='v3'; // Enemy Update (+100 ennemis) — incrémenter pour forcer reset boutique (localStorage)
+const SHOP_VERSION='v4'; // Scaling infini + fatigue de run — incrémenter pour forcer reset boutique (localStorage)
 
 // Vérifier la version au chargement — reset si version différente
 (function checkShopVersion(){
@@ -1818,7 +1818,7 @@ const SHOP_VERSION='v3'; // Enemy Update (+100 ennemis) — incrémenter pour fo
     localStorage.removeItem(KSH);
     localStorage.removeItem('surv_coins');
     localStorage.setItem(KSH_VER,SHOP_VERSION);
-    console.log('Mise à jour v3 — Enemy Update +100 ennemis (boutique réinitialisée)');
+    console.log('Mise à jour v4 — Scaling infini & entropie (boutique réinitialisée)');
   }
 })();
 const SHOP_ITEMS=[
@@ -1985,12 +1985,18 @@ function renderShop(){
 /* ══════════════════════════════════════════════
    50 UPGRADES — déblocage progressif par vague
 ══════════════════════════════════════════════ */
+/** Plafond de PV avec option surcharge (upgrade s_overheal). */
+function playerHealCap(pl){
+  if(!pl)return 0;
+  const m=Math.max(1,Math.floor(Number(pl.maxHp))||1);
+  return pl.overheal?Math.floor(m*1.5):m;
+}
 // Format: {id, name, icon, desc, rarity, unlockWave, apply}
 const ALL_UPGRADES=[
   // ── WAVE 1 ──
   {id:'speed1',   name:'VITESSE+',        icon:'💨',rarity:'common',   unlockWave:1,  desc:'+20% vitesse',                apply:s=>s.player.speed*=1.2},
   {id:'dmg1',     name:'DÉGÂTS+',         icon:'⚔️',rarity:'common',   unlockWave:1,  desc:'+25% dégâts',                apply:s=>s.player.bulletDmg*=1.25},
-  {id:'hp1',      name:'ARMURE',          icon:'🛡️',rarity:'common',   unlockWave:1,  desc:'PV max +30',                 apply:s=>{s.player.maxHp+=30;s.player.hp=Math.min(s.player.hp+30,s.player.maxHp);}},
+  {id:'hp1',      name:'ARMURE',          icon:'🛡️',rarity:'common',   unlockWave:1,  desc:'PV max +30',                 apply:s=>{s.player.maxHp+=30;s.player.hp=Math.min(s.player.hp+30,playerHealCap(s.player));}},
   {id:'bsize1',   name:'BALLES+',         icon:'🟠',rarity:'common',   unlockWave:1,  desc:'Balles x1.4 plus grosses',   apply:s=>s.player.bulletSize*=1.4},
   {id:'xprad1',   name:'MAGNÉTISME',      icon:'🧲',rarity:'common',   unlockWave:1,  desc:'Portée XP +60%',             apply:s=>s.player.xpRadius*=1.6},
   {id:'regen0',   name:'VITALITÉ',        icon:'🌱',rarity:'common',   unlockWave:1,  desc:'+1 PV/seconde',              apply:s=>s.player.regen+=1},
@@ -2008,7 +2014,7 @@ const ALL_UPGRADES=[
   {id:'crit1',    name:'CRITIQUE',        icon:'🎲',rarity:'rare',     unlockWave:3,  desc:'+20% chance crit (x2)',      apply:s=>s.player.critChance=Math.min(.8,s.player.critChance+.2)},
   {id:'dodge1',   name:'ESQUIVE',         icon:'🌬️',rarity:'rare',    unlockWave:3,  desc:'5% chance esquiver',         apply:s=>s.player.dodge=(s.player.dodge||0)+.05},
   {id:'dmg1b',    name:'LAME AFFÛTÉE',    icon:'🗡️',rarity:'rare',    unlockWave:3,  desc:'+20% dégâts',                apply:s=>s.player.bulletDmg*=1.2},
-  {id:'hp1b',     name:'ENDURANCE',       icon:'💪',rarity:'common',   unlockWave:3,  desc:'PV max +20',                 apply:s=>{s.player.maxHp+=20;s.player.hp=Math.min(s.player.hp+20,s.player.maxHp);}},
+  {id:'hp1b',     name:'ENDURANCE',       icon:'💪',rarity:'common',   unlockWave:3,  desc:'PV max +20',                 apply:s=>{s.player.maxHp+=20;s.player.hp=Math.min(s.player.hp+20,playerHealCap(s.player));}},
   {id:'speed1b',  name:'LÉGÈRETÉ',        icon:'🍃',rarity:'common',   unlockWave:3,  desc:'+15% vitesse',               apply:s=>s.player.speed*=1.15},
   // ── WAVE 4 ──
   {id:'regen1',   name:'RÉGÉNÉRATION',    icon:'💚',rarity:'rare',     unlockWave:4,  desc:'+2 PV/seconde',              apply:s=>s.player.regen+=2},
@@ -2027,7 +2033,7 @@ const ALL_UPGRADES=[
   {id:'fire2',    name:'MITRAILLEUSE',    icon:'💫',rarity:'epic',     unlockWave:6,  desc:'Tir +45% plus vite',         apply:s=>s.player.fireRate=Math.max(80,s.player.fireRate*.6)},
   {id:'knockback1',name:'RECUL',          icon:'↩️',rarity:'rare',    unlockWave:6,  desc:'Balles repoussent les ennemis',apply:s=>s.player.knockback=true},
   {id:'n_siphon', name:'SIPHON',          icon:'🩺',rarity:'epic',     unlockWave:6,  desc:'Chaque kill soigne 5 PV',    apply:s=>s.player.siphon=(s.player.siphon||0)+5},
-  {id:'hp2b',     name:'FORTIFICATION',   icon:'🏗️',rarity:'rare',   unlockWave:6,  desc:'PV max +40',                 apply:s=>{s.player.maxHp+=40;s.player.hp=Math.min(s.player.hp+40,s.player.maxHp);}},
+  {id:'hp2b',     name:'FORTIFICATION',   icon:'🏗️',rarity:'rare',   unlockWave:6,  desc:'PV max +40',                 apply:s=>{s.player.maxHp+=40;s.player.hp=Math.min(s.player.hp+40,playerHealCap(s.player));}},
   {id:'speed2b',  name:'ACCÉLÉRATION',    icon:'🏁',rarity:'rare',     unlockWave:6,  desc:'+25% vitesse',               apply:s=>s.player.speed*=1.25},
   // ── WAVE 7 ──
   {id:'tri1',     name:'TRIPLE TIR',      icon:'🔫',rarity:'epic',     unlockWave:7,  desc:'Tir en éventail x3',         apply:s=>s.player.triShot=true},
@@ -2046,7 +2052,7 @@ const ALL_UPGRADES=[
   {id:'shield1',  name:'BOUCLIER',        icon:'🔵',rarity:'epic',     unlockWave:9,  desc:'Bloque 1 coup / 8s',         apply:s=>{s.player.hasShield=true;s.player.shieldCd=0;}},
   {id:'n_shrink', name:'MINIBALLE',       icon:'🔬',rarity:'rare',     unlockWave:9,  desc:'Balles 3x plus petites et rapides',apply:s=>{s.player.bulletSize*=.6;s.player.bulletSpeed*=2.2;}},
   {id:'bspd1b',   name:'BALLE LASER',     icon:'🔴',rarity:'rare',     unlockWave:9,  desc:'Vitesse balles +60%',        apply:s=>s.player.bulletSpeed*=1.6},
-  {id:'hp3a',     name:'FORTRESSE',       icon:'🏰',rarity:'rare',     unlockWave:9,  desc:'PV max +60',                 apply:s=>{s.player.maxHp+=60;s.player.hp=Math.min(s.player.hp+60,s.player.maxHp);}},
+  {id:'hp3a',     name:'FORTRESSE',       icon:'🏰',rarity:'rare',     unlockWave:9,  desc:'PV max +60',                 apply:s=>{s.player.maxHp+=60;s.player.hp=Math.min(s.player.hp+60,playerHealCap(s.player));}},
   // ── WAVE 10 ──
   {id:'multi2',   name:'TIRS MULTIPLES',  icon:'🎯',rarity:'epic',     unlockWave:10, desc:'+2 projectiles',             apply:s=>s.player.multiShot+=2},
   {id:'xprad2',   name:'SUPER AIMANT',    icon:'🧲',rarity:'rare',     unlockWave:10, desc:'Portée XP x3',               apply:s=>s.player.xpRadius*=3},
@@ -2065,7 +2071,7 @@ const ALL_UPGRADES=[
   {id:'orbit2',   name:'CONSTELLATION',   icon:'🌌',rarity:'epic',     unlockWave:12, desc:'+2 orbes protecteurs',       apply:s=>s.player.orbCount+=2},
   {id:'n_poison', name:'POISON',          icon:'☠️',rarity:'epic',     unlockWave:12, desc:'Balles empoisonnent 3s',     apply:s=>s.player.poisonBullet=true},
   {id:'n_fury',   name:'FURIE',           icon:'🔱',rarity:'epic',     unlockWave:12, desc:'+3% dégâts par kill (stack)',apply:s=>s.player.furyStacks=0},
-  {id:'hp3b',     name:'TITAN NAISSANT',  icon:'🗿',rarity:'epic',     unlockWave:12, desc:'PV max +80',                 apply:s=>{s.player.maxHp+=80;s.player.hp=Math.min(s.player.hp+80,s.player.maxHp);}},
+  {id:'hp3b',     name:'TITAN NAISSANT',  icon:'🗿',rarity:'epic',     unlockWave:12, desc:'PV max +80',                 apply:s=>{s.player.maxHp+=80;s.player.hp=Math.min(s.player.hp+80,playerHealCap(s.player));}},
   {id:'pierce1b', name:'PERFORANT+',      icon:'🔰',rarity:'epic',     unlockWave:12, desc:'Balles traversent +2',       apply:s=>s.player.pierce+=2},
   // ── WAVE 13 ──
   {id:'n_web',    name:'TOILE',           icon:'🕸️',rarity:'epic',    unlockWave:13, desc:'Balles piègent ennemis 2s',  apply:s=>s.player.webBullet=true},
@@ -2189,7 +2195,7 @@ const ALL_UPGRADES=[
   {id:'b_dmg_10',name:'FORCE ABSOLUE',icon:'💎',rarity:'mythic',unlockWave:35,desc:'+200% dégâts',apply:s=>{  s.player.bulletDmg*=3.00;discoverEntry('upgrades','b_dmg_10'); }},
   {id:'b_dmg_11',name:'COUTEAU SUISSE',icon:'🔧',rarity:'common',unlockWave:1,desc:'+8% dégâts, +5% vitesse balle',apply:s=>{  s.player.bulletDmg*=1.08;s.player.bulletSpeed*=1.05;discoverEntry('upgrades','b_dmg_11'); }},
   {id:'b_dmg_12',name:'FRAPPE PRÉCISE',icon:'🎯',rarity:'rare',unlockWave:5,desc:'+20% dégâts si ennemi gelé',apply:s=>{  s.player.dmgOnFrozen=(s.player.dmgOnFrozen||1)*1.20;discoverEntry('upgrades','b_dmg_12'); }},
-  {id:'b_dmg_13',name:'RAGE DE COMBAT',icon:'😤',rarity:'rare',unlockWave:7,desc:'+15% dégâts, -10% PV max',apply:s=>{  s.player.bulletDmg*=1.15;s.player.maxHp=Math.max(10,s.player.maxHp*.90);s.player.hp=Math.min(s.player.hp,s.player.maxHp);discoverEntry('upgrades','b_dmg_13'); }},
+  {id:'b_dmg_13',name:'RAGE DE COMBAT',icon:'😤',rarity:'rare',unlockWave:7,desc:'+15% dégâts, -10% PV max',apply:s=>{  s.player.bulletDmg*=1.15;s.player.maxHp=Math.max(10,s.player.maxHp*.90);s.player.hp=Math.min(s.player.hp,playerHealCap(s.player));discoverEntry('upgrades','b_dmg_13'); }},
   {id:'b_dmg_14',name:'LAME EMPOISONNÉE',icon:'☠️',rarity:'epic',unlockWave:9,desc:'+35% dégâts, balles empoisonnent',apply:s=>{  s.player.bulletDmg*=1.35;s.player.poisonBullet=true;discoverEntry('upgrades','b_dmg_14'); }},
   {id:'b_dmg_15',name:'CALIBRE LOURD',icon:'🔵',rarity:'epic',unlockWave:10,desc:'+45% dégâts, balles 2x plus grosses',apply:s=>{  s.player.bulletDmg*=1.45;s.player.bulletSize*=2.0;discoverEntry('upgrades','b_dmg_15'); }},
   {id:'b_dmg_16',name:'COUP CRITIQUE+',icon:'🎲',rarity:'rare',unlockWave:6,desc:'+25% chance crit',apply:s=>{  s.player.critChance=Math.min(.9,s.player.critChance+.25);discoverEntry('upgrades','b_dmg_16'); }},
@@ -2201,8 +2207,8 @@ const ALL_UPGRADES=[
   {id:'b_dmg_22',name:'BALLE RAPIDE',icon:'🚀',rarity:'rare',unlockWave:4,desc:'+30% vitesse balle',apply:s=>{  s.player.bulletSpeed*=1.30;discoverEntry('upgrades','b_dmg_22'); }},
   {id:'b_dmg_23',name:'HYPERSONIQUE',icon:'⚡',rarity:'epic',unlockWave:9,desc:'+60% vitesse balle',apply:s=>{  s.player.bulletSpeed*=1.60;discoverEntry('upgrades','b_dmg_23'); }},
   {id:'b_dmg_24',name:'LUMIÈRE',icon:'✨',rarity:'legendary',unlockWave:18,desc:'+100% vitesse balle',apply:s=>{  s.player.bulletSpeed*=2.0;discoverEntry('upgrades','b_dmg_24'); }},
-  {id:'b_dmg_25',name:'MALEDICTION ROUGE',icon:'🩸',rarity:'epic',unlockWave:12,desc:'MALUS: -20% HP max mais +80% dégâts',apply:s=>{  s.player.maxHp=Math.max(10,s.player.maxHp*.80);s.player.hp=Math.min(s.player.hp,s.player.maxHp);s.player.bulletDmg*=1.80;discoverEntry('upgrades','b_dmg_25'); }},
-  {id:'b_dmg_26',name:'PACTE DÉMONIAQUE',icon:'😈',rarity:'legendary',unlockWave:20,desc:'MALUS: PV max -50% mais dégâts x3',apply:s=>{  s.player.maxHp=Math.max(10,Math.floor(s.player.maxHp*.50));s.player.hp=Math.min(s.player.hp,s.player.maxHp);s.player.bulletDmg*=3;discoverEntry('upgrades','b_dmg_26'); }},
+  {id:'b_dmg_25',name:'MALEDICTION ROUGE',icon:'🩸',rarity:'epic',unlockWave:12,desc:'MALUS: -20% HP max mais +80% dégâts',apply:s=>{  s.player.maxHp=Math.max(10,s.player.maxHp*.80);s.player.hp=Math.min(s.player.hp,playerHealCap(s.player));s.player.bulletDmg*=1.80;discoverEntry('upgrades','b_dmg_25'); }},
+  {id:'b_dmg_26',name:'PACTE DÉMONIAQUE',icon:'😈',rarity:'legendary',unlockWave:20,desc:'MALUS: PV max -50% mais dégâts x3',apply:s=>{  s.player.maxHp=Math.max(10,Math.floor(s.player.maxHp*.50));s.player.hp=Math.min(s.player.hp,playerHealCap(s.player));s.player.bulletDmg*=3;discoverEntry('upgrades','b_dmg_26'); }},
   {id:'b_dmg_27',name:'ŒIL DU TIGRE',icon:'🐯',rarity:'rare',unlockWave:6,desc:'+20% dégâts contre ennemis > 50% HP',apply:s=>{  s.player.tigerEye=true;discoverEntry('upgrades','b_dmg_27'); }},
   {id:'b_dmg_28',name:'ACHÈVEMENT',icon:'⚔️',rarity:'epic',unlockWave:11,desc:'+50% dégâts contre ennemis < 30% HP',apply:s=>{  s.player.finisher=true;discoverEntry('upgrades','b_dmg_28'); }},
   {id:'b_dmg_29',name:'DOUBLE TRANCHANT',icon:'⚔️',rarity:'legendary',unlockWave:15,desc:'+80% dégâts mais -30% cadence',apply:s=>{  s.player.bulletDmg*=1.80;s.player.fireRate=Math.min(1000,s.player.fireRate*1.30);discoverEntry('upgrades','b_dmg_29'); }},
@@ -2237,11 +2243,11 @@ const ALL_UPGRADES=[
   {id:'f_snipe_1',name:'SNIPE ALÉATOIRE',icon:'🎯',rarity:'epic',unlockWave:8,desc:'20% chance de super-projectile x5',apply:s=>{  s.player.sniperRandom=true;discoverEntry('upgrades','f_snipe_1'); }},
   {id:'f_burst_1',name:'RAFALE 3',icon:'🔫',rarity:'rare',unlockWave:7,desc:"Tire 3 balles d'un coup toutes les 3 tirs",apply:s=>{  s.player.burstShot=true;discoverEntry('upgrades','f_burst_1'); }},
   {id:'f_slow_1',name:'BALLES PESANTES',icon:'⚓',rarity:'common',unlockWave:2,desc:'MALUS: -20% vitesse balle mais +20% dégâts et taille',apply:s=>{  s.player.bulletSpeed*=.80;s.player.bulletDmg*=1.20;s.player.bulletSize*=1.20;discoverEntry('upgrades','f_slow_1'); }},
-  {id:'s_hp_1',name:'PV+',icon:'❤️',rarity:'common',unlockWave:1,desc:'PV max +25',apply:s=>{  s.player.maxHp+=25;s.player.hp=Math.min(s.player.hp+25,s.player.maxHp);discoverEntry('upgrades','s_hp_1'); }},
-  {id:'s_hp_2',name:'PV++',icon:'❤️',rarity:'common',unlockWave:2,desc:'PV max +40',apply:s=>{  s.player.maxHp+=40;s.player.hp=Math.min(s.player.hp+40,s.player.maxHp);discoverEntry('upgrades','s_hp_2'); }},
-  {id:'s_hp_3',name:'ARMURE',icon:'🛡️',rarity:'rare',unlockWave:4,desc:'PV max +70',apply:s=>{  s.player.maxHp+=70;s.player.hp=Math.min(s.player.hp+70,s.player.maxHp);discoverEntry('upgrades','s_hp_3'); }},
-  {id:'s_hp_4',name:'FORTIF.',icon:'🏗️',rarity:'rare',unlockWave:7,desc:'PV max +100',apply:s=>{  s.player.maxHp+=100;s.player.hp=Math.min(s.player.hp+100,s.player.maxHp);discoverEntry('upgrades','s_hp_4'); }},
-  {id:'s_hp_5',name:'COLOSSE',icon:'🏰',rarity:'epic',unlockWave:12,desc:'PV max +180',apply:s=>{  s.player.maxHp+=180;s.player.hp=Math.min(s.player.hp+180,s.player.maxHp);discoverEntry('upgrades','s_hp_5'); }},
+  {id:'s_hp_1',name:'PV+',icon:'❤️',rarity:'common',unlockWave:1,desc:'PV max +25',apply:s=>{  s.player.maxHp+=25;s.player.hp=Math.min(s.player.hp+25,playerHealCap(s.player));discoverEntry('upgrades','s_hp_1'); }},
+  {id:'s_hp_2',name:'PV++',icon:'❤️',rarity:'common',unlockWave:2,desc:'PV max +40',apply:s=>{  s.player.maxHp+=40;s.player.hp=Math.min(s.player.hp+40,playerHealCap(s.player));discoverEntry('upgrades','s_hp_2'); }},
+  {id:'s_hp_3',name:'ARMURE',icon:'🛡️',rarity:'rare',unlockWave:4,desc:'PV max +70',apply:s=>{  s.player.maxHp+=70;s.player.hp=Math.min(s.player.hp+70,playerHealCap(s.player));discoverEntry('upgrades','s_hp_3'); }},
+  {id:'s_hp_4',name:'FORTIF.',icon:'🏗️',rarity:'rare',unlockWave:7,desc:'PV max +100',apply:s=>{  s.player.maxHp+=100;s.player.hp=Math.min(s.player.hp+100,playerHealCap(s.player));discoverEntry('upgrades','s_hp_4'); }},
+  {id:'s_hp_5',name:'COLOSSE',icon:'🏰',rarity:'epic',unlockWave:12,desc:'PV max +180',apply:s=>{  s.player.maxHp+=180;s.player.hp=Math.min(s.player.hp+180,playerHealCap(s.player));discoverEntry('upgrades','s_hp_5'); }},
   {id:'s_hp_6',name:'TITAN',icon:'🗿',rarity:'legendary',unlockWave:20,desc:'PV max +300',apply:s=>{  s.player.maxHp+=300;s.player.hp=s.player.maxHp;discoverEntry('upgrades','s_hp_6'); }},
   {id:'s_hp_7',name:'IMMORTEL',icon:'♾️',rarity:'mythic',unlockWave:30,desc:'PV max +500',apply:s=>{  s.player.maxHp+=500;s.player.hp=s.player.maxHp;discoverEntry('upgrades','s_hp_7'); }},
   {id:'s_hp_8',name:'DEMI-DIEU',icon:'👑',rarity:'mythic',unlockWave:45,desc:'PV max x2',apply:s=>{  s.player.maxHp*=2;s.player.hp=s.player.maxHp;discoverEntry('upgrades','s_hp_8'); }},
@@ -2266,17 +2272,23 @@ const ALL_UPGRADES=[
   {id:'s_shield_1',name:'BOUCLIER I',icon:'🔵',rarity:'epic',unlockWave:8,desc:'Bouclier recharge en 8s',apply:s=>{  s.player.hasShield=true;s.player.shieldCooldownMax=8000;discoverEntry('upgrades','s_shield_1'); }},
   {id:'s_shield_2',name:'BOUCLIER II',icon:'🔮',rarity:'legendary',unlockWave:14,desc:'Bouclier recharge en 5s',apply:s=>{  s.player.hasShield=true;s.player.shieldCooldownMax=5000;discoverEntry('upgrades','s_shield_2'); }},
   {id:'s_shield_3',name:'BOUCLIER III',icon:'💎',rarity:'mythic',unlockWave:22,desc:'Bouclier recharge en 2s',apply:s=>{  s.player.hasShield=true;s.player.shieldCooldownMax=2000;discoverEntry('upgrades','s_shield_3'); }},
-  {id:'s_malus_1',name:'CORPS FRAGILE',icon:'💔',rarity:'rare',unlockWave:5,desc:'MALUS: PV max -40 mais +2 orbes',apply:s=>{  s.player.maxHp=Math.max(10,s.player.maxHp-40);s.player.hp=Math.min(s.player.hp,s.player.maxHp);s.player.orbCount+=2;discoverEntry('upgrades','s_malus_1'); }},
-  {id:'s_malus_2',name:'RISQUE-TOUT',icon:'🎲',rarity:'epic',unlockWave:10,desc:'MALUS: PV max /3 mais +200% dégâts',apply:s=>{  s.player.maxHp=Math.max(5,Math.floor(s.player.maxHp/3));s.player.hp=Math.min(s.player.hp,s.player.maxHp);s.player.bulletDmg*=3;discoverEntry('upgrades','s_malus_2'); }},
+  {id:'s_malus_1',name:'CORPS FRAGILE',icon:'💔',rarity:'rare',unlockWave:5,desc:'MALUS: PV max -40 mais +2 orbes',apply:s=>{  s.player.maxHp=Math.max(10,s.player.maxHp-40);s.player.hp=Math.min(s.player.hp,playerHealCap(s.player));s.player.orbCount+=2;discoverEntry('upgrades','s_malus_1'); }},
+  {id:'s_malus_2',name:'RISQUE-TOUT',icon:'🎲',rarity:'epic',unlockWave:10,desc:'MALUS: PV max /3 mais +200% dégâts',apply:s=>{  s.player.maxHp=Math.max(5,Math.floor(s.player.maxHp/3));s.player.hp=Math.min(s.player.hp,playerHealCap(s.player));s.player.bulletDmg*=3;discoverEntry('upgrades','s_malus_2'); }},
   {id:'s_malus_3',name:'BERSERKER FOU',icon:'😡',rarity:'legendary',unlockWave:15,desc:'MALUS: plus de régén mais +300% dégâts quand blessé',apply:s=>{  s.player.regen=0;s.player.crazyBerserk=true;discoverEntry('upgrades','s_malus_3'); }},
   {id:'s_life_steal',name:'DRAIN TOTAL',icon:'🐛',rarity:'epic',unlockWave:12,desc:'Chaque balle soigne 0.3 PV',apply:s=>{  s.player.lifeSteal=true;discoverEntry('upgrades','s_life_steal'); }},
   {id:'s_second',name:'VIE SUPPLÉMENTAIRE',icon:'💖',rarity:'legendary',unlockWave:15,desc:'Survit une fois à mort (60s CD)',apply:s=>{  s.player.secondLife=true;discoverEntry('upgrades','s_second'); }},
   {id:'s_overheal',name:'SURCHARGE PV',icon:'💉',rarity:'epic',unlockWave:10,desc:'PV peuvent dépasser le max x1.5',apply:s=>{  s.player.overheal=true;discoverEntry('upgrades','s_overheal'); }},
-  {id:'s_food_1',name:'PAIN SEC',icon:'🍞',rarity:'common',unlockWave:1,desc:'MALUS: drôle — +2 PV max. Wow.',apply:s=>{  s.player.maxHp+=2;s.player.hp=Math.min(s.player.hp+2,s.player.maxHp);discoverEntry('upgrades','s_food_1'); }},
-  {id:'s_bandage',name:'BANDAGE',icon:'🩹',rarity:'common',unlockWave:2,desc:'+15 PV maintenant',apply:s=>{  s.player.hp=Math.min(s.player.maxHp,s.player.hp+15);discoverEntry('upgrades','s_bandage'); }},
-  {id:'s_firstaid',name:'TROUSSE',icon:'🏥',rarity:'rare',unlockWave:5,desc:'+40 PV maintenant',apply:s=>{  s.player.hp=Math.min(s.player.maxHp,s.player.hp+40);discoverEntry('upgrades','s_firstaid'); }},
+  {id:'s_food_1',name:'PAIN SEC',icon:'🍞',rarity:'common',unlockWave:1,desc:'MALUS: drôle — +2 PV max. Wow.',apply:s=>{  s.player.maxHp+=2;s.player.hp=Math.min(s.player.hp+2,playerHealCap(s.player));discoverEntry('upgrades','s_food_1'); }},
+  {id:'s_bandage',name:'BANDAGE',icon:'🩹',rarity:'common',unlockWave:2,desc:'+15 PV maintenant',apply:s=>{  s.player.hp=Math.min(playerHealCap(s.player),s.player.hp+15);discoverEntry('upgrades','s_bandage'); }},
+  {id:'s_firstaid',name:'TROUSSE',icon:'🏥',rarity:'rare',unlockWave:5,desc:'+40 PV maintenant',apply:s=>{  s.player.hp=Math.min(playerHealCap(s.player),s.player.hp+40);discoverEntry('upgrades','s_firstaid'); }},
   {id:'s_fullheal',name:'GUÉRISON',icon:'✨',rarity:'epic',unlockWave:10,desc:'PV au maximum',apply:s=>{  s.player.hp=s.player.maxHp;discoverEntry('upgrades','s_fullheal'); }},
-  {id:'s_curse_hp',name:'MALÉDICTION PV',icon:'💀',rarity:'mythic',unlockWave:20,desc:'MALUS: PV max =1 pendant 20s puis x3',apply:s=>{  s.player.cursedHpTimer=0;discoverEntry('upgrades','s_curse_hp'); }},
+  {id:'s_curse_hp',name:'MALÉDICTION PV',icon:'💀',rarity:'mythic',unlockWave:20,desc:'MALUS: PV max =1 pendant 20s puis x3',apply:s=>{
+    const o=s.player;
+    o._cursedHpSavedMax=Math.max(1,Math.floor(o.maxHp));
+    o.maxHp=1;o.hp=1;
+    o.cursedHpTimer=20000;
+    discoverEntry('upgrades','s_curse_hp');
+  }},
   {id:'v_speed_1',name:'SPRINT I',icon:'🏃',rarity:'common',unlockWave:1,desc:'+12% vitesse',apply:s=>{  s.player.speed*=1.12;discoverEntry('upgrades','v_speed_1'); }},
   {id:'v_speed_2',name:'SPRINT II',icon:'🏃',rarity:'common',unlockWave:2,desc:'+18% vitesse',apply:s=>{  s.player.speed*=1.18;discoverEntry('upgrades','v_speed_2'); }},
   {id:'v_speed_3',name:'COURSE',icon:'💨',rarity:'rare',unlockWave:4,desc:'+28% vitesse',apply:s=>{  s.player.speed*=1.28;discoverEntry('upgrades','v_speed_3'); }},
@@ -2286,7 +2298,7 @@ const ALL_UPGRADES=[
   {id:'v_speed_7',name:'HYPERSONIQUE',icon:'⚡',rarity:'legendary',unlockWave:20,desc:'+120% vitesse',apply:s=>{  s.player.speed*=2.20;discoverEntry('upgrades','v_speed_7'); }},
   {id:'v_speed_8',name:'LUMIÈRE II',icon:'✨',rarity:'mythic',unlockWave:30,desc:'Vitesse x3',apply:s=>{  s.player.speed*=3;discoverEntry('upgrades','v_speed_8'); }},
   {id:'v_speed_9',name:'BOURDON',icon:'🐝',rarity:'common',unlockWave:1,desc:'MALUS: vitesse -10% mais cadence +20%',apply:s=>{  s.player.speed*=.90;s.player.fireRate=Math.max(60,s.player.fireRate*.83);discoverEntry('upgrades','v_speed_9'); }},
-  {id:'v_speed_10',name:'LENT MAIS SÛR',icon:'🐢',rarity:'rare',unlockWave:5,desc:'MALUS: vitesse -30% mais PV max +150',apply:s=>{  s.player.speed*=.70;s.player.maxHp+=150;s.player.hp=Math.min(s.player.hp+150,s.player.maxHp);discoverEntry('upgrades','v_speed_10'); }},
+  {id:'v_speed_10',name:'LENT MAIS SÛR',icon:'🐢',rarity:'rare',unlockWave:5,desc:'MALUS: vitesse -30% mais PV max +150',apply:s=>{  s.player.speed*=.70;s.player.maxHp+=150;s.player.hp=Math.min(s.player.hp+150,playerHealCap(s.player));discoverEntry('upgrades','v_speed_10'); }},
   {id:'v_dash_1',name:'DASH I',icon:'💨',rarity:'rare',unlockWave:5,desc:'Dash + CD -1s',apply:s=>{  s.player.hasDash=true;s.player.dashCooldownMax=Math.max(500,(s.player.dashCooldownMax||3000)-1000);discoverEntry('upgrades','v_dash_1'); }},
   {id:'v_dash_2',name:'DASH II',icon:'⚡',rarity:'epic',unlockWave:10,desc:'Dash CD -1.5s supplémentaires',apply:s=>{  s.player.dashCooldownMax=Math.max(500,(s.player.dashCooldownMax||3000)-1500);discoverEntry('upgrades','v_dash_2'); }},
   {id:'v_dash_3',name:'DASH III',icon:'🌀',rarity:'legendary',unlockWave:18,desc:'Dash quasi-instantané (0.5s CD)',apply:s=>{  s.player.hasDash=true;s.player.dashCooldownMax=500;discoverEntry('upgrades','v_dash_3'); }},
@@ -2562,7 +2574,7 @@ const ALL_UPGRADES=[
   {id:'x_lucky',   name:'CHANCEUX',       icon:'🍀',rarity:'rare',    unlockWave:6,
    desc:'+50% chances upgrades rares et +', apply:s=>{s.player.lucky=true;}},
   {id:'x_cursed',  name:'MAUDIT',         icon:'💀',rarity:'mythic',  unlockWave:20,
-   desc:'PV max /2 mais toutes les upgrades sont Mythiques', apply:s=>{s.player.maxHp=Math.max(10,s.player.maxHp*.5);s.player.hp=Math.min(s.player.hp,s.player.maxHp);s.player.cursed=true;}},
+   desc:'PV max /2 mais toutes les upgrades sont Mythiques', apply:s=>{s.player.maxHp=Math.max(10,s.player.maxHp*.5);s.player.hp=Math.min(s.player.hp,playerHealCap(s.player));s.player.cursed=true;}},
   {id:'x_kamikaze',name:'KAMIKAZEMODE',   icon:'💥',rarity:'mythic',  unlockWave:22,
    desc:'En mourant: explosion x300 dégâts tout autour', apply:s=>s.player.kamikazeDeath=true},
   {id:'x_necro_up',name:'NÉCROMANCIEN',   icon:'💀',rarity:'legendary',unlockWave:25,
@@ -2675,7 +2687,7 @@ const ALL_UPGRADES=[
 
   {id:'p_blood_price',name:'PACTE DE SANG', icon:'🩸',rarity:'legendary',unlockWave:15,
    desc:'-30 PV max mais +150% dégâts',
-   apply:s=>{ s.player.maxHp=Math.max(20,s.player.maxHp-30); s.player.hp=Math.min(s.player.hp,s.player.maxHp); s.player.bulletDmg*=2.5; }},
+   apply:s=>{ s.player.maxHp=Math.max(20,s.player.maxHp-30); s.player.hp=Math.min(s.player.hp,playerHealCap(s.player)); s.player.bulletDmg*=2.5; }},
 
   {id:'p_glass',    name:'CANON DE VERRE',  icon:'🔮',rarity:'legendary',unlockWave:14,
    desc:'1 PV max mais dégâts x10',
@@ -3034,10 +3046,13 @@ const EVENTS=[
     desc:"100 petits ennemis d'un coup !",
     color:'#88ff00',
     onStart:s=>{
-      for(let i=0;i<100&&s.enemies.length<120;i++){
+      for(let i=0;i<100&&s.enemies.length<MAX_ENEMIES_ALIVE;i++){
         const{x,y}=edgePos();const cfg=ETYPES.swarm;
-        s.enemies.push({x,y,type:'swarm',hp:cfg.hp(s.wave)*2,maxHp:cfg.hp(s.wave)*2,
-          speed:cfg.spd(s.wave)*1.5,size:cfg.sz,dmg:cfg.dmg,color:'#ffaa00',xp:3,coins:0,id:Math.random()});
+        const hm=enemyHpWaveMul(s.wave);
+        const sh=cfg.hp(s.wave)*2*hm;
+        const dM=enemyDmgWaveMul(s.wave),sM=enemySpdWaveMul(s.wave);
+        s.enemies.push({x,y,type:'swarm',hp:sh,maxHp:sh,
+          speed:cfg.spd(s.wave)*1.5*sM,size:cfg.sz,dmg:Math.max(1,Math.ceil(cfg.dmg*dM)),color:'#ffaa00',xp:3,coins:0,id:Math.random()});
       }
     },
     onEnd:s=>{}
@@ -3158,7 +3173,7 @@ const EVENTS=[
     id:'coin_flood',  name:'DÉLUGE DE PIÈCES',     icon:'💰', duration:15000,
     desc:'Des pièces pleuvent partout sur la map !',
     color:'#ffdd00',
-    onStart:s=>{ for(let i=0;i<30;i++){const{x,y}=edgePos();s.coinPickups.push({x:x+s.camX,y:y+s.camY,value:10+Math.floor(Math.random()*20)});} },
+    onStart:s=>{ for(let i=0;i<30;i++){const{x,y}=edgePos();s.coinPickups.push({x,y,value:10+Math.floor(Math.random()*20)});} },
     onEnd:  s=>{}
   },
   {
@@ -3508,7 +3523,7 @@ function updateObstacles(dt){
       ob.x+=ob.vx;ob.y+=ob.vy;
       // Touche le joueur
       if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size){
-        if(!p.divineActive&&!p.shieldActive){p.hp-=ob.dmg;pts(p.x,p.y,'#ff6600',1,3);if(p.hp<=0){gameOver();return;}}
+        if(!p.divineActive&&!p.shieldActive){p.hp-=ob.dmg;pts(p.x,p.y,'#ff6600',1,3);if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
       }
       // Touche les ennemis
       for(let j=state.enemies.length-1;j>=0;j--){
@@ -3522,10 +3537,11 @@ function updateObstacles(dt){
     // Zone de feu / toxique / éclair — dégâts au joueur
     if((ob.type==='fire_zone'||ob.type==='toxic_pool'||ob.type==='lightning_zone')&&!ob.solid){
       if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size*.5){
-        if(!p.divineActive&&Math.random()<.08){
+        const skipToxic=ob.type==='toxic_pool'&&p.immunePoison;
+        if(!skipToxic&&!p.divineActive&&Math.random()<.08){
           p.hp-=(ob.dmg||5);
           if(ob.slow)p.speed=Math.max(.5,p.speed*ob.slow);
-          if(p.hp<=0){gameOver();return;}
+          if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}
         }
       }
     }
@@ -3566,11 +3582,11 @@ function updateObstacles(dt){
         if(Math.abs(dx)<ob.w*.5+p.size&&Math.abs(dy)<ob.h*.5+p.size){
           if(Math.abs(dx)-ob.w*.5>Math.abs(dy)-ob.h*.5)p.x+=dx>0?2:-2;
           else p.y+=dy>0?2:-2;
-          if(ob.dmg){p.hp-=ob.dmg*.1;if(p.hp<=0){gameOver();return;}}
+          if(ob.dmg){p.hp-=ob.dmg*.1;if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
         }
       } else if(dist<minDist){
         const push=minDist-dist;p.x+=dx/(dist||1)*push;p.y+=dy/(dist||1)*push;
-        if(ob.dmg&&Math.random()<.05){p.hp-=ob.dmg;if(p.hp<=0){gameOver();return;}}
+        if(ob.dmg&&Math.random()<.05){p.hp-=ob.dmg;if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
       }
     }
 
@@ -3642,8 +3658,10 @@ function checkSynergy(newId){
 // Biome actuel — progression dans l'ordre selon la vague
 function getBiome(wave){
   // Chaque segment = 15 vagues, boucle sur tous les biomes
-  const idx=Math.floor(wave/15) % BIOMES.length;
-  return BIOMES[idx];
+  const w=Math.max(1,Math.floor(Number(wave))||1);
+  const bl=BIOMES&&BIOMES.length?BIOMES.length:1;
+  const idx=Math.floor(w/15)%bl;
+  return BIOMES[idx]||BIOMES[0];
 }
 
 function getBiomeLoop(){
@@ -3654,7 +3672,11 @@ function getBiomeLoop(){
 function getCurrentBiome(){
   // Utiliser le biome sauvegardé dans state (change seulement à wave%15)
   // Pas recalculer à chaque frame
-  if(state&&state.biome)return state.biome;
+  if(state&&state.biome){
+    try{
+      if(BIOMES&&BIOMES.some(b=>b&&b.id===state.biome.id))return state.biome;
+    }catch(e){}
+  }
   if(!state)return BIOMES[0];
   return getBiome(state.wave);
 }
@@ -3662,18 +3684,21 @@ function getCurrentBiome(){
 // Choisir un événement aléatoire (pas le même deux fois de suite)
 let _lastEventId=null;
 function pickEvent(){
-  const pool=EVENTS.filter(e=>e.id!==_lastEventId);
-  return pool[Math.floor(Math.random()*pool.length)];
+  if(!EVENTS||!EVENTS.length)return null;
+  const pool=EVENTS.filter(e=>e&&e.id&&e.id!==_lastEventId);
+  const use=pool.length?pool:EVENTS.filter(e=>e&&e.id);
+  if(!use.length)return null;
+  return use[Math.floor(Math.random()*use.length)];
 }
 
 // Lancer un événement
 function startEvent(ev){
-  if(!state)return;
+  if(!state||!ev)return;
   if(state.currentEvent)endEvent(state.currentEvent);
   state.currentEvent=ev;
-  state.eventTimer=ev.duration;
+  state.eventTimer=ev.duration||15000;
   _lastEventId=ev.id;
-  ev.onStart(state);
+  try{ev.onStart(state);}catch(e){console.error('[event start]',e);}
   showEventBanner(ev);
   discoverEntry('events',ev.id);
   snd('boss');
@@ -3681,9 +3706,8 @@ function startEvent(ev){
 
 function endEvent(ev){
   if(!ev)return;
-  ev.onEnd(state);
-  state.currentEvent=null;
-  state.eventTimer=0;
+  try{if(state)ev.onEnd(state);}catch(e){console.error('[event end]',e);}
+  if(state){state.currentEvent=null;state.eventTimer=0;}
   hideEventBanner();
 }
 
@@ -3707,7 +3731,7 @@ function hideEventBanner(){
   if(bar)bar.style.display='none';
 }
 
-/* ═══ ENEMY UPDATE — 100 ennemis (eupd_*) · mécaniques par famille (vi%20) + registre ═══ */
+/* ═══ Pack 100 ennemis (eupd_*) · mécaniques par famille (vi%20) + registre · scaling infini ═══ */
 const ENEMY_MECHANICS=(function(){
   const M={};
   function sh(st,x,y,vx,vy,sz,lf,pr){
@@ -4136,17 +4160,85 @@ Object.assign(ETYPES,getEnemyUpdatePack().etypes);
 })();
 
 function edgePos(){
-  // Spawn autour de la caméra (pas juste les bords du canvas)
+  // Coordonnées monde : rectangle visible = [camX,camY] → [camX+W,camY+H]
   const cx=(state&&state.camX)||0, cy=(state&&state.camY)||0;
-  const margin=50;
+  const wv=state&&state.wave?state.wave:1;
+  const basePad=Math.max(80,Math.round(Math.min(W||800,H||600)*0.12));
+  const wavePad=Math.min(280,Math.floor(wv*2.25));
+  const margin=basePad+wavePad;
   const s=Math.floor(Math.random()*4);
-  if(s===0)return{x:cx+Math.random()*W,       y:cy-margin};
-  if(s===1)return{x:cx+W+margin,               y:cy+Math.random()*H};
-  if(s===2)return{x:cx+Math.random()*W,       y:cy+H+margin};
-  return        {x:cx-margin,                  y:cy+Math.random()*H};
+  if(s===0)return{x:cx+Math.random()*W,y:cy-margin};
+  if(s===1)return{x:cx+W+margin,y:cy+Math.random()*H};
+  if(s===2)return{x:cx+Math.random()*W,y:cy+H+margin};
+  return{x:cx-margin,y:cy+Math.random()*H};
+}
+/** Bonus dégâts Œil du tigre / Achèvement (texte des upgrades). */
+function applyConditionalDmgMul(p,e,dmg){
+  if(!e||!p||!(dmg>0)||!isFinite(dmg))return dmg;
+  const mx=e.maxHp||1;
+  if(mx<=0)return dmg;
+  const ratio=e.hp/mx;
+  if(p.tigerEye&&ratio>0.5)dmg*=1.2;
+  if(p.finisher&&ratio<0.3)dmg*=1.5;
+  return dmg;
+}
+/** Si un ennemi traîne trop loin, le tirer doucement vers le joueur (évite les bords « passifs »). */
+function nudgeEnemyTowardPlayer(e,p,dt){
+  if(!e||!p||e.isClone||(e.frozen||0)>0)return;
+  const ex=p.x-e.x,ey=p.y-e.y,ed=Math.hypot(ex,ey)||1;
+  const w=state&&state.wave?state.wave:1;
+  const outer=220+w*3.4;
+  if(ed<outer)return;
+  const sp=(e.speed||1)*(state._evEnemySpeedMult||1)*(p.slowMult||1);
+  const t=Math.min(2.2,(ed-outer)/Math.max(180,300+w*2));
+  const mag=Math.min(3.6,0.45+t)*sp*(dt/16.67)*0.85;
+  e.x+=ex/ed*mag;
+  e.y+=ey/ed*mag;
+}
+
+/** Plafond d'ennemis vivants (hors rares cas boss événement qui peuvent dépasser légèrement). */
+const MAX_ENEMIES_ALIVE=72;
+/** Dernier rempart IEEE pour les mul PV/dégâts (aussi haut que possible sans Infinity/NaN en chaîne). */
+const ENEMY_STAT_MUL_CAP=Number.MAX_VALUE/1e12;
+function clampEnemyStatMul(v){
+  if(typeof v!=='number'||!isFinite(v)||v<=0)return 1;
+  return Math.min(ENEMY_STAT_MUL_CAP,v);
+}
+/** PV : croissance continue sans plafond « gameplay » ; clamp = limite machine seulement. */
+function enemyHpWaveMul(w){
+  const ww=Math.max(1,Math.floor(Number(w))||1);
+  const t=ww-1;
+  const expCore=Math.pow(1.034,t);
+  const shoulder=1+t*0.045+t*t*0.00014;
+  let m=expCore*shoulder;
+  if(ww>96)m*=Math.pow(1.0134,ww-96);
+  return clampEnemyStatMul(m);
+}
+/** Dégâts contact / tir ennemis — idem, montée non bornée côté design jusqu'au cap IEEE. */
+function enemyDmgWaveMul(w){
+  const ww=Math.max(1,Math.floor(Number(w))||1);
+  const t=ww-1;
+  let d=1+t*0.042+Math.pow(Math.max(0,t-15)/38,1.85)*2.2;
+  if(ww>86)d*=Math.pow(1.0108,ww-86);
+  return clampEnemyStatMul(d);
+}
+/** Fraction des PV max drainés par seconde (fatigue de run). Zéro au début, irrésistible sur l'échelle d'1–2 h+. */
+function enduranceHpDrainRate(){
+  if(!state||state.wave<12)return 0;
+  const hoursSinceStart=state.elapsed/3600000;
+  if(hoursSinceStart<0.11)return 0;
+  const h=hoursSinceStart-0.11;
+  const w=state.wave;
+  return h*h*2.1e-8*w+h*5.2e-7*w;
+}
+/** Vitesse ennemie légère bonus en profondeur (pour traverser le champ de balles). */
+function enemySpdWaveMul(w){
+  const ww=Math.max(1,Math.floor(Number(w))||1);
+  return 1+Math.min(0.55,(ww-1)*0.0045);
 }
 
 function spawnEnemy(){
+  if(state.enemies.length>=MAX_ENEMIES_ALIVE)return;
   const w=state.wave;
   const currentBiomeId=getCurrentBiome().id;
 
@@ -4179,6 +4271,9 @@ function spawnEnemy(){
       // Ennemi tout nouveau → poids minimal (apparaît parfois)
       weight=1;
     }
+    if(w>=18&&(t==='shooter'||t==='sniper'||t==='necro'||t==='laser_drone'||t==='mirror'||t==='missile_mech')){
+      weight+=Math.min(28,4+Math.floor((w-18)/4));
+    }
     for(let i=0;i<weight;i++) pool.push(t);
   }
 
@@ -4187,7 +4282,16 @@ function spawnEnemy(){
   const{x,y}=edgePos();
   const cfg=ETYPES[type];
   const _gm=state&&state._evGiants?3:1;
-  const e={x,y,type,hp:cfg.hp(w)*_gm,maxHp:cfg.hp(w)*_gm,speed:cfg.spd(w),size:cfg.sz*(_gm>1?2:1),dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()};
+  const _hpM=enemyHpWaveMul(w)*_gm;
+  let _base=cfg.hp(w)*_hpM;
+  if(state.player&&state.player.mirrorWorld){
+    const bonus=Math.min(2.2,1+state.player.maxHp/230);
+    _base*=bonus;
+  }
+  const _dM=enemyDmgWaveMul(w);
+  const _sM=enemySpdWaveMul(w);
+  const _dmg=Math.max(1,Math.ceil((cfg.dmg||0)*_dM));
+  const e={x,y,type,hp:_base,maxHp:_base,speed:cfg.spd(w)*_sM,size:cfg.sz*(_gm>1?2:1),dmg:_dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()};
   // Extras par type
   if(type==='shooter')e.st=0;
   if(type==='ghost')e.gt=0;
@@ -4272,7 +4376,9 @@ function spawnEnemy(){
   if(type==='twin'){
     // Spawn son jumeau
     const{x:tx2,y:ty2}=edgePos();
-    const twin2={x:tx2,y:ty2,type:'twin',hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:'#ffbbdd',xp:cfg.xp,coins:cfg.coins,id:Math.random()};
+    const _tHp=cfg.hp(w)*enemyHpWaveMul(w);
+    const _tDmg=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)));
+    const twin2={x:tx2,y:ty2,type:'twin',hp:_tHp,maxHp:_tHp,speed:cfg.spd(w)*enemySpdWaveMul(w),size:cfg.sz,dmg:_tDmg,color:'#ffbbdd',xp:cfg.xp,coins:cfg.coins,id:Math.random()};
     twin2.twinId=e.id;e.twinId=twin2.id;
     state.enemies.push(twin2);discoverEntry('enemies','twin');
   }
@@ -4282,8 +4388,8 @@ function spawnEnemy(){
 
 function spawnWave(){
   const w=state.wave;
-  // Cap exponentiel : ~6 au niveau 1, double tous les ~8 niveaux
-  const cap=Math.min(Math.floor(6*Math.pow(1.09,w-1)), 120);
+  // Cap : croissance modérée, plafond MAX_ENEMIES_ALIVE (perf + lisibilité)
+  const cap=Math.min(Math.floor(5.5*Math.pow(1.076,w-1)), MAX_ENEMIES_ALIVE);
   state._waveCap=cap; // garder pour le spawn continu
   if(state.enemies.length>=cap)return;
   // Spawn initial : remplir la moitié du cap
@@ -4291,10 +4397,12 @@ function spawnWave(){
   for(let i=0;i<initCount&&state.enemies.length<cap;i++)spawnEnemy();
   // Essaim à partir de vague 5
   if(w>=5&&Math.random()<.4&&state.enemies.length<cap-5){
-    const swarmCount=Math.min(Math.floor(w/3), 12);
-    for(let i=0;i<swarmCount;i++){
+    const swarmCount=Math.min(Math.floor(w/3), 10);
+    for(let i=0;i<swarmCount&&state.enemies.length<MAX_ENEMIES_ALIVE;i++){
       const{x,y}=edgePos();const cfg=ETYPES.swarm;
-      state.enemies.push({x,y,type:'swarm',hp:cfg.hp(w),maxHp:cfg.hp(w),speed:cfg.spd(w),size:cfg.sz,dmg:cfg.dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()});
+      const sh=cfg.hp(w)*enemyHpWaveMul(w);
+      const sd=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)));
+      state.enemies.push({x,y,type:'swarm',hp:sh,maxHp:sh,speed:cfg.spd(w)*enemySpdWaveMul(w),size:cfg.sz,dmg:sd,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()});
       discoverEntry('enemies','swarm');
     }
   }
@@ -4379,14 +4487,15 @@ function spawnBiomeBoss(){
   const w=state.wave;
   const{x,y}=edgePos();
   const cfg=ETYPES[bb.type]||ETYPES.megaboss;
+  const _bMul=enemyHpWaveMul(w);
   const boss={
     x,y,
     type:bb.type,
-    hp:  cfg.hp(w)*bb.scale*1.5,
-    maxHp:cfg.hp(w)*bb.scale*1.5,
-    speed:cfg.spd(w)*.8,
+    hp:  cfg.hp(w)*bb.scale*1.5*_bMul,
+    maxHp:cfg.hp(w)*bb.scale*1.5*_bMul,
+    speed:cfg.spd(w)*.8*enemySpdWaveMul(w),
     size: cfg.sz*bb.scale,
-    dmg:  cfg.dmg*1.3,
+    dmg:  Math.max(1,Math.ceil(cfg.dmg*1.3*enemyDmgWaveMul(w))),
     color:biome.accent,
     xp:   cfg.xp*3,
     coins:cfg.coins*3,
@@ -4412,6 +4521,32 @@ function spawnBiomeBoss(){
     b.classList.add('show');
   }
   discoverEntry('enemies',bb.type);
+}
+/** Boss événement / pluie de boss — mêmes multiplicateurs vague que le reste. */
+function spawnBoss(bossType){
+  if(!state||!state.running)return;
+  const t=String(bossType||'boss');
+  const cfg=ETYPES[t];
+  if(!cfg||state.enemies.length>=MAX_ENEMIES_ALIVE)return;
+  const w=state.wave;
+  const{x,y}=edgePos();
+  const _bMul=enemyHpWaveMul(w);
+  const scale=t==='megaboss'?2.2:t==='cosmic'?2.4:t==='titan'?1.75:1.45;
+  const b={
+    x,y,type:t,
+    hp:cfg.hp(w)*scale*_bMul,
+    maxHp:cfg.hp(w)*scale*_bMul,
+    speed:cfg.spd(w)*.82*enemySpdWaveMul(w),
+    size:Math.min(52,cfg.sz*Math.min(2.4,scale+.55)),
+    dmg:Math.max(1,Math.ceil(cfg.dmg*1.28*enemyDmgWaveMul(w))),
+    color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()
+  };
+  if(t==='entity')b.immune=true;
+  if(t==='cosmic'){b.cosT=0;b.cosPhase=0;}
+  if(t==='fallen'){b.falT=0;b.falAngle=0;}
+  state.enemies.push(b);
+  snd('boss');
+  discoverEntry('enemies',t);
 }
 function showRunTitle(s){
   const t=computeTitle(s);if(!t)return;
@@ -4463,13 +4598,33 @@ function loop(ts=0){
   if(!gameLoop&&ts>0)return; // boucle annulée
   const dt=lastTime?Math.min(ts-lastTime,50):16;
   lastTime=ts;
-  if(state&&state.running&&!state.paused)update(dt);
+  if(state&&state.running&&!state.paused){
+    try{update(dt);}
+    catch(err){
+      console.error('[update]',err);
+      try{if(state){state.running=false;state.paused=false;}gameOver();}
+      catch(e2){console.error('[gameOver]',e2);try{backToTitle();}catch(e3){}}
+    }
+  }
   if(state)draw();
   gameLoop=requestAnimationFrame(loop);
 }
 
+/** Phénix / renaissance / 2e vie / phénix éternel — retourne true si la mort est évitée. */
+function tryPlayerRevives(p){
+  if(!p||p.hp>0)return false;
+  if(p.phoenix){p.hp=p.maxHp*.3;p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);return true;}
+  if(p.rebirth){p.hp=p.maxHp*.5;p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);return true;}
+  if(p.phoenixInfinite&&!(p.phoenixCd>0)){p.hp=Math.max(1,Math.floor(p.maxHp*.1));p.phoenixCd=60000;pts(p.x,p.y,'#ff4400',2,6);return true;}
+  if(p.secondLife&&!(p.secondLifeCd>0)){p.secondLife=false;p.secondLifeCd=60000;p.hp=Math.max(1,Math.floor(p.maxHp*.25));pts(p.x,p.y,'#ff88dd',2,6);return true;}
+  return false;
+}
+
 function update(dt){
+  if(!state||!state.player)return;
   const p=state.player;
+  if((p.secondLifeCd||0)>0){p.secondLifeCd-=dt;if(p.secondLifeCd<=0){p.secondLifeCd=0;p.secondLife=true;}}
+  if((p.phoenixCd||0)>0){p.phoenixCd-=dt;if(p.phoenixCd<=0)p.phoenixCd=0;}
   state.elapsed+=dt;state.waveTimer+=dt;
 
   // Caméra suit le joueur en douceur
@@ -4496,7 +4651,7 @@ function update(dt){
     const bossStillAlive=state.enemies.some(e=>e.isBiomeBoss);
     if(!bossStillAlive){
       state.biomeBossAlive=false;
-      p.hp=Math.min(p.maxHp,p.hp+p.maxHp*.3);pts(p.x,p.y,'#00ff88',1.5,6);
+      p.hp=Math.min(playerHealCap(p),p.hp+p.maxHp*.3);pts(p.x,p.y,'#00ff88',1.5,6);
       state.waveTimer=20001;
     }
   }
@@ -4507,7 +4662,7 @@ function update(dt){
     state.wave++;
     showWaveBanner(state.wave);
     spawnWave();
-    if(state.wave%15===0){p.hp=Math.min(p.maxHp,p.hp+Math.floor(p.maxHp*.15));pts(p.x,p.y,'#00ff88',1.2,5);}
+    if(state.wave%15===0){p.hp=Math.min(playerHealCap(p),p.hp+Math.floor(p.maxHp*.15));pts(p.x,p.y,'#00ff88',1.2,5);}
     if(state.wave%15===14){
       state.biomeBossAlive=false;
       state._biomeBossSpawned=false;
@@ -4548,7 +4703,8 @@ function update(dt){
     state.eventCooldown--;
     if(state.eventCooldown<=0){
       state.eventCooldown=15; // toutes les 15 vagues
-      startEvent(pickEvent());
+      const ev=pickEvent();
+      if(ev)startEvent(ev);
     }
   }
   // Biome par défaut
@@ -4565,9 +4721,30 @@ function update(dt){
     if(state._evBossRain){state._evBossTimer=(state._evBossTimer||0)+dt;if(state._evBossTimer>4000){state._evBossTimer=0;spawnBoss('boss');}}
   }
   // Soin événement
-  if(state._evHealRate>0)p.hp=Math.min(p.maxHp,p.hp+state._evHealRate*dt*.001);
+  if(state._evHealRate>0)p.hp=Math.min(playerHealCap(p),p.hp+state._evHealRate*dt*.001);
   // Malédiction — PV descend lentement
   if(state._evCurse)p.hp=Math.max(1,p.hp-8*dt*.001);
+  // Malédiction PV (upgrade) — 20 s à 1 PV max puis x3 max PV
+  if(p.cursedHpTimer>0){
+    p.cursedHpTimer-=dt;
+    p.maxHp=1;
+    p.hp=Math.min(1,p.hp);
+    if(p.cursedHpTimer<=0){
+      p.cursedHpTimer=0;
+      const saved=Math.max(1,Math.floor(p._cursedHpSavedMax||1));
+      p.maxHp=Math.max(1,Math.floor(saved*3));
+      p.hp=p.maxHp;
+      p._cursedHpSavedMax=undefined;
+    }
+  }
+  // Fatigue cosmique — aucune build ne reste invincible indéfiniment (ignore bouclier divin court)
+  if(state.running&&p.hp>0&&!p.divineActive){
+    const er=enduranceHpDrainRate();
+    if(er>0){
+      p.hp-=p.maxHp*er*(dt/1000);
+      if(p.hp<=0){if(!tryPlayerRevives(p))gameOver();}
+    }
+  }
   // Miroir de dégâts — géré dans collision
   // Phantom — géré dans collision
   if(state._evInvincible)p.shieldActive=true;
@@ -4634,7 +4811,10 @@ function update(dt){
     state._nightmareTimer=(state._nightmareTimer||0)+dt;
     if(state._nightmareTimer>3000){state._nightmareTimer=0;
       const{x,y}=edgePos();const cfg=ETYPES.ghost;
-      state.enemies.push({x,y,type:'ghost',hp:cfg.hp(state.wave),maxHp:cfg.hp(state.wave),speed:cfg.spd(state.wave)*1.5,size:cfg.sz,dmg:cfg.dmg,color:'rgba(200,150,255,.7)',xp:0,coins:0,id:Math.random(),gt:0});
+      const wv=state.wave;
+      const gh=cfg.hp(wv)*enemyHpWaveMul(wv);
+      const gD=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(wv)));
+      if(state.enemies.length<MAX_ENEMIES_ALIVE)state.enemies.push({x,y,type:'ghost',hp:gh,maxHp:gh,speed:cfg.spd(wv)*1.5*enemySpdWaveMul(wv),size:cfg.sz,dmg:gD,color:'rgba(200,150,255,.7)',xp:0,coins:0,id:Math.random(),gt:0});
     }
   }
   // XP mult événement (géré ici directement)
@@ -4645,10 +4825,10 @@ function update(dt){
   const spawnInterval=Math.max(200, 1000-state.wave*20);
   if(state.spawnTimer>spawnInterval){
     state.spawnTimer=0;
-    const cap=state._waveCap||Math.floor(6*Math.pow(1.09,state.wave-1));
+    const cap=Math.min(state._waveCap||Math.floor(5.5*Math.pow(1.076,state.wave-1)), MAX_ENEMIES_ALIVE);
     if(state.enemies.length<cap){
       const n=Math.max(1,Math.floor(cap/8))*(state._evSpawnMult||1);
-      for(let i=0;i<n&&state.enemies.length<cap;i++)spawnEnemy();
+      for(let i=0;i<n&&state.enemies.length<cap&&state.enemies.length<MAX_ENEMIES_ALIVE;i++)spawnEnemy();
     }
   }
   // Limites performance (conserver les entrées les plus récentes : push en fin de tableau)
@@ -4681,7 +4861,7 @@ function update(dt){
 
   // Regen
   p.regenTimer+=dt;
-  if(p.regen>0&&p.regenTimer>1000){p.regenTimer=0;p.hp=Math.min(p.maxHp,p.hp+p.regen);}
+  if(p.regen>0&&p.regenTimer>1000){p.regenTimer=0;p.hp=Math.min(playerHealCap(p),p.hp+p.regen);}
 
   // Tourelles — tir auto
   if(p.turretCount>0){
@@ -4692,8 +4872,8 @@ function update(dt){
   }
 
   // ── EFFETS PASSIFS NOUVEAUX UPGRADES ──
-  if(p.aura>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<55){e.hp-=p.aura*dt*.001;if(e.hp<=0)killEnemy(i);}}}
-  if(p.corona>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<70){e.hp-=p.corona*dt*.001;if(e.hp<=0)killEnemy(i);}}}
+  if(p.aura>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<55){const ad=applyConditionalDmgMul(p,e,p.aura*dt*.001);e.hp-=ad;if(e.hp<=0)killEnemy(i);}}}
+  if(p.corona>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<70){const cd=applyConditionalDmgMul(p,e,p.corona*dt*.001);e.hp-=cd;if(e.hp<=0)killEnemy(i);}}}
   if(p.blizzard){for(const e of state.enemies){if(e&&Math.hypot(e.x-p.x,e.y-p.y)<90){e.frozen=Math.max(e.frozen||0,200);}}if(Math.random()<.06)pts(p.x+(Math.random()-.5)*90,p.y+(Math.random()-.5)*90,'#aaeeff',.4,1);}
   if(p.gravityField){for(const e of state.enemies){if(e&&Math.hypot(e.x-p.x,e.y-p.y)<160){const gx=p.x-e.x,gy=p.y-e.y,gd=Math.hypot(gx,gy)||1;e.x+=gx/gd*1.2;e.y+=gy/gd*1.2;}}}
   if(p.pulseTimer>=0){p.pulseTimer+=dt;if(p.pulseTimer>5000){p.pulseTimer=0;explodeAt(p.x,p.y,30);pts(p.x,p.y,'#aaaaff',1.2,6);}}
@@ -4703,7 +4883,7 @@ function update(dt){
   if(p.armaTimer>=0){p.armaTimer+=dt;if(p.armaTimer>30000){p.armaTimer=0;for(let i=state.enemies.length-1;i>=0;i--){if(state.enemies[i])killEnemy(i);}for(let k=0;k<20;k++)pts(p.x+(Math.random()-.5)*W*.5,p.y+(Math.random()-.5)*H*.5,'#ff4400',1.5,8);}}
   if(p.eternalTimer>=0){p.eternalTimer+=dt;if(p.eternalTimer%30000<5000)p.divineActive=true;}
   if(p.abyssTimer>=0){p.abyssTimer+=dt;if(p.abyssTimer>20000){p.abyssTimer=0;for(const e of state.enemies){if(e&&Math.hypot(e.x-p.x,e.y-p.y)<100){const gx=p.x-e.x,gy=p.y-e.y,gd=Math.hypot(gx,gy)||1;e.x+=gx/gd*14;e.y+=gy/gd*14;}}}}
-  if(p.heaven){const near=state.enemies.some(e=>e&&Math.hypot(e.x-p.x,e.y-p.y)<200);if(!near)p.hp=Math.min(p.maxHp,p.hp+dt*.025);}
+  if(p.heaven){const near=state.enemies.some(e=>e&&Math.hypot(e.x-p.x,e.y-p.y)<200);if(!near)p.hp=Math.min(playerHealCap(p),p.hp+dt*.025);}
   if(p.coinRadius){state.coinPickups.forEach(c=>{if(Math.hypot(c.x-p.x,c.y-p.y)<p.coinRadius){const cd=Math.hypot(p.x-c.x,p.y-c.y)||1;c.x+=(p.x-c.x)/cd*6;c.y+=(p.y-c.y)/cd*6;}});}
   // Furie — stack par kill (géré dans killEnemy)
   p._furyMult=p.furyStacks!=null?1+p.furyStacks*.03:1;
@@ -4762,9 +4942,7 @@ function update(dt){
         if(p.dodge>0&&Math.random()<p.dodge)return false;
         if(p.shadowDodge&&Math.random()<.5)return false;
         p.hp-=8+state.wave;pts(p.x,p.y,'#ff3c6e',.6,2.5);
-        if(p.hp<=0&&p.phoenix){p.hp=p.maxHp*.3;p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);return false;}
-        if(p.hp<=0&&p.rebirth){p.hp=p.maxHp*.5;p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);return false;}
-        if(p.hp<=0){gameOver();return false;}
+        if(p.hp<=0){if(tryPlayerRevives(p))return false;gameOver();return false;}
         return false;
       }
       return true;
@@ -4800,7 +4978,9 @@ function update(dt){
         if(e.type==='berserker_e'){e.bersHits=(e.bersHits||0)+1;e.speed=Math.min(ETYPES.berserker_e.spd(state.wave)*3,e.speed+.25);}
         // Gardien bouclé : réduit les dégâts des ennemis proches protégés
         if(e._shielded>0){dmg*=.4;e._shielded-=dt;}
+        dmg=applyConditionalDmgMul(p,e,dmg);
         e.hp-=dmg;state.stats.totalDmg+=dmg;
+        if(p.poisonBullet&&e.hp>0){e.playerPoisonT=3000;}
         // Reaper : 10% chance tuer instantanément
         if(p.reaper&&Math.random()<.10){e.hp=0;}
         // Judgment : tue ennemi < 10% PV
@@ -4823,6 +5003,14 @@ function update(dt){
   // Ennemis
   for(let i=state.enemies.length-1;i>=0;i--){
     const e=state.enemies[i];if(!e)continue;
+    if((e.playerPoisonT||0)>0){
+      e.playerPoisonT-=dt;
+      if(e.playerPoisonT>0){
+        const rate=((p.bulletDmg||1)*(p.poisonDmg||1)*0.55)/3000;
+        e.hp-=rate*dt;
+        if(e.hp<=0){killEnemy(i);continue;}
+      }else e.playerPoisonT=0;
+    }
     if(e.frozen>0){e.frozen-=dt;if(e.frozen<=0)e.speed=ETYPES[e.type]?.spd(state.wave)||e.speed;}
     const ex=p.x-e.x,ey=p.y-e.y,ed=Math.hypot(ex,ey)||1;
     const sp=(e.frozen>0?e.speed*.35:e.speed*p.slowMult)*(state._evEnemySpeedMult||1);
@@ -4831,7 +5019,10 @@ function update(dt){
     if(_cfgEUpd&&_cfgEUpd.enemyUpdateMech&&ENEMY_MECHANICS[e.type]){
       ENEMY_MECHANICS[e.type].tick(e,dt,p,state,ex,ey,ed,sp,i);
     }else if(e.type==='shooter'){
-      if(ed<170){e.x-=ex/ed*sp;e.y-=ey/ed*sp;}else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
+      if(ed<170){
+        const side=0.42*Math.sin((e.st||0)*.0037);
+        e.x+=(-ex/ed*.82+(-ey/ed)*side)*sp;e.y+=(-ey/ed*.82+(ex/ed)*side)*sp;
+      }else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
       e.st=(e.st||0)+dt;
       if(e.st>1900){e.st=0;const spd=2.4;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:5,life:130,enemy:true,pierce:0,frozen:0});}
     }else if(e.type==='zigzag'){
@@ -4840,7 +5031,7 @@ function update(dt){
       e.x+=Math.cos(za)*sp;e.y+=Math.sin(za)*sp;
     }else if(e.type==='ghost'){
       e.gt=(e.gt||0)+dt;e.x+=ex/ed*sp;e.y+=ey/ed*sp;
-      if(e.gt>3500){e.gt=0;const a=Math.random()*Math.PI*2;e.x=p.x+Math.cos(a)*90;e.y=p.y+Math.sin(a)*90;pts(e.x,e.y,'#cc88ff',1,4);}
+      if(e.gt>3500){e.gt=0;const a=Math.random()*Math.PI*2,rd=Math.max(120,Math.hypot(W,H)*.52)+Math.random()*80;e.x=p.x+Math.cos(a)*rd;e.y=p.y+Math.sin(a)*rd;pts(e.x,e.y,'#cc88ff',1,4);}
     }else if(e.type==='healer'){
       e.ht=(e.ht||0)+dt;e.x+=ex/ed*sp;e.y+=ey/ed*sp;
       if(e.ht>2200){e.ht=0;for(const en of state.enemies){if(en&&en!==e&&Math.hypot(en.x-e.x,en.y-e.y)<110){en.hp=Math.min(en.maxHp,en.hp+18);pts(en.x,en.y,'#00ff88',.6,2);}}}
@@ -4857,9 +5048,10 @@ function update(dt){
       e.speed=p.speed*.9;
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
     }else if(e.type==='sniper'){
-      // Reste loin, tire rarement mais fort
+      // Reste loin, tire rarement mais fort — zone 250–350 : avance légèrement (évite blocage)
       if(ed<250){e.x-=ex/ed*sp;e.y-=ey/ed*sp;}
       else if(ed>350){e.x+=ex/ed*sp*.5;e.y+=ey/ed*sp*.5;}
+      else{e.x+=ex/ed*sp*.38;e.y+=ey/ed*sp*.38;}
       e.st=(e.st||0)+dt;
       if(e.st>3500){e.st=0;
         const spd=5.5;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:4,life:200,enemy:true,pierce:1,frozen:0,isSniperBullet:true});
@@ -4922,10 +5114,18 @@ function update(dt){
       // Immense, immunisé explosion, frappe lourd
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
     }else if(e.type==='specter'){
-      // Rebondit sur les bords
-      e.x+=e.svx||sp;e.y+=e.svy||sp;
-      if(e.x<e.size||e.x>W-e.size){e.svx=-(e.svx||(ex/ed*sp));}
-      if(e.y<e.size||e.y>H-e.size){e.svy=-(e.svy||(ey/ed*sp));}
+      // Rebondit sur un grand cercle centré sur le joueur (W/H écran ≠ monde infini)
+      const vx0=e.svx!=null?e.svx:ex/ed*sp,vy0=e.svy!=null?e.svy:ey/ed*sp;
+      e.x+=vx0;e.y+=vy0;
+      const ring=Math.max(400,Math.min(920,(W+H)*.52));
+      const bx=e.x-p.x,by=e.y-p.y,bd=Math.hypot(bx,by)||1;
+      if(bd>ring-e.size*.85){
+        const nx=bx/bd,ny=by/bd;
+        const vn=(e.svx||vx0)*nx+(e.svy||vy0)*ny;
+        if(vn>0){e.svx=(e.svx||vx0)-2*vn*nx;e.svy=(e.svy||vy0)-2*vn*ny;}
+        else{e.svx=e.svx||vx0;e.svy=e.svy||vy0;}
+        e.x=p.x+nx*(ring-e.size*.85-2);e.y=p.y+ny*(ring-e.size*.85-2);
+      }
       e.svx=(e.svx||ex/ed*sp)*.99+(ex/ed*sp*.01);
       e.svy=(e.svy||ey/ed*sp)*.99+(ey/ed*sp*.01);
     }else if(e.type==='necro'){
@@ -4975,7 +5175,7 @@ function update(dt){
         const drain=Math.min(p.hp-1,5+state.wave*.5);
         p.hp-=drain;e.hp=Math.min(e.maxHp,e.hp+drain);
         pts(p.x,p.y,'#cc0022',.7,2);pts(e.x,e.y,'#cc0022',.7,2);
-        if(p.hp<=0){gameOver();return;}
+        if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}
       }
     }else if(e.type==='minigod'){
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
@@ -5066,7 +5266,7 @@ function update(dt){
       if(e.ftT>200){e.ftT=0;for(let i=state.enemies.length-1;i>=0;i--){}}  // juste visuel
       if(Math.random()<.03)pts(e.x+(Math.random()-.5)*30,e.y+(Math.random()-.5)*30,'#ff4400',.7,3);
       // Brûle le joueur si proche
-      if(ed<80){p.hp-=dt*.02;if(p.hp<=0){gameOver();return;}}
+      if(ed<80){p.hp-=dt*.02;if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
     }else if(e.type==='void_e'){
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
       e.voidT=(e.voidT||0)+dt;
@@ -5171,8 +5371,15 @@ function update(dt){
     }else if(applyExclusiveArch(e,dt,p,ex,ey,ed,sp)){}
     else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
 
+    nudgeEnemyTowardPlayer(e,p,dt);
+
     // Orbes
-    for(const o of state.orbs){if(Math.hypot(o.x-e.x,o.y-e.y)<(e.size||12)+(o.size||7)){e.hp-=.5;if(e.hp<=0){killEnemy(i);break;}}}
+    for(const o of state.orbs){if(Math.hypot(o.x-e.x,o.y-e.y)<(e.size||12)+(o.size||7)){
+      const od=applyConditionalDmgMul(p,e,.5);
+      e.hp-=od;
+      if(p.orbDrain&&od>0)p.hp=Math.min(playerHealCap(p),p.hp+Math.max(.12,od*.22));
+      if(e.hp<=0){killEnemy(i);break;}
+    }}
 
     // Contact
     if(Math.hypot(p.x-e.x,p.y-e.y)<p.size+e.size){
@@ -5188,9 +5395,7 @@ function update(dt){
       if(e.type==='splitter')splitEnemy(e);
       if(e.type==='toxic'){p.speed=Math.max(.5,p.speed*.9);}
       state.enemies.splice(i,1);
-      if(p.hp<=0&&p.phoenix){p.hp=p.maxHp*.3;p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);continue;}
-      if(p.hp<=0&&p.rebirth){p.hp=p.maxHp*.5;p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);continue;}
-      if(p.hp<=0){gameOver();return;}
+      if(p.hp<=0){if(tryPlayerRevives(p))continue;gameOver();return;}
     }
   }
 
@@ -5205,8 +5410,9 @@ function update(dt){
   state.particles.forEach(pt=>{
     if(!pt.toxic)return;
     if(Math.hypot(pt.x-p.x,pt.y-p.y)<p.size+pt.size){
-      p.hp-=pt.dmg*.1;pt.toxic=false;
-      if(p.hp<=0){gameOver();return;}
+      if(!p.immunePoison){p.hp-=pt.dmg*.1;pt.toxic=false;}
+      else pt.toxic=false;
+      if(p.hp<=0){if(tryPlayerRevives(p))return;gameOver();return;}
     }
   });
 
@@ -5246,7 +5452,7 @@ function update(dt){
       state.knives.push({x:kx,y:ky,angle:a});
       for(let i=state.enemies.length-1;i>=0;i--){
         const e=state.enemies[i];if(!e)continue;
-        if(Math.hypot(e.x-kx,e.y-ky)<e.size+8){e.hp-=p.bulletDmg*.4*dt*.06;if(e.hp<=0)killEnemy(i);}
+        if(Math.hypot(e.x-kx,e.y-ky)<e.size+8){const kv=p.bulletDmg*.4*dt*.06;e.hp-=applyConditionalDmgMul(p,e,kv);if(e.hp<=0)killEnemy(i);}
       }
     }
   }
@@ -5259,7 +5465,7 @@ function update(dt){
       // Trouver ennemi le plus proche
       let bd=Infinity,be=null;
       for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;be=e;}}
-      if(be&&bd<W*.6){be.hp-=p.bulletDmg*.15;if(be.hp<=0){const idx=state.enemies.indexOf(be);if(idx>=0)killEnemy(idx);}
+      if(be&&bd<W*.6){const lv=applyConditionalDmgMul(p,be,p.bulletDmg*.15);be.hp-=lv;if(be.hp<=0){const idx=state.enemies.indexOf(be);if(idx>=0)killEnemy(idx);}
         state._laserTarget={x:be.x,y:be.y};}
       else state._laserTarget=null;
     }
@@ -5274,7 +5480,7 @@ function update(dt){
     for(let i=state.enemies.length-1;i>=0;i--){
       const e=state.enemies[i];if(!e)continue;
       if(Math.hypot(e.x-sx,e.y-sy)<e.size+(state._saw.r||18)){
-        e.hp-=p.bulletDmg*.5*dt*.05;if(e.hp<=0)killEnemy(i);
+        const sv=p.bulletDmg*.5*dt*.05;e.hp-=applyConditionalDmgMul(p,e,sv);if(e.hp<=0)killEnemy(i);
       }
     }
   }
@@ -5287,7 +5493,7 @@ function update(dt){
       state._activeBeam={timer:800,y:p.y};
       for(let i=state.enemies.length-1;i>=0;i--){
         const e=state.enemies[i];if(!e)continue;
-        if(Math.abs(e.y-p.y)<30){e.hp-=p.bulletDmg*3;if(e.hp<=0)killEnemy(i);}
+        if(Math.abs(e.y-p.y)<30){e.hp-=applyConditionalDmgMul(p,e,p.bulletDmg*3);if(e.hp<=0)killEnemy(i);}
       }
     }
     if(state._activeBeam){state._activeBeam.timer-=dt;if(state._activeBeam.timer<=0)state._activeBeam=null;}
@@ -5359,7 +5565,7 @@ function update(dt){
         if(d<state._tornado.r){
           const a=Math.atan2(e.y-state._tornado.y,e.x-state._tornado.x);
           e.x+=Math.cos(a+Math.PI*.5)*3;e.y+=Math.sin(a+Math.PI*.5)*3;
-          e.hp-=p.bulletDmg*.1*dt*.01;
+          e.hp-=applyConditionalDmgMul(p,e,p.bulletDmg*.1*dt*.01);
         }
       }
       if(state._tornado.timer<=0)state._tornado=null;
@@ -5374,7 +5580,7 @@ function update(dt){
       for(let i=state.enemies.length-1;i>=0;i--){
         const e=state.enemies[i];if(!e)continue;
         const d=Math.hypot(e.x-p.x,e.y-p.y);
-        if(d<100){e.hp-=p.bulletDmg*2;const a=Math.atan2(e.y-p.y,e.x-p.x);e.x+=Math.cos(a)*60;e.y+=Math.sin(a)*60;if(e.hp<=0)killEnemy(i);}
+        if(d<100){e.hp-=applyConditionalDmgMul(p,e,p.bulletDmg*2);const a=Math.atan2(e.y-p.y,e.x-p.x);e.x+=Math.cos(a)*60;e.y+=Math.sin(a)*60;if(e.hp<=0)killEnemy(i);}
       }
     }
     if(state._whip){state._whip.timer-=dt;if(state._whip.timer<=0)state._whip=null;}
@@ -5414,7 +5620,7 @@ function update(dt){
       const effects=[
         ()=>explodeAt(p.x,p.y,80),
         ()=>{for(const e of state.enemies)if(e)e.frozen=3000;},
-        ()=>{p.hp=Math.min(p.maxHp,p.hp+p.maxHp*.3);},
+        ()=>{p.hp=Math.min(playerHealCap(p),p.hp+p.maxHp*.3);},
         ()=>{state.xpMult=(state.xpMult||1)*2;setTimeout(()=>{state.xpMult/=2;},5000);},
         ()=>{for(let k=0;k<8;k++){const a=k/8*Math.PI*2;state.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*p.bulletSpeed,vy:Math.sin(a)*p.bulletSpeed,dmg:p.bulletDmg*2,size:p.bulletSize,life:100,pierce:2,enemy:false,chainLeft:0,isChain:false,frozen:0});}},
       ];
@@ -5482,7 +5688,7 @@ function fireBullet(){
   }
 
   // Sangsue — soin par tir
-  if(p.lifeSteal){p.hp=Math.min(p.maxHp,p.hp+.5);}
+  if(p.lifeSteal){const ls=p.lifeStealAmt!=null?p.lifeStealAmt:.3;p.hp=Math.min(playerHealCap(p),p.hp+ls);}
 
   // Splitter — les balles se fractionnent à mi-vie (géré dans update des balles)
   // Tir magnétique — les balles courbent (géré dans update des balles)
@@ -5505,17 +5711,19 @@ function doDash(){
   p.dashCd=3000;pts(p.x,p.y,'#00ffe7',.9,3.5);snd('dash');
 }
 function splitEnemy(e){
+  const w=state.wave;
+  const spdMul=enemySpdWaveMul(w),dmgMul=enemyDmgWaveMul(w);
   for(let k=0;k<2;k++){
     const a=Math.random()*Math.PI*2;const hp=Math.floor(e.maxHp*.3);
-    state.enemies.push({x:e.x+Math.cos(a)*14,y:e.y+Math.sin(a)*14,type:'fast',hp,maxHp:hp,speed:2.4,size:7,dmg:7,color:'#ff6688',xp:4,coins:0,frozen:0});
+    state.enemies.push({x:e.x+Math.cos(a)*14,y:e.y+Math.sin(a)*14,type:'fast',hp,maxHp:hp,speed:Math.max(1.8,2.4*spdMul),size:7,dmg:Math.max(1,Math.ceil(7*dmgMul)),color:'#ff6688',xp:4,coins:0,frozen:0});
   }
 }
 function killEnemy(i){
   const e=state.enemies[i];if(!e)return;
   state.kills++;state.stats.killTypes[e.type]=(state.stats.killTypes[e.type]||0)+1;
   if(e.type==='boss'||e.type==='megaboss'||e.type==='minigod')state.stats.bossKills++;
-  if(state.player.vamp>0)state.player.hp=Math.min(state.player.maxHp,state.player.hp+state.player.vamp);
-  if(state.player.siphon>0)state.player.hp=Math.min(state.player.maxHp,state.player.hp+state.player.siphon);
+  if(state.player.vamp>0)state.player.hp=Math.min(playerHealCap(state.player),state.player.hp+state.player.vamp);
+  if(state.player.siphon>0)state.player.hp=Math.min(playerHealCap(state.player),state.player.hp+state.player.siphon);
   if(state.player.furyStacks!=null)state.player.furyStacks++;
   // Rupture : onde de choc au kill
   if(state.player.rupture)explodeAt(e.x,e.y,12,1); // depth=1 pour éviter cascade
@@ -5531,9 +5739,11 @@ function killEnemy(i){
   if(e.type==='void_phantom'&&!e.splitDone){
     for(let k=0;k<2;k++){
       const cfg=ETYPES.void_phantom;const w=state.wave;
+      const vm=enemyHpWaveMul(w);
+      const vD=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)));
       state.enemies.push({x:e.x+(k?30:-30),y:e.y,type:'void_phantom',
-        hp:cfg.hp(w)*.4,maxHp:cfg.hp(w)*.4,speed:cfg.spd(w)*1.3,
-        size:cfg.sz*.6,dmg:cfg.dmg,color:cfg.color,xp:3,coins:0,
+        hp:cfg.hp(w)*.4*vm,maxHp:cfg.hp(w)*.4*vm,speed:cfg.spd(w)*1.3*enemySpdWaveMul(w),
+        size:cfg.sz*.6,dmg:vD,color:cfg.color,xp:3,coins:0,
         id:Math.random(),vpTimer:0,visible:true,splitDone:true});
     }
   }
@@ -5549,9 +5759,10 @@ function killEnemy(i){
   if(e.type==='distortion'&&e.distSplit<1){
     const cfg=ETYPES.basic;
     for(let k=0;k<4;k++){const a=k/4*Math.PI*2;const w2=state.wave;
+      const dm=enemyHpWaveMul(w2);
       state.enemies.push({x:e.x+Math.cos(a)*20,y:e.y+Math.sin(a)*20,type:'basic',
-        hp:cfg.hp(w2)*.5,maxHp:cfg.hp(w2)*.5,speed:cfg.spd(w2)*1.5,
-        size:e.size*.6,dmg:e.dmg*.5,color:'#4400cc',xp:2,coins:0,id:Math.random(),distSplit:1});
+        hp:cfg.hp(w2)*.5*dm,maxHp:cfg.hp(w2)*.5*dm,speed:cfg.spd(w2)*1.5*enemySpdWaveMul(w2),
+        size:e.size*.6,dmg:Math.max(1,Math.ceil(e.dmg*.5)),color:'#4400cc',xp:2,coins:0,id:Math.random(),distSplit:1});
     }
   }
   // dying_star — nova à la mort
@@ -5578,7 +5789,8 @@ function killEnemy(i){
     for(let j=state.enemies.length-1;j>=0&&count<3;j--){
       const en=state.enemies[j];if(!en||en===e)continue;
       if(Math.hypot(en.x-e.x,en.y-e.y)<180){
-        en.hp-=state.player.bulletDmg*.8;pts(en.x,en.y,'#aaaaff',1,3);count++;
+        const ch=applyConditionalDmgMul(state.player,en,state.player.bulletDmg*.8);
+        en.hp-=ch;pts(en.x,en.y,'#aaaaff',1,3);count++;
         if(en.hp<=0)killEnemy(j);
       }
     }
@@ -5600,7 +5812,8 @@ function explodeAt(x,y,dmg,_depth){
   for(let i=state.enemies.length-1;i>=0;i--){
     const e=state.enemies[i];if(!e)continue;
     if(Math.hypot(e.x-x,e.y-y)<r){
-      e.hp-=dmg;
+      const hd=state.player?applyConditionalDmgMul(state.player,e,dmg):dmg;
+      e.hp-=hd;
       if(e.hp<=0)toKill.push(i);
     }
   }
@@ -5610,8 +5823,8 @@ function explodeAt(x,y,dmg,_depth){
     state.kills++;
     state.stats.killTypes[e.type]=(state.stats.killTypes[e.type]||0)+1;
     if(e.type==='boss'||e.type==='megaboss'||e.type==='minigod')state.stats.bossKills++;
-    if(state.player.vamp>0)state.player.hp=Math.min(state.player.maxHp,state.player.hp+state.player.vamp);
-    if(state.player.siphon>0)state.player.hp=Math.min(state.player.maxHp,state.player.hp+state.player.siphon);
+    if(state.player.vamp>0)state.player.hp=Math.min(playerHealCap(state.player),state.player.hp+state.player.vamp);
+    if(state.player.siphon>0)state.player.hp=Math.min(playerHealCap(state.player),state.player.hp+state.player.siphon);
     const xm=state.xpMult||1;
     state.xpGems.push({x:e.x,y:e.y,value:Math.ceil(e.xp*xm)});
     if(e.coins>0)state.coinPickups.push({x:e.x,y:e.y,value:Math.round(e.coins*(state._evGoldMult||1))});
@@ -5678,6 +5891,7 @@ function dmgNum(x,y,v,color='#ff6',crit=false){
 
 /* ── GAME OVER ── */
 function gameOver(){
+  if(!state||!state.player){try{backToTitle();}catch(e){}return;}
   state.running=false;snd('gameover');
   const fmt=ms=>{const s=Math.floor(ms/1000);return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;};
   const score=calcScore(state.wave,state.kills,state.elapsed,state.player.level);
