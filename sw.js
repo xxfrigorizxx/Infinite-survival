@@ -1,4 +1,4 @@
-const CACHE = 'survivor-v4-scaling-2026-04-15';
+const CACHE = 'survivor-v6-balance-and-leaderboard-2026-04-18';
 const ASSETS = [
   './',
   './index.html',
