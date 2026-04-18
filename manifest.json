@@ -1,7 +1,7 @@
 {
   "name": "∞ SURVIVOR",
   "short_name": "SURVIVOR",
-  "description": "Jeu de survie infini — Scaling infini & entropie",
+  "description": "Jeu de survie infini — Classement complet, boss de secteur & projectiles",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "any",

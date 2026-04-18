@@ -227,7 +227,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— SCALING INFINI · ENTROPIE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— CLASSEMENT COMPLET · BOSS DE SECTEUR —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · Codex &amp; boucle à jour</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -400,7 +400,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div id="lb-modal" style="display:none;position:fixed;inset:0;background:rgba(4,8,15,.97);z-index:600;flex-direction:column;align-items:center;padding:0;overflow:hidden;">
   <div style="flex-shrink:0;padding:12px 12px 5px;text-align:center;width:100%;">
     <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:clamp(.95rem,4.2vw,1.28rem);letter-spacing:.1em;text-shadow:0 0 16px var(--gold);margin-bottom:3px;">🏆 CLASSEMENT MONDIAL</div>
-    <div style="color:#567;font-size:.6rem;margin-bottom:6px;">Top 10 — mis à jour en temps réel</div>
+    <div style="color:#567;font-size:.6rem;margin-bottom:6px;">Liste complète — mis à jour en temps réel</div>
   </div>
   <div style="flex:1;overflow-y:auto;width:100%;padding:0 12px 8px;display:flex;flex-direction:column;align-items:center;">
     <div id="lb-modal-rows" style="width:100%;max-width:360px;"></div>
@@ -413,7 +413,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ MODULE FIREBASE ══ -->
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import {getDatabase,ref,set,get,remove,query,orderByChild,limitToLast,onValue,child}
+import {getDatabase,ref,set,get,remove,onValue,child}
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const app=initializeApp({
@@ -427,7 +427,9 @@ const app=initializeApp({
 });
 const db=getDatabase(app);
 const LB=ref(db,'leaderboard');
-const MAX=10;
+/** Nombre max d’entrées conservées côté Firebase (éviction du plus faible si plein). */
+const LB_STORAGE_MAX=200;
+window.__LB_STORAGE_MAX=LB_STORAGE_MAX;
 
 // Clé propre pour Firebase
 function key(name){
@@ -439,8 +441,8 @@ function key(name){
     .slice(0,32)||'joueur';
 }
 
-// Écoute temps réel — met à jour le classement automatiquement
-onValue(query(LB,orderByChild('score'),limitToLast(MAX)),snap=>{
+// Écoute temps réel — tout le classement en base (tri côté client)
+onValue(LB,snap=>{
   const list=[];
   snap.forEach(c=>{const v=c.val();if(v&&v.name)list.push(v);});
   list.sort((a,b)=>b.score-a.score);
@@ -468,13 +470,13 @@ window._fbSave=async function(name,score,wave,kills,date){
         return;
       }
     } else {
-      // Nouveau joueur — vérifier top 10
+      // Nouveau joueur — vérifier si on entre dans le top LB_STORAGE_MAX
       const all=await get(LB);
       if(all.exists()){
         let cnt=0,worstKey='',worstScore=Infinity;
         all.forEach(c=>{cnt++;const s=c.val().score||0;if(s<worstScore){worstScore=s;worstKey=c.key;}});
-        if(cnt>=MAX){
-          if(score<=worstScore){console.log('[FB] Pas dans top 10');return;}
+        if(cnt>=LB_STORAGE_MAX){
+          if(score<=worstScore){console.log('[FB] Pas dans le classement (top '+LB_STORAGE_MAX+')');return;}
           await remove(child(LB,worstKey));
           console.log('[FB] Viré '+worstKey);
         }
@@ -490,7 +492,7 @@ window._fbSave=async function(name,score,wave,kills,date){
 
 // Refresh manuel
 window._fbRefresh=function(){
-  get(query(LB,orderByChild('score'),limitToLast(MAX))).then(snap=>{
+  get(LB).then(snap=>{
     const list=[];
     snap.forEach(c=>{const v=c.val();if(v&&v.name)list.push(v);});
     list.sort((a,b)=>b.score-a.score);
@@ -507,6 +509,7 @@ console.log('[FB] Module prêt ✅');
 
 // Défini en premier pour que le module Firebase puisse l'appeler dès que prêt
 window._renderLBData=function(lb){
+  const rankLab=i=>(i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.');
   // Met à jour TOUS les endroits où le classement s'affiche
   ['lb-rows','lb-modal-rows'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
@@ -514,18 +517,17 @@ window._renderLBData=function(lb){
       el.innerHTML='<div class="lb-empty">Aucun score encore — sois le premier !</div>';
       return;
     }
-    const m=['🥇','🥈','🥉','4.','5.','6.','7.','8.','9.','10.'];
     if(id==='lb-rows'){
       el.innerHTML=lb.slice(0,10).map((e,i)=>`
         <div class="lb-row ${i===0?'gr':''}">
-          <span class="lb-rank">${m[i]||i+1}</span>
+          <span class="lb-rank">${rankLab(i)}</span>
           <span class="lb-name">${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
           <span class="lb-score">${(e.score||0).toLocaleString()}</span>
         </div>`).join('');
     } else {
-      el.innerHTML=lb.slice(0,10).map((e,i)=>`
+      el.innerHTML=lb.map((e,i)=>`
         <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?.2:.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
-          <span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:${i===0?'var(--gold)':'#456'};width:22px;flex-shrink:0;text-align:center;">${m[i]||i+1}</span>
+          <span style="font-family:'Orbitron',sans-serif;font-size:.68rem;color:${i===0?'var(--gold)':'#456'};min-width:2.1rem;flex-shrink:0;text-align:right;">${rankLab(i)}</span>
           <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-family:'Orbitron',sans-serif;color:${i===0?'var(--gold)':'var(--neon)'};font-size:.72rem;font-weight:700;">${(e.score||0).toLocaleString()}</div>
@@ -615,7 +617,7 @@ function openLeaderboardModal(){
   const fromStats=document.getElementById('stats-screen').classList.contains('show');
   modal.dataset.fromStats=fromStats?'1':'0';
   // Afficher ce qu'on a déjà
-  const lb=window._fbLbData&&window._fbLbData.length?window._fbLbData:_loadLocalLB();
+  const lb=window._fbData&&window._fbData.length?window._fbData:_loadLocalLB();
   window._renderLBData(lb);
   // Refresh Firebase
   if(typeof window._fbRefresh==='function')window._fbRefresh();
@@ -790,7 +792,7 @@ function applyExclusiveArch(e,dt,p,ex,ey,ed,sp){
     e.y+=ey/ed*sp*(ed>200?.35:ed<120?-.25:.6);
     e._sl=(e._sl||0)+dt;
     if(e._sl>2100&&ed<380){e._sl=0;
-      const spd=3.8;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:5,life:160,enemy:true,pierce:0,frozen:0});
+      const spd=6.2;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:5,life:300,enemy:true,pierce:0,frozen:0});
     }
     return true;
   }
@@ -1775,7 +1777,8 @@ function _doSaveRecord(name){
   const idx=lb.findIndex(e=>e.name===d.name);
   if(idx>=0){if(d.score>lb[idx].score)lb[idx]=d;}else lb.push(d);
   lb.sort((a,b)=>b.score-a.score);
-  localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,10)));
+  const cap=typeof window.__LB_STORAGE_MAX==='number'?window.__LB_STORAGE_MAX:1000;
+  localStorage.setItem('surv_lb',JSON.stringify(lb.slice(0,cap)));
 
   // 2. Firebase — attendre que le module soit prêt, max 10s
   let waited=0;
@@ -1810,7 +1813,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
-const SHOP_VERSION='v4'; // Scaling infini + fatigue de run — incrémenter pour forcer reset boutique (localStorage)
+const SHOP_VERSION='v5'; // Classement étendu + boss de secteur + projectiles — incrémenter pour forcer reset boutique (localStorage)
 
 // Vérifier la version au chargement — reset si version différente
 (function checkShopVersion(){
@@ -1818,7 +1821,7 @@ const SHOP_VERSION='v4'; // Scaling infini + fatigue de run — incrémenter pou
     localStorage.removeItem(KSH);
     localStorage.removeItem('surv_coins');
     localStorage.setItem(KSH_VER,SHOP_VERSION);
-    console.log('Mise à jour v4 — Scaling infini & entropie (boutique réinitialisée)');
+    console.log('Mise à jour v5 — Classement complet & boss de secteur (boutique réinitialisée)');
   }
 })();
 const SHOP_ITEMS=[
@@ -3528,7 +3531,7 @@ function updateObstacles(dt){
       // Touche les ennemis
       for(let j=state.enemies.length-1;j>=0;j--){
         const e=state.enemies[j];if(!e)continue;
-        if(Math.hypot(ob.x-e.x,ob.y-e.y)<ob.r+e.size){e.hp-=ob.dmg*2;if(e.hp<=0)killEnemy(j);}
+        if(Math.hypot(ob.x-e.x,ob.y-e.y)<ob.r+e.size){if(e.isBiomeBoss)continue;e.hp-=ob.dmg*2;if(e.hp<=0)killEnemy(j);}
       }
       // Hors écran → supprimer
       if(ob.x<-60||ob.x>W+60||ob.y<-60||ob.y>H+60){state.obstacles.splice(i,1);continue;}
@@ -3666,7 +3669,16 @@ function getBiome(wave){
 
 function getBiomeLoop(){
   if(!state)return 0;
+  // 1 boucle = un passage complet sur tous les biomes (15 vagues × taille de la liste). Les mutations s’appliquent dès loop>0 au retour sur chaque biome.
   return Math.floor(state.wave/(15*BIOMES.length));
+}
+
+/** Dès le 3ᵉ « monde » (tranche floor(vague/15)≥2, ex. vagues 30+ au 1er tour), PV & dégâts montent — par secteur de 15 vagues, pas seulement après une boucle complète des biomes. */
+function enemySecteurBrutalityMul(w){
+  const ww=Math.max(1,Math.floor(Number(w))||1);
+  const seg=Math.floor(ww/15);
+  if(seg<2)return 1;
+  return Math.pow(1.1,seg-1);
 }
 
 function getCurrentBiome(){
@@ -4208,18 +4220,20 @@ function clampEnemyStatMul(v){
 function enemyHpWaveMul(w){
   const ww=Math.max(1,Math.floor(Number(w))||1);
   const t=ww-1;
-  const expCore=Math.pow(1.034,t);
-  const shoulder=1+t*0.045+t*t*0.00014;
+  const expCore=Math.pow(1.0365,t);
+  const shoulder=1+t*0.052+t*t*0.00017;
   let m=expCore*shoulder;
-  if(ww>96)m*=Math.pow(1.0134,ww-96);
+  if(ww>96)m*=Math.pow(1.0158,ww-96);
+  m*=enemySecteurBrutalityMul(ww);
   return clampEnemyStatMul(m);
 }
 /** Dégâts contact / tir ennemis — idem, montée non bornée côté design jusqu'au cap IEEE. */
 function enemyDmgWaveMul(w){
   const ww=Math.max(1,Math.floor(Number(w))||1);
   const t=ww-1;
-  let d=1+t*0.042+Math.pow(Math.max(0,t-15)/38,1.85)*2.2;
-  if(ww>86)d*=Math.pow(1.0108,ww-86);
+  let d=1+t*0.048+Math.pow(Math.max(0,t-15)/38,1.85)*2.55;
+  if(ww>86)d*=Math.pow(1.0135,ww-86);
+  d*=enemySecteurBrutalityMul(ww);
   return clampEnemyStatMul(d);
 }
 /** Fraction des PV max drainés par seconde (fatigue de run). Zéro au début, irrésistible sur l'échelle d'1–2 h+. */
@@ -4872,15 +4886,15 @@ function update(dt){
   }
 
   // ── EFFETS PASSIFS NOUVEAUX UPGRADES ──
-  if(p.aura>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<55){const ad=applyConditionalDmgMul(p,e,p.aura*dt*.001);e.hp-=ad;if(e.hp<=0)killEnemy(i);}}}
-  if(p.corona>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<70){const cd=applyConditionalDmgMul(p,e,p.corona*dt*.001);e.hp-=cd;if(e.hp<=0)killEnemy(i);}}}
+  if(p.aura>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<55){if(e.isBiomeBoss)continue;const ad=applyConditionalDmgMul(p,e,p.aura*dt*.001);e.hp-=ad;if(e.hp<=0)killEnemy(i);}}}
+  if(p.corona>0){for(let i=state.enemies.length-1;i>=0;i--){const e=state.enemies[i];if(e&&Math.hypot(e.x-p.x,e.y-p.y)<70){if(e.isBiomeBoss)continue;const cd=applyConditionalDmgMul(p,e,p.corona*dt*.001);e.hp-=cd;if(e.hp<=0)killEnemy(i);}}}
   if(p.blizzard){for(const e of state.enemies){if(e&&Math.hypot(e.x-p.x,e.y-p.y)<90){e.frozen=Math.max(e.frozen||0,200);}}if(Math.random()<.06)pts(p.x+(Math.random()-.5)*90,p.y+(Math.random()-.5)*90,'#aaeeff',.4,1);}
   if(p.gravityField){for(const e of state.enemies){if(e&&Math.hypot(e.x-p.x,e.y-p.y)<160){const gx=p.x-e.x,gy=p.y-e.y,gd=Math.hypot(gx,gy)||1;e.x+=gx/gd*1.2;e.y+=gy/gd*1.2;}}}
   if(p.pulseTimer>=0){p.pulseTimer+=dt;if(p.pulseTimer>5000){p.pulseTimer=0;explodeAt(p.x,p.y,30);pts(p.x,p.y,'#aaaaff',1.2,6);}}
   if(p.novaTimer>=0){p.novaTimer+=dt;if(p.novaTimer>8000){p.novaTimer=0;explodeAt(p.x,p.y,60);for(let k=0;k<12;k++)pts(p.x,p.y,'#ff88ff',1,5);}}
   if(p.overloadTimer>=0){p.overloadTimer+=dt;if(p.overloadTimer>10000){p.overloadTimer=0;p._overload=true;setTimeout(()=>{if(p)p._overload=false;},600);}}
   if(p.singTimer>=0){p.singTimer+=dt;if(p.singTimer>15000){p.singTimer=0;for(const e of state.enemies){if(e){const gx=p.x-e.x,gy=p.y-e.y,gd=Math.hypot(gx,gy)||1;e.x+=gx/gd*8;e.y+=gy/gd*8;}}pts(p.x,p.y,'#8888ff',1.5,8);}}
-  if(p.armaTimer>=0){p.armaTimer+=dt;if(p.armaTimer>30000){p.armaTimer=0;for(let i=state.enemies.length-1;i>=0;i--){if(state.enemies[i])killEnemy(i);}for(let k=0;k<20;k++)pts(p.x+(Math.random()-.5)*W*.5,p.y+(Math.random()-.5)*H*.5,'#ff4400',1.5,8);}}
+  if(p.armaTimer>=0){p.armaTimer+=dt;if(p.armaTimer>30000){p.armaTimer=0;for(let i=state.enemies.length-1;i>=0;i--){const ev=state.enemies[i];if(ev&&!ev.isBiomeBoss)killEnemy(i);}for(let k=0;k<20;k++)pts(p.x+(Math.random()-.5)*W*.5,p.y+(Math.random()-.5)*H*.5,'#ff4400',1.5,8);}}
   if(p.eternalTimer>=0){p.eternalTimer+=dt;if(p.eternalTimer%30000<5000)p.divineActive=true;}
   if(p.abyssTimer>=0){p.abyssTimer+=dt;if(p.abyssTimer>20000){p.abyssTimer=0;for(const e of state.enemies){if(e&&Math.hypot(e.x-p.x,e.y-p.y)<100){const gx=p.x-e.x,gy=p.y-e.y,gd=Math.hypot(gx,gy)||1;e.x+=gx/gd*14;e.y+=gy/gd*14;}}}}
   if(p.heaven){const near=state.enemies.some(e=>e&&Math.hypot(e.x-p.x,e.y-p.y)<200);if(!near)p.hp=Math.min(playerHealCap(p),p.hp+dt*.025);}
@@ -4933,8 +4947,11 @@ function update(dt){
       state.obstacles=state.obstacles||[];
       state.obstacles.push({type:'fire_zone',x:b.x,y:b.y,r:8,color:'rgba(255,80,0,.2)',dmg:4,solid:false,_life:1500});
     }
-    // Supprimer si trop loin du joueur (world coords) ou vie écoulée
-    if(Math.hypot(b.x-p.x,b.y-p.y)>Math.max(W,H)*1.2||b.life<=0)return false;
+    // Supprimer si trop loin ou vie écoulée — les balles ennemies doivent pouvoir traverser l'écran depuis les snipers / bords (ancien seuil ~1,2× écran les supprimait avant impact).
+    const distP=Math.hypot(b.x-p.x,b.y-p.y);
+    const scr=Math.max(480,Math.max(W||800,H||600));
+    const maxKeep=b.enemy?scr*6+1400:scr*1.2;
+    if(distP>maxKeep||b.life<=0)return false;
     if(b.enemy){
       if(Math.hypot(b.x-p.x,b.y-p.y)<p.size+b.size){
         if(p.divineActive)return false;
@@ -4981,10 +4998,9 @@ function update(dt){
         dmg=applyConditionalDmgMul(p,e,dmg);
         e.hp-=dmg;state.stats.totalDmg+=dmg;
         if(p.poisonBullet&&e.hp>0){e.playerPoisonT=3000;}
-        // Reaper : 10% chance tuer instantanément
-        if(p.reaper&&Math.random()<.10){e.hp=0;}
-        // Judgment : tue ennemi < 10% PV
-        if(p.judgment&&e.hp>0&&e.hp<e.maxHp*.1){e.hp=0;}
+        // Reaper / Judgment — pas sur le boss de biome (sinon mort « gratuite »)
+        if(p.reaper&&Math.random()<.10&&!e.isBiomeBoss){e.hp=0;}
+        if(p.judgment&&e.hp>0&&e.hp<e.maxHp*.1&&!e.isBiomeBoss){e.hp=0;}
         if(p.freeze&&!e.frozen){e.frozen=500;e.speed*=.35;}
         if(p.explode)explodeAt(b.x,b.y,b.dmg*.55);
         if(p.chain&&b.chainLeft>0){
@@ -5024,7 +5040,7 @@ function update(dt){
         e.x+=(-ex/ed*.82+(-ey/ed)*side)*sp;e.y+=(-ey/ed*.82+(ex/ed)*side)*sp;
       }else{e.x+=ex/ed*sp;e.y+=ey/ed*sp;}
       e.st=(e.st||0)+dt;
-      if(e.st>1900){e.st=0;const spd=2.4;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:5,life:130,enemy:true,pierce:0,frozen:0});}
+      if(e.st>1900){e.st=0;const spd=4.6;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:5,life:320,enemy:true,pierce:0,frozen:0});}
     }else if(e.type==='zigzag'){
       e.zt=(e.zt||0)+dt;
       const za=Math.atan2(ey,ex)+Math.sin(e.zt*.005)*1.4;
@@ -5042,7 +5058,7 @@ function update(dt){
     }else if(e.type==='megaboss'){
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
       e.st=(e.st||0)+dt;
-      if(e.st>1200){e.st=0;for(let k=0;k<5;k++){const a=k/5*Math.PI*2;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*2.5,vy:Math.sin(a)*2.5,dmg:0,size:6,life:160,enemy:true,pierce:0,frozen:0});}}
+      if(e.st>1200){e.st=0;for(let k=0;k<5;k++){const a=k/5*Math.PI*2;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*4.2,vy:Math.sin(a)*4.2,dmg:0,size:6,life:280,enemy:true,pierce:0,frozen:0});}}
     }else if(e.type==='mimic'){
       // Copie la vitesse du joueur
       e.speed=p.speed*.9;
@@ -5054,7 +5070,7 @@ function update(dt){
       else{e.x+=ex/ed*sp*.38;e.y+=ey/ed*sp*.38;}
       e.st=(e.st||0)+dt;
       if(e.st>3500){e.st=0;
-        const spd=5.5;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:4,life:200,enemy:true,pierce:1,frozen:0,isSniperBullet:true});
+        const spd=8.5;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:4,life:420,enemy:true,pierce:1,frozen:0,isSniperBullet:true});
         pts(e.x,e.y,'#ff00aa',.8,3);}
     }else if(e.type==='shielder'){
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
@@ -5086,8 +5102,8 @@ function update(dt){
       e.st=(e.st||0)+dt;
       if(e.st>2800){e.st=0;
         // Tire un projectile boomerang
-        const bvx=ex/ed*4,bvy=ey/ed*4;
-        state.bullets.push({x:e.x,y:e.y,vx:bvx,vy:bvy,dmg:0,size:7,life:120,enemy:true,pierce:2,frozen:0,isBoomer:true,boomAge:0,bvx,bvy});
+        const bvx=ex/ed*6.2,bvy=ey/ed*6.2;
+        state.bullets.push({x:e.x,y:e.y,vx:bvx,vy:bvy,dmg:0,size:7,life:240,enemy:true,pierce:2,frozen:0,isBoomer:true,boomAge:0,bvx,bvy});
       }
     }else if(e.type==='toxic'){
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
@@ -5182,7 +5198,7 @@ function update(dt){
       e.st=(e.st||0)+dt;
       if(e.st>1500){e.st=0;
         // Tir en étoile à 8 directions
-        for(let k=0;k<8;k++){const a=k/8*Math.PI*2;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,dmg:0,size:6,life:180,enemy:true,pierce:0,frozen:0});}
+        for(let k=0;k<8;k++){const a=k/8*Math.PI*2;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*4.8,vy:Math.sin(a)*4.8,dmg:0,size:6,life:300,enemy:true,pierce:0,frozen:0});}
       }
       // Soigne les ennemis proches
       e.ht=(e.ht||0)+dt;
@@ -5221,7 +5237,7 @@ function update(dt){
       e.stT=(e.stT||0)+dt;
       if(e.stT>1200){e.stT=0;
         // Rafale de 3 balles
-        for(let k=0;k<3;k++){const delay=k*80;setTimeout(()=>{if(state&&state.running&&state.enemies.includes(e)){const d2=Math.hypot(p.x-e.x,p.y-e.y)||1;state.bullets.push({x:e.x,y:e.y,vx:(p.x-e.x)/d2*5,vy:(p.y-e.y)/d2*5,dmg:0,size:4,life:120,enemy:true,pierce:0,frozen:0});}},delay);}
+        for(let k=0;k<3;k++){const delay=k*80;setTimeout(()=>{if(state&&state.running&&state.enemies.includes(e)){const d2=Math.hypot(p.x-e.x,p.y-e.y)||1;state.bullets.push({x:e.x,y:e.y,vx:(p.x-e.x)/d2*7.8,vy:(p.y-e.y)/d2*7.8,dmg:0,size:4,life:280,enemy:true,pierce:0,frozen:0});}},delay);}
       }
     }else if(e.type==='guardian'){
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
@@ -5252,7 +5268,7 @@ function update(dt){
       e.spT=(e.spT||0)+dt;
       if(e.spT>2200){e.spT=0;
         // Tire une toile (ralentit le joueur si touché)
-        state.bullets.push({x:e.x,y:e.y,vx:ex/ed*3.5,vy:ey/ed*3.5,dmg:0,size:7,life:150,enemy:true,pierce:0,frozen:0,isWeb:true});}
+        state.bullets.push({x:e.x,y:e.y,vx:ex/ed*5.8,vy:ey/ed*5.8,dmg:0,size:7,life:280,enemy:true,pierce:0,frozen:0,isWeb:true});}
     }else if(e.type==='crystal'){
       e.x+=ex/ed*sp*.7;e.y+=ey/ed*sp*.7;
       e.angle=(e.angle||0)+dt*.001;
@@ -5283,7 +5299,7 @@ function update(dt){
       e.falT=(e.falT||0)+dt;
       if(e.falT>900){e.falT=0;
         // Tir en spirale
-        for(let k=0;k<6;k++){const a=e.falAngle+k/6*Math.PI*2;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*3.5,vy:Math.sin(a)*3.5,dmg:0,size:6,life:180,enemy:true,pierce:0,frozen:0});}}
+        for(let k=0;k<6;k++){const a=e.falAngle+k/6*Math.PI*2;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*5.5,vy:Math.sin(a)*5.5,dmg:0,size:6,life:300,enemy:true,pierce:0,frozen:0});}}
     }else if(e.type==='cosmic'){
       e.cosT=(e.cosT||0)+dt;e.cosPhase=(e.cosPhase||0)+dt*.001;
       // Se déplace en orbite autour du centre
@@ -5292,8 +5308,8 @@ function update(dt){
       e.y+=(p.y+Math.sin(e.cosPhase)*cr-e.y)*.03;
       if(e.cosT>600){e.cosT=0;
         // Tir en étoile à 8 directions + tir vers joueur
-        for(let k=0;k<8;k++){const a=k/8*Math.PI*2+e.cosPhase;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,dmg:0,size:7,life:200,enemy:true,pierce:1,frozen:0});}
-        state.bullets.push({x:e.x,y:e.y,vx:ex/ed*5,vy:ey/ed*5,dmg:0,size:9,life:200,enemy:true,pierce:2,frozen:0});
+        for(let k=0;k<8;k++){const a=k/8*Math.PI*2+e.cosPhase;state.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*4.8,vy:Math.sin(a)*4.8,dmg:0,size:7,life:340,enemy:true,pierce:1,frozen:0});}
+        state.bullets.push({x:e.x,y:e.y,vx:ex/ed*7.8,vy:ey/ed*7.8,dmg:0,size:9,life:400,enemy:true,pierce:2,frozen:0});
       }
     }else if(e.type==='void_phantom'){
       // Invisible sauf au contact — clignote
@@ -5354,7 +5370,7 @@ function update(dt){
       e.x+=ex/ed*sp*1.2;e.y+=ey/ed*sp*1.2;
       e.droneTimer=(e.droneTimer||0)+dt;
       if(e.droneTimer>1800){e.droneTimer=0;
-        state.bullets.push({x:e.x,y:e.y,vx:ex/ed*4,vy:ey/ed*4,dmg:0,size:5,life:100,enemy:true,pierce:0,frozen:0});
+        state.bullets.push({x:e.x,y:e.y,vx:ex/ed*6.8,vy:ey/ed*6.8,dmg:0,size:5,life:260,enemy:true,pierce:0,frozen:0});
       }
     }else if(e.type==='dreamspec'){
       e.x+=ex/ed*sp;e.y+=ey/ed*sp;
@@ -5375,6 +5391,7 @@ function update(dt){
 
     // Orbes
     for(const o of state.orbs){if(Math.hypot(o.x-e.x,o.y-e.y)<(e.size||12)+(o.size||7)){
+      if(e.isBiomeBoss)break;
       const od=applyConditionalDmgMul(p,e,.5);
       e.hp-=od;
       if(p.orbDrain&&od>0)p.hp=Math.min(playerHealCap(p),p.hp+Math.max(.12,od*.22));
@@ -5383,13 +5400,24 @@ function update(dt){
 
     // Contact
     if(Math.hypot(p.x-e.x,p.y-e.y)<p.size+e.size){
-      if(state._evPhantom){state.enemies.splice(i,1);continue;}
-      if(p.divineActive){killEnemy(i);continue;}
+      if(state._evPhantom&&!e.isBiomeBoss){state.enemies.splice(i,1);continue;}
+      if(p.divineActive&&!e.isBiomeBoss){killEnemy(i);continue;}
       if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;pts(p.x,p.y,'#00aaff',1.5,5);
+        if(e.isBiomeBoss)continue;
         if(e.type==='splitter')splitEnemy(e);state.enemies.splice(i,1);continue;}
       if(e.type==='bomber'||e.type==='kamikaze'||e.type==='chain_bomber'){explodeAt(e.x,e.y,e.type==='kamikaze'?55:e.hp*.5+20);killEnemy(i);continue;}
-      if(p.dodge>0&&Math.random()<p.dodge){state.enemies.splice(i,1);continue;}
-      if(p.shadowDodge&&Math.random()<.5){state.enemies.splice(i,1);continue;}
+      if(p.dodge>0&&Math.random()<p.dodge&&!e.isBiomeBoss){state.enemies.splice(i,1);continue;}
+      if(p.shadowDodge&&Math.random()<.5&&!e.isBiomeBoss){state.enemies.splice(i,1);continue;}
+      // Boss de biome : dégâts au corps-à-corps avec cooldown — ne jamais retirer par splice (sinon boss « mort » sans combat ni loot, vagues bloquées).
+      if(e.isBiomeBoss){
+        e._bioTouchT=(e._bioTouchT||0)+dt;
+        if(e._bioTouchT>=520){
+          e._bioTouchT=0;
+          if(!p.divineActive){p.hp-=e.dmg;pts(p.x,p.y,'#ff3c6e',.8,2.5);
+            if(p.hp<=0){if(tryPlayerRevives(p))continue;gameOver();return;}}
+        }
+        continue;
+      }
       if(e.type==='thief'){const steal=Math.min(state.coinsRun,5+state.wave);state.coinsRun=Math.max(0,state.coinsRun-steal);if(steal>0){dmgNum(p.x,p.y-10,'-'+steal+'🪙','#ffcc00');}}
       p.hp-=e.dmg;pts(p.x,p.y,'#ff3c6e',.8,2.5);
       if(e.type==='splitter')splitEnemy(e);
@@ -5983,10 +6011,10 @@ function updateHUD(){
   if(wt){
     if(state&&state.running){
       if(state.biomeBossAlive){
-        wt.textContent='⚠ TUE LE BOSS !';
+        wt.textContent='⚠ VAINCS LE BOSS DE SECTEUR';
         wt.style.color='#ff4060';
       } else if(state.wave%15===0){
-        wt.textContent='🌍 TUE LE BOSS !';
+        wt.textContent='🌍 Changement de secteur';
         wt.style.color='#aaeeff';
       } else {
         const secLeft=Math.max(0,Math.ceil((20000-(state.waveTimer||0))/1000));
