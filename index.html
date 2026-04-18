@@ -227,9 +227,9 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— CLASSEMENT COMPLET · BOSS DE SECTEUR —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v6 CRISTAUX XP / MONDE · CLASSEMENT · BOSS DE SECTEUR —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
-  <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · Codex &amp; boucle à jour</p>
+  <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
     <div class="pb-av" id="pb-av">?</div>
     <div class="pb-info"><div class="pb-name" id="pb-name">Créer mon profil</div><div class="pb-stats" id="pb-stats">Aucune partie jouée</div></div>
@@ -526,7 +526,7 @@ window._renderLBData=function(lb){
         </div>`).join('');
     } else {
       el.innerHTML=lb.map((e,i)=>`
-        <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?.2:.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
+        <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?0.2:0.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
           <span style="font-family:'Orbitron',sans-serif;font-size:.68rem;color:${i===0?'var(--gold)':'#456'};min-width:2.1rem;flex-shrink:0;text-align:right;">${rankLab(i)}</span>
           <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
           <div style="text-align:right;flex-shrink:0;">
@@ -788,8 +788,8 @@ function applyExclusiveArch(e,dt,p,ex,ey,ed,sp){
     return true;
   }
   if(ar==='sniperlite'){
-    e.x+=ex/ed*sp*(ed>200?.35:ed<120?-.25:.6);
-    e.y+=ey/ed*sp*(ed>200?.35:ed<120?-.25:.6);
+    e.x+=ex/ed*sp*(ed>200?0.35:ed<120?-0.25:0.6);
+    e.y+=ey/ed*sp*(ed>200?0.35:ed<120?-0.25:0.6);
     e._sl=(e._sl||0)+dt;
     if(e._sl>2100&&ed<380){e._sl=0;
       const spd=6.2;state.bullets.push({x:e.x,y:e.y,vx:ex/ed*spd,vy:ey/ed*spd,dmg:0,size:5,life:300,enemy:true,pierce:0,frozen:0});
@@ -1813,7 +1813,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
-const SHOP_VERSION='v5'; // Classement étendu + boss de secteur + projectiles — incrémenter pour forcer reset boutique (localStorage)
+const SHOP_VERSION='v6'; // Cristaux XP par monde + classement & boss — incrémenter pour forcer reset boutique (localStorage)
 
 // Vérifier la version au chargement — reset si version différente
 (function checkShopVersion(){
@@ -1821,7 +1821,7 @@ const SHOP_VERSION='v5'; // Classement étendu + boss de secteur + projectiles �
     localStorage.removeItem(KSH);
     localStorage.removeItem('surv_coins');
     localStorage.setItem(KSH_VER,SHOP_VERSION);
-    console.log('Mise à jour v5 — Classement complet & boss de secteur (boutique réinitialisée)');
+    console.log('Mise à jour v6 — Cristaux XP par monde, classement & boss (boutique réinitialisée)');
   }
 })();
 const SHOP_ITEMS=[
@@ -3673,12 +3673,26 @@ function getBiomeLoop(){
   return Math.floor(state.wave/(15*BIOMES.length));
 }
 
-/** Dès le 3ᵉ « monde » (tranche floor(vague/15)≥2, ex. vagues 30+ au 1er tour), PV & dégâts montent — par secteur de 15 vagues, pas seulement après une boucle complète des biomes. */
+/** Dès le 3ᵉ « monde » (tranche floor(vague/15)≥2, ex. vagues 30+ au 1er tour), bonus de base par secteur. */
 function enemySecteurBrutalityMul(w){
   const ww=Math.max(1,Math.floor(Number(w))||1);
   const seg=Math.floor(ww/15);
   if(seg<2)return 1;
-  return Math.pow(1.1,seg-1);
+  return Math.pow(1.12,seg-1);
+}
+/** À partir de la vague 30 : chaque vague supplémentaire augmente encore les PV ennemis (cumulatif, anti-build AFK). */
+function enemyWorld3PerWaveHpMul(w){
+  const ww=Math.max(1,Math.floor(Number(w))||1);
+  if(ww<30)return 1;
+  const n=ww-30;
+  return Math.pow(1.0142,n);
+}
+/** Idem pour les dégâts — un peu plus raide pour percer vampirisme / regen / bouclier. */
+function enemyWorld3PerWaveDmgMul(w){
+  const ww=Math.max(1,Math.floor(Number(w))||1);
+  if(ww<30)return 1;
+  const n=ww-30;
+  return Math.pow(1.0185,n);
 }
 
 function getCurrentBiome(){
@@ -4225,15 +4239,17 @@ function enemyHpWaveMul(w){
   let m=expCore*shoulder;
   if(ww>96)m*=Math.pow(1.0158,ww-96);
   m*=enemySecteurBrutalityMul(ww);
+  m*=enemyWorld3PerWaveHpMul(ww);
   return clampEnemyStatMul(m);
 }
 /** Dégâts contact / tir ennemis — idem, montée non bornée côté design jusqu'au cap IEEE. */
 function enemyDmgWaveMul(w){
   const ww=Math.max(1,Math.floor(Number(w))||1);
   const t=ww-1;
-  let d=1+t*0.048+Math.pow(Math.max(0,t-15)/38,1.85)*2.55;
-  if(ww>86)d*=Math.pow(1.0135,ww-86);
+  let d=1+t*0.052+Math.pow(Math.max(0,t-15)/38,1.85)*2.75;
+  if(ww>86)d*=Math.pow(1.0148,ww-86);
   d*=enemySecteurBrutalityMul(ww);
+  d*=enemyWorld3PerWaveDmgMul(ww);
   return clampEnemyStatMul(d);
 }
 /** Fraction des PV max drainés par seconde (fatigue de run). Zéro au début, irrésistible sur l'échelle d'1–2 h+. */
@@ -4712,6 +4728,7 @@ function update(dt){
           }
         },1500);
       }
+      transformXpGemsForNewWorld();
     }
     // Événement spécial toutes les ~15 vagues, aléatoire
     state.eventCooldown--;
@@ -4958,7 +4975,10 @@ function update(dt){
         if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;return false;}
         if(p.dodge>0&&Math.random()<p.dodge)return false;
         if(p.shadowDodge&&Math.random()<.5)return false;
-        p.hp-=8+state.wave;pts(p.x,p.y,'#ff3c6e',.6,2.5);
+        const wvB=Math.max(1,state.wave||1);
+        const projMul=enemyWorld3PerWaveDmgMul(wvB)*enemySecteurBrutalityMul(wvB);
+        p.hp-=Math.max(10,(7+wvB*1.08)*projMul);
+        pts(p.x,p.y,'#ff3c6e',.6,2.5);
         if(p.hp<=0){if(tryPlayerRevives(p))return false;gameOver();return false;}
         return false;
       }
@@ -5759,7 +5779,7 @@ function killEnemy(i){
   if(e.type!=='parasite')state.lastKilled={type:e.type,maxHp:e.maxHp,speed:ETYPES[e.type]?.spd(state.wave)||e.speed,size:e.size,dmg:e.dmg,color:e.color,xp:Math.floor(e.xp*.3),coins:0};
   const gc=e.type==='megaboss'||e.type==='minigod'?10:e.type==='boss'||e.type==='titan'?6:e.type==='tank'||e.type==='elite'?3:1;
   const xm=state.xpMult||1;
-  for(let k=0;k<gc;k++)state.xpGems.push({x:e.x+(Math.random()-.5)*18,y:e.y+(Math.random()-.5)*18,value:Math.ceil(e.xp*xm/gc)});
+  for(let k=0;k<gc;k++)pushXpGem(e.x+(Math.random()-.5)*18,e.y+(Math.random()-.5)*18,Math.ceil(e.xp*xm/gc));
   if(e.coins>0)state.coinPickups.push({x:e.x,y:e.y,value:Math.round(e.coins*(state._evGoldMult||1))});
   // Effets de mort spéciaux
   if(e.type==='bomber'||e.type==='kamikaze'||e.type==='chain_bomber')explodeAt(e.x,e.y,35,1);
@@ -5854,7 +5874,7 @@ function explodeAt(x,y,dmg,_depth){
     if(state.player.vamp>0)state.player.hp=Math.min(playerHealCap(state.player),state.player.hp+state.player.vamp);
     if(state.player.siphon>0)state.player.hp=Math.min(playerHealCap(state.player),state.player.hp+state.player.siphon);
     const xm=state.xpMult||1;
-    state.xpGems.push({x:e.x,y:e.y,value:Math.ceil(e.xp*xm)});
+    pushXpGem(e.x,e.y,Math.ceil(e.xp*xm));
     if(e.coins>0)state.coinPickups.push({x:e.x,y:e.y,value:Math.round(e.coins*(state._evGoldMult||1))});
     // Bomber/kamikaze : explosion secondaire avec depth+1
     if(e.type==='bomber'||e.type==='kamikaze')explodeAt(e.x,e.y,dmg*.5,(_depth||0)+1);
@@ -5865,6 +5885,58 @@ function explodeAt(x,y,dmg,_depth){
   const nb=Math.min(6,8-(_depth||0)*2);
   for(let k=0;k<nb;k++)pts(x,y,'#ff6010',.8,2.5);
 }
+
+/** Segment monde (0,1,2…) : +1 à chaque vague multiple de 15 ; ne boucle pas (contrairement à l’index de biome). */
+function xpWorldSegment(){
+  const w=Math.max(1,state&&state.wave?state.wave:1);
+  return Math.floor(w/15);
+}
+/** Position dans le bloc : 0 = vague 1 ou 15/30… ; 1..14 = milieu/fin de bloc (16→1 … 29→14). */
+function xpWorldSubwave(){
+  const w=Math.max(1,state&&state.wave?state.wave:1);
+  if(w%15===0)return 0;
+  if(w<15)return(w-1)%15;
+  return w%15;
+}
+
+/** Cristal XP : gros / moyen / poussière selon progression du monde (jamais de reset arrière). */
+function pushXpGem(wx,wy,baseValue){
+  if(!state)return;
+  const bv=Math.max(1,Number(baseValue)||1);
+  const seg=xpWorldSegment();
+  const sub=xpWorldSubwave();
+  const pHi=Math.min(0.9,0.06+sub*0.051+seg*0.024);
+  const r=Math.random();
+  let mult=1,tier='c',sz=7,glow='#00ffe7';
+  if(r<pHi*0.32){mult=2.85;tier='e';sz=12;glow='#ffd54a';}
+  else if(r<pHi){mult=1.88;tier='r';sz=9;glow='#b388ff';}
+  else if(r>0.74-sub*0.01){mult=0.5;tier='d';sz=5;glow='#5c6b7d';}
+  const v=Math.max(1,Math.ceil(bv*mult));
+  state.xpGems.push({x:wx,y:wy,value:v,xpTier:tier,gemSize:sz,glow});
+}
+
+/** Changement de monde : affaiblir l’XP « ancien » + rafale de cristaux du nouveau secteur (de plus en plus généreux avec seg). */
+function transformXpGemsForNewWorld(){
+  if(!state)return;
+  const p=state.player;
+  const seg=xpWorldSegment();
+  for(const g of state.xpGems){
+    if(!g)continue;
+    g.legacy=true;
+    g.xpTier='d';
+    g.gemSize=5;
+    g.glow='#4a5566';
+    g.value=Math.max(1,Math.floor(g.value*(0.46+Math.random()*0.14)));
+  }
+  const n=4+Math.min(6,1+Math.floor(seg/2))+Math.floor(Math.random()*2);
+  const base=12+state.wave*2.4+seg*6;
+  for(let k=0;k<n;k++){
+    const a=(k/Math.max(1,n))*Math.PI*2+Math.random()*0.4;
+    const rd=52+Math.random()*110;
+    pushXpGem(p.x+Math.cos(a)*rd,p.y+Math.sin(a)*rd,base*1.55);
+  }
+}
+
 function gainXP(v){
   const p=state.player;p.xp+=v*(state._evXpMult||1);
   if(p.xp>=p.xpNext){p.xp-=p.xpNext;p.xpNext=Math.floor(p.xpNext*1.32);p.level++;state.paused=true;showUpgrades();snd('levelup');}
@@ -6047,7 +6119,7 @@ function drawMiniMap(){
   mx.fillStyle='rgba(4,8,15,.95)';mx.fillRect(0,0,mw,mh);
   function toMM(wx,wy){return[mw/2+(wx-px)*(mw/(RANGE*2)),mh/2+(wy-py)*(mh/(RANGE*2))];}
   mx.fillStyle='rgba(0,255,231,.6)';
-  for(const g of state.xpGems){if(!g||Math.abs(g.x-px)>RANGE||Math.abs(g.y-py)>RANGE)continue;const[gx,gy]=toMM(g.x,g.y);mx.beginPath();mx.arc(gx,gy,1,0,Math.PI*2);mx.fill();}
+  for(const g of state.xpGems){if(!g||Math.abs(g.x-px)>RANGE||Math.abs(g.y-py)>RANGE)continue;const[gx,gy]=toMM(g.x,g.y);mx.fillStyle=g.glow||'#00ffe7';mx.beginPath();mx.arc(gx,gy,(g.gemSize||7)*0.12,0,Math.PI*2);mx.fill();}
   for(const e of state.enemies){
     if(!e||Math.abs(e.x-px)>RANGE*1.5||Math.abs(e.y-py)>RANGE*1.5)continue;
     const[ex,ey]=toMM(e.x,e.y);
@@ -6141,10 +6213,16 @@ function draw(){
     }
   }
 
-  // XP gems
+  // Cristaux XP (tiers : poussière / commun / rare / épique + legacy au changement de monde)
   state.xpGems.forEach(g=>{
-    ctx.beginPath();ctx.moveTo(g.x,g.y-6);ctx.lineTo(g.x+4,g.y);ctx.lineTo(g.x,g.y+6);ctx.lineTo(g.x-4,g.y);
-    ctx.closePath();ctx.fillStyle='#00ffe7';ctx.shadowBlur=7;ctx.shadowColor='#00ffe7';ctx.fill();ctx.shadowBlur=0;
+    if(!g)return;
+    const s=g.gemSize||7,col=g.glow||'#00ffe7';
+    ctx.save();ctx.translate(g.x,g.y);
+    ctx.beginPath();ctx.moveTo(0,-s);ctx.lineTo(s*.72,s*.42);ctx.lineTo(0,s*.88);ctx.lineTo(-s*.72,s*.42);ctx.closePath();
+    if(g.legacy)ctx.globalAlpha=0.78;
+    ctx.fillStyle=col;ctx.shadowBlur=g.xpTier==='e'?14:9;ctx.shadowColor=col;ctx.fill();ctx.shadowBlur=0;
+    if(g.xpTier==='e'||g.xpTier==='r'){ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;ctx.stroke();}
+    ctx.restore();
   });
 
   // Tourelles
@@ -6174,7 +6252,7 @@ function draw(){
     }else if(e.type==='ghost'){
       ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);ctx.fillStyle=e.color;ctx.fill();
     }else if(e.type==='stealth'){
-      ctx.globalAlpha=e.visible===false?.1:.7;
+      ctx.globalAlpha=e.visible===false?0.1:0.7;
       ctx.beginPath();ctx.arc(0,0,e.size,0,Math.PI*2);ctx.fillStyle=e.color;ctx.fill();
     }else if(e.type==='mimic'){
       // Forme qui ressemble au joueur

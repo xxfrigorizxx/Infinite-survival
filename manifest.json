@@ -1,7 +1,7 @@
 {
   "name": "∞ SURVIVOR",
   "short_name": "SURVIVOR",
-  "description": "Jeu de survie infini — Classement complet, boss de secteur & projectiles",
+  "description": "Survie infinie — cristaux XP par monde, classement complet, boss de secteur & correctifs",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "any",
