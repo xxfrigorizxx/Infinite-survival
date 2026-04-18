@@ -400,7 +400,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div id="lb-modal" style="display:none;position:fixed;inset:0;background:rgba(4,8,15,.97);z-index:600;flex-direction:column;align-items:center;padding:0;overflow:hidden;">
   <div style="flex-shrink:0;padding:12px 12px 5px;text-align:center;width:100%;">
     <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:clamp(.95rem,4.2vw,1.28rem);letter-spacing:.1em;text-shadow:0 0 16px var(--gold);margin-bottom:3px;">🏆 CLASSEMENT MONDIAL</div>
-    <div style="color:#567;font-size:.6rem;margin-bottom:6px;">Top 10 — mis à jour en temps réel</div>
+    <div style="color:#567;font-size:.6rem;margin-bottom:6px;">Classement complet — mis à jour en temps réel</div>
   </div>
   <div style="flex:1;overflow-y:auto;width:100%;padding:0 12px 8px;display:flex;flex-direction:column;align-items:center;">
     <div id="lb-modal-rows" style="width:100%;max-width:360px;"></div>
@@ -440,7 +440,7 @@ function key(name){
 }
 
 // Écoute temps réel — met à jour le classement automatiquement
-onValue(query(LB,orderByChild('score'),limitToLast(MAX)),snap=>{
+onValue(query(LB,orderByChild('score')),snap=>{
   const list=[];
   snap.forEach(c=>{const v=c.val();if(v&&v.name)list.push(v);});
   list.sort((a,b)=>b.score-a.score);
@@ -467,18 +467,6 @@ window._fbSave=async function(name,score,wave,kills,date){
         console.log('[FB] Score existant meilleur ('+prev.score+') — skip');
         return;
       }
-    } else {
-      // Nouveau joueur — vérifier top 10
-      const all=await get(LB);
-      if(all.exists()){
-        let cnt=0,worstKey='',worstScore=Infinity;
-        all.forEach(c=>{cnt++;const s=c.val().score||0;if(s<worstScore){worstScore=s;worstKey=c.key;}});
-        if(cnt>=MAX){
-          if(score<=worstScore){console.log('[FB] Pas dans top 10');return;}
-          await remove(child(LB,worstKey));
-          console.log('[FB] Viré '+worstKey);
-        }
-      }
     }
     const data={name:String(name),score:Number(score),wave:Number(wave||0),kills:Number(kills||0),date:String(date||''),ts:Date.now()};
     await set(r,data);
@@ -490,7 +478,7 @@ window._fbSave=async function(name,score,wave,kills,date){
 
 // Refresh manuel
 window._fbRefresh=function(){
-  get(query(LB,orderByChild('score'),limitToLast(MAX))).then(snap=>{
+  get(query(LB,orderByChild('score'))).then(snap=>{
     const list=[];
     snap.forEach(c=>{const v=c.val();if(v&&v.name)list.push(v);});
     list.sort((a,b)=>b.score-a.score);
@@ -523,7 +511,7 @@ window._renderLBData=function(lb){
           <span class="lb-score">${(e.score||0).toLocaleString()}</span>
         </div>`).join('');
     } else {
-      el.innerHTML=lb.slice(0,10).map((e,i)=>`
+      el.innerHTML=lb.map((e,i)=>`
         <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?.2:.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
           <span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:${i===0?'var(--gold)':'#456'};width:22px;flex-shrink:0;text-align:center;">${m[i]||i+1}</span>
           <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
@@ -615,7 +603,7 @@ function openLeaderboardModal(){
   const fromStats=document.getElementById('stats-screen').classList.contains('show');
   modal.dataset.fromStats=fromStats?'1':'0';
   // Afficher ce qu'on a déjà
-  const lb=window._fbLbData&&window._fbLbData.length?window._fbLbData:_loadLocalLB();
+  const lb=window._fbData&&window._fbData.length?window._fbData:_loadLocalLB();
   window._renderLBData(lb);
   // Refresh Firebase
   if(typeof window._fbRefresh==='function')window._fbRefresh();
@@ -4198,6 +4186,13 @@ function nudgeEnemyTowardPlayer(e,p,dt){
 
 /** Plafond d'ennemis vivants (hors rares cas boss événement qui peuvent dépasser légèrement). */
 const MAX_ENEMIES_ALIVE=72;
+const BOSS_CONTACT_TYPES=new Set([
+  'boss','megaboss','titan','icetitan','firetitan','minigod','entity',
+  'fallen','cosmic','graviton','colossus','balrog','lich_king','void_titan','the_nothing'
+]);
+function isBossEnemy(e){
+  return !!(e&&(e.isBiomeBoss||e.isBoss||BOSS_CONTACT_TYPES.has(e.type)));
+}
 /** Dernier rempart IEEE pour les mul PV/dégâts (aussi haut que possible sans Infinity/NaN en chaîne). */
 const ENEMY_STAT_MUL_CAP=Number.MAX_VALUE/1e12;
 function clampEnemyStatMul(v){
@@ -4211,6 +4206,7 @@ function enemyHpWaveMul(w){
   const expCore=Math.pow(1.034,t);
   const shoulder=1+t*0.045+t*t*0.00014;
   let m=expCore*shoulder;
+  if(ww>=31)m*=1+Math.min(0.16,(ww-30)*0.004);
   if(ww>96)m*=Math.pow(1.0134,ww-96);
   return clampEnemyStatMul(m);
 }
@@ -4219,6 +4215,7 @@ function enemyDmgWaveMul(w){
   const ww=Math.max(1,Math.floor(Number(w))||1);
   const t=ww-1;
   let d=1+t*0.042+Math.pow(Math.max(0,t-15)/38,1.85)*2.2;
+  if(ww>=31)d*=1+Math.min(0.18,(ww-30)*0.0045);
   if(ww>86)d*=Math.pow(1.0108,ww-86);
   return clampEnemyStatMul(d);
 }
@@ -4234,7 +4231,9 @@ function enduranceHpDrainRate(){
 /** Vitesse ennemie légère bonus en profondeur (pour traverser le champ de balles). */
 function enemySpdWaveMul(w){
   const ww=Math.max(1,Math.floor(Number(w))||1);
-  return 1+Math.min(0.55,(ww-1)*0.0045);
+  let s=1+Math.min(0.55,(ww-1)*0.0045);
+  if(ww>=31)s*=1+Math.min(0.12,(ww-30)*0.0025);
+  return s;
 }
 
 function spawnEnemy(){
@@ -4499,6 +4498,7 @@ function spawnBiomeBoss(){
     color:biome.accent,
     xp:   cfg.xp*3,
     coins:cfg.coins*3,
+    isBoss:true,
     isBiomeBoss:true,
     biomeBossName:bb.name,
     id:Math.random()
@@ -4539,7 +4539,8 @@ function spawnBoss(bossType){
     speed:cfg.spd(w)*.82*enemySpdWaveMul(w),
     size:Math.min(52,cfg.sz*Math.min(2.4,scale+.55)),
     dmg:Math.max(1,Math.ceil(cfg.dmg*1.28*enemyDmgWaveMul(w))),
-    color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()
+    color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random(),
+    isBoss:true
   };
   if(t==='entity')b.immune=true;
   if(t==='cosmic'){b.cosT=0;b.cosPhase=0;}
@@ -4902,7 +4903,7 @@ function update(dt){
 
   // Balles
   state.bullets=state.bullets.filter(b=>{
-    b.x+=b.vx;b.y+=b.vy;b.life--;
+    b.x+=b.vx;b.y+=b.vy;b.life-=b.enemy?.5:1;
     if(b.frozen>0)b.frozen-=dt;
     // Balles qui zigzaguent (TREMBLEMENT)
     if(!b.enemy&&state.player.wobblyBullets){
@@ -4934,7 +4935,8 @@ function update(dt){
       state.obstacles.push({type:'fire_zone',x:b.x,y:b.y,r:8,color:'rgba(255,80,0,.2)',dmg:4,solid:false,_life:1500});
     }
     // Supprimer si trop loin du joueur (world coords) ou vie écoulée
-    if(Math.hypot(b.x-p.x,b.y-p.y)>Math.max(W,H)*1.2||b.life<=0)return false;
+    const bulletRangeMul=b.enemy?2:1;
+    if(Math.hypot(b.x-p.x,b.y-p.y)>Math.max(W,H)*1.2*bulletRangeMul||b.life<=0)return false;
     if(b.enemy){
       if(Math.hypot(b.x-p.x,b.y-p.y)<p.size+b.size){
         if(p.divineActive)return false;
@@ -5003,6 +5005,7 @@ function update(dt){
   // Ennemis
   for(let i=state.enemies.length-1;i>=0;i--){
     const e=state.enemies[i];if(!e)continue;
+    if((e.contactCd||0)>0)e.contactCd-=dt;
     if((e.playerPoisonT||0)>0){
       e.playerPoisonT-=dt;
       if(e.playerPoisonT>0){
@@ -5383,18 +5386,25 @@ function update(dt){
 
     // Contact
     if(Math.hypot(p.x-e.x,p.y-e.y)<p.size+e.size){
-      if(state._evPhantom){state.enemies.splice(i,1);continue;}
+      const bossEnemy=isBossEnemy(e);
+      if(bossEnemy&&e.contactCd>0)continue;
+      if(state._evPhantom){
+        if(bossEnemy){e.contactCd=420;continue;}
+        state.enemies.splice(i,1);continue;
+      }
       if(p.divineActive){killEnemy(i);continue;}
       if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;pts(p.x,p.y,'#00aaff',1.5,5);
+        if(bossEnemy){e.contactCd=420;continue;}
         if(e.type==='splitter')splitEnemy(e);state.enemies.splice(i,1);continue;}
       if(e.type==='bomber'||e.type==='kamikaze'||e.type==='chain_bomber'){explodeAt(e.x,e.y,e.type==='kamikaze'?55:e.hp*.5+20);killEnemy(i);continue;}
-      if(p.dodge>0&&Math.random()<p.dodge){state.enemies.splice(i,1);continue;}
-      if(p.shadowDodge&&Math.random()<.5){state.enemies.splice(i,1);continue;}
+      if(p.dodge>0&&Math.random()<p.dodge){if(bossEnemy){e.contactCd=420;continue;}state.enemies.splice(i,1);continue;}
+      if(p.shadowDodge&&Math.random()<.5){if(bossEnemy){e.contactCd=420;continue;}state.enemies.splice(i,1);continue;}
       if(e.type==='thief'){const steal=Math.min(state.coinsRun,5+state.wave);state.coinsRun=Math.max(0,state.coinsRun-steal);if(steal>0){dmgNum(p.x,p.y-10,'-'+steal+'🪙','#ffcc00');}}
       p.hp-=e.dmg;pts(p.x,p.y,'#ff3c6e',.8,2.5);
+      if(bossEnemy)e.contactCd=420;
       if(e.type==='splitter')splitEnemy(e);
       if(e.type==='toxic'){p.speed=Math.max(.5,p.speed*.9);}
-      state.enemies.splice(i,1);
+      if(!bossEnemy)state.enemies.splice(i,1);
       if(p.hp<=0){if(tryPlayerRevives(p))continue;gameOver();return;}
     }
   }
