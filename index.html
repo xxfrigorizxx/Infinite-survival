@@ -227,7 +227,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v6 CRISTAUX XP / MONDE · CLASSEMENT · BOSS DE SECTEUR —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -1083,545 +1083,6 @@ const CODEX_ENEMIES=[
   for(const c of p.codex)CODEX_ENEMIES.push(c);
 })();
 
-// Définition du codex — upgrades (résumé des 50 upgrades)
-const CODEX_UPGRADES=[
-  {id:'speed1',    icon:'💨',name:'VITESSE+',           desc:'+20% vitesse.',                       hint:'Vague 1'},
-  {id:'dmg1',      icon:'⚔️',name:'DÉGÂTS+',            desc:'+25% dégâts.',                        hint:'Vague 1'},
-  {id:'hp1',       icon:'🛡️',name:'ARMURE',             desc:'PV max +30.',                         hint:'Vague 1'},
-  {id:'bsize1',    icon:'🟠',name:'BALLES+',            desc:'Balles x1.4 plus grosses.',           hint:'Vague 1'},
-  {id:'xprad1',    icon:'🧲',name:'MAGNÉTISME',         desc:'Portée XP +60%.',                     hint:'Vague 1'},
-  {id:'regen0',    icon:'🌱',name:'VITALITÉ',           desc:'+1 PV/seconde.',                      hint:'Vague 1'},
-  {id:'bspd_a',    icon:'💨',name:'BALLE RAPIDE',       desc:'+20% vitesse balle.',                 hint:'Vague 1'},
-  {id:'fire0',     icon:'🔫',name:'GÂCHETTE LÉGÈRE',    desc:'Tir +15% plus vite.',                 hint:'Vague 1'},
-  {id:'fire1',     icon:'🔥',name:'CADENCE+',           desc:'Tir +30% plus vite.',                 hint:'Vague 2'},
-  {id:'speed2',    icon:'🏃',name:'SPRINT',             desc:'+30% vitesse.',                       hint:'Vague 2'},
-  {id:'hp2',       icon:'🦺',name:'ARMURE LOURDE',      desc:'PV max +50.',                         hint:'Vague 2'},
-  {id:'bspd2',     icon:'💫',name:'BALLE LÉGÈRE',       desc:'Vitesse balles +25%.',                hint:'Vague 2'},
-  {id:'coinb',     icon:'🪙',name:'COLLECTEUR',         desc:'+30% pièces cette partie.',           hint:'Vague 2'},
-  {id:'xpboost1',  icon:'✨',name:'XP BOOST',           desc:'+25% XP gagné.',                      hint:'Vague 2'},
-  {id:'multi1',    icon:'🎯',name:'MULTI-TIR',          desc:'+1 projectile.',                      hint:'Vague 3'},
-  {id:'crit1',     icon:'🎲',name:'CRITIQUE',           desc:'+20% chance crit (x2).',              hint:'Vague 3'},
-  {id:'dodge1',    icon:'🌬️',name:'ESQUIVE',            desc:'5% chance esquiver.',                hint:'Vague 3'},
-  {id:'dmg1b',     icon:'🗡️',name:'LAME AFFÛTÉE',      desc:'+20% dégâts.',                       hint:'Vague 3'},
-  {id:'hp1b',      icon:'💪',name:'ENDURANCE',          desc:'PV max +20.',                         hint:'Vague 3'},
-  {id:'speed1b',   icon:'🍃',name:'LÉGÈRETÉ',           desc:'+15% vitesse.',                       hint:'Vague 3'},
-  {id:'regen1',    icon:'💚',name:'RÉGÉNÉRATION',       desc:'+2 PV/seconde.',                      hint:'Vague 4'},
-  {id:'dmg2',      icon:'🗡️',name:'DÉGÂTS++',           desc:'+40% dégâts.',                       hint:'Vague 4'},
-  {id:'n_haste',   icon:'🏎️',name:'HÂTE',              desc:'+15% vitesse + cadence.',             hint:'Vague 4'},
-  {id:'xpboost2',  icon:'📚',name:'ÉRUDIT',             desc:'+35% XP gagné.',                      hint:'Vague 4'},
-  {id:'fire1b',    icon:'🔥',name:'DOUBLE GÂCHETTE',    desc:'Tir +20% plus vite.',                 hint:'Vague 4'},
-  {id:'pierce1',   icon:'🔱',name:'PERFORANT',          desc:'Balles traversent +1.',               hint:'Vague 5'},
-  {id:'dash1',     icon:'💨',name:'ESQUIVE RAPIDE',    desc:'Débloque le dash — esquive en un éclair.',    hint:'Vague 5'},
-  {id:'n_magnet2', icon:'🔮',name:'SUPER MAGNÉT.',      desc:'Portée XP +50%, pièces aussi.',       hint:'Vague 5'},
-  {id:'crit1b',    icon:'👁️',name:'ŒIL DE LYNX',       desc:'+15% chance crit.',                   hint:'Vague 5'},
-  {id:'bsize1b',   icon:'⚫',name:'OBUS LÉGER',         desc:'Balles x1.6 plus grosses.',           hint:'Vague 5'},
-  {id:'orbit1',    icon:'🌀',name:'ORBITE',             desc:'+1 orbe protecteur.',                 hint:'Vague 6'},
-  {id:'fire2',     icon:'💫',name:'MITRAILLEUSE',       desc:'Tir +45% plus vite.',                 hint:'Vague 6'},
-  {id:'knockback1',icon:'↩️',name:'RECUL',              desc:'Balles repoussent les ennemis.',     hint:'Vague 6'},
-  {id:'n_siphon',  icon:'🩺',name:'SIPHON',             desc:'Chaque kill soigne 5 PV.',            hint:'Vague 6'},
-  {id:'hp2b',      icon:'🏗️',name:'FORTIFICATION',     desc:'PV max +40.',                         hint:'Vague 6'},
-  {id:'speed2b',   icon:'🏁',name:'ACCÉLÉRATION',       desc:'+25% vitesse.',                       hint:'Vague 6'},
-  {id:'tri1',      icon:'🔫',name:'TRIPLE TIR',         desc:'Tir en éventail x3.',                 hint:'Vague 7'},
-  {id:'bspd1',     icon:'🚀',name:'BALLES RAPIDES',     desc:'Vitesse balles +40%.',                hint:'Vague 7'},
-  {id:'aura1',     icon:'🔥',name:'CERCLE DE FEU',      desc:'Zone de feu autour de toi +15 dégâts/sec.',   hint:'Vague 7'},
-  {id:'dmg2b',     icon:'🔨',name:'FRAPPE LOURDE',      desc:'+30% dégâts.',                        hint:'Vague 7'},
-  {id:'multi1b',   icon:'🎰',name:'RAFALE',             desc:'+1 projectile.',                      hint:'Vague 7'},
-  {id:'vamp1',     icon:'🩸',name:'VAMPIRISME',         desc:'+3 PV par kill.',                     hint:'Vague 8'},
-  {id:'crit2',     icon:'🎯',name:'SNIPER',             desc:'+30% crit, x2.5 dégâts.',            hint:'Vague 8'},
-  {id:'n_berserker',icon:'😤',name:'BERSERK',           desc:'+40% dégâts si PV < 30%.',           hint:'Vague 8'},
-  {id:'regen1b',   icon:'🌊',name:'FLUX VITAL',         desc:'+3 PV/seconde.',                      hint:'Vague 8'},
-  {id:'dodge1b',   icon:'💨',name:'RÉFLEXES+',          desc:'+8% chance esquiver.',                hint:'Vague 8'},
-  {id:'explode1',  icon:'💥',name:'EXPLOSION',          desc:'Balles explosent.',                   hint:'Vague 9'},
-  {id:'shield1',   icon:'🔵',name:'BOUCLIER',           desc:'Bloque 1 coup / 8s.',                 hint:'Vague 9'},
-  {id:'n_shrink',  icon:'🔬',name:'MINIBALLE',          desc:'Balles 3x plus petites et rapides.',  hint:'Vague 9'},
-  {id:'bspd1b',    icon:'🔴',name:'BALLE LASER',        desc:'Vitesse balles +60%.',                hint:'Vague 9'},
-  {id:'hp3a',      icon:'🏰',name:'FORTRESSE',          desc:'PV max +60.',                         hint:'Vague 9'},
-  {id:'multi2',    icon:'🎯',name:'TIRS MULTIPLES',     desc:'+2 projectiles.',                     hint:'Vague 10'},
-  {id:'xprad2',    icon:'🧲',name:'SUPER AIMANT',       desc:'Portée XP x3.',                       hint:'Vague 10'},
-  {id:'n_thorns',  icon:'🌵',name:'ÉPINES',             desc:'Renvoie 25% dégâts.',                 hint:'Vague 10'},
-  {id:'n_shield2', icon:'🔮',name:'BOUCLIER+',          desc:'Bouclier recharge en 5s.',            hint:'Vague 10'},
-  {id:'speed3a',   icon:'⚡',name:'FULGURANCE',          desc:'+35% vitesse.',                       hint:'Vague 10'},
-  {id:'fire2b',    icon:'🤖',name:'TOURELLE RAPIDE',    desc:'Tir +35% plus vite.',                 hint:'Vague 10'},
-  {id:'n_orb_dmg', icon:'💫',name:'ORBES OFFENSIFS',    desc:'Orbes font x2 dégâts.',              hint:'Vague 11'},
-  {id:'n_bounce',  icon:'⚽',name:'REBONDISSANTE',      desc:'Balles rebondissent sur ennemis.',    hint:'Vague 11'},
-  {id:'vamp1b',    icon:'🩸',name:'SANGSUE',            desc:'+5 PV par kill.',                     hint:'Vague 11'},
-  {id:'crit2b',    icon:'🎲',name:'INSTINCT MORTEL',    desc:'+20% crit, critiques +0.5.',          hint:'Vague 11'},
-  {id:'orbit1b',   icon:'🌌',name:'DOUBLE ORBITE',      desc:'+2 orbes.',                           hint:'Vague 11'},
-  {id:'chain1',    icon:'⚡',name:'CHAÎNE ÉCLAIR',      desc:'Balles rebondissent x2.',             hint:'Vague 12'},
-  {id:'orbit2',    icon:'🌌',name:'CONSTELLATION',      desc:'+2 orbes protecteurs.',               hint:'Vague 12'},
-  {id:'n_poison',  icon:'☠️',name:'POISON',             desc:'Balles empoisonnent 3s.',             hint:'Vague 12'},
-  {id:'n_fury',    icon:'🔱',name:'FURIE',              desc:'+3% dégâts par kill.',                hint:'Vague 12'},
-  {id:'hp3b',      icon:'🗿',name:'TITAN NAISSANT',     desc:'PV max +80.',                         hint:'Vague 12'},
-  {id:'pierce1b',  icon:'🔰',name:'PERFORANT+',         desc:'Balles traversent +2.',               hint:'Vague 12'},
-  {id:'n_web',     icon:'🕸️',name:'TOILE',             desc:'Balles piègent ennemis 2s.',          hint:'Vague 13'},
-  {id:'aura1b',    icon:'🔥',name:'BRASIER',            desc:'Aura de feu +25/s.',                  hint:'Vague 13'},
-  {id:'knockback2',icon:'💢',name:'ONDE DE CHOC',       desc:'Recul des balles x2.',                hint:'Vague 13'},
-  {id:'speed3b',   icon:'🏎️',name:'TURBO',              desc:'+40% vitesse.',                       hint:'Vague 13'},
-  {id:'freeze1',   icon:'❄️',name:'GEL',                desc:'Balles gèlent 0.5s.',                hint:'Vague 14'},
-  {id:'regen2',    icon:'🌿',name:'HYPER RÉGÉN.',       desc:'+5 PV/seconde.',                      hint:'Vague 14'},
-  {id:'n_teleport',icon:'🔀',name:'BLINK',              desc:'Cooldown Dash réduit à 1.5s.',        hint:'Vague 14'},
-  {id:'n_blade',   icon:'⚔️',name:'LAMES TOURNANTES',  desc:'Orbes 1.5x larges et rapides.',       hint:'Vague 14'},
-  {id:'dmg3a',     icon:'⚔️',name:'FRAPPE DIVINE',     desc:'+60% dégâts.',                        hint:'Vague 14'},
-  {id:'n_echo',    icon:'🔊',name:'ÉCHO',               desc:'Toutes les 5 balles, 1 fait x3.',     hint:'Vague 15'},
-  {id:'n_fortress',icon:'🏯',name:'FORTERESSE',         desc:'+80 PV max, -10% vitesse.',           hint:'Vague 15'},
-  {id:'vamp2a',    icon:'🩸',name:'DRAIN',              desc:'+6 PV par kill.',                     hint:'Vague 15'},
-  {id:'orbit3a',   icon:'🪐',name:'ANNEAU CÉLESTE',     desc:'+3 orbes géants.',                    hint:'Vague 15'},
-  {id:'multi2b',   icon:'🌧️',name:'PLUIE DE BALLES',   desc:'+2 projectiles.',                    hint:'Vague 15'},
-  {id:'slow1',     icon:'⏳',name:'VAGUE DE TEMPS',     desc:'Ennemis -20% vitesse.',               hint:'Vague 16'},
-  {id:'pierce2',   icon:'🔰',name:'ULTRA PERFORANT',    desc:'Balles traversent tout.',             hint:'Vague 16'},
-  {id:'n_blizzard',icon:'🌨️',name:'BLIZZARD',           desc:'Zone givre permanente.',              hint:'Vague 16'},
-  {id:'n_pulse',   icon:'📡',name:'PULSATION',          desc:'Onde de choc / 5s.',                  hint:'Vague 16'},
-  {id:'shield2',   icon:'🔵',name:'ARMURE ABSOLUE',     desc:'Bouclier recharge en 4s.',            hint:'Vague 16'},
-  {id:'fire3a',    icon:'🔥',name:'RAFALE INFERNALE',   desc:'Tir +55% plus vite.',                 hint:'Vague 16'},
-  {id:'crit3a',    icon:'🎯',name:'TUEUR PRÉCIS',       desc:'+35% crit, x3 dégâts.',              hint:'Vague 17'},
-  {id:'n_corona',  icon:'☀️',name:'COURONNE SOLAIRE',   desc:'Halo de feu permanent.',              hint:'Vague 17'},
-  {id:'speed4a',   icon:'🌩️',name:'SUPERSONIQUE',        desc:'+45% vitesse.',                       hint:'Vague 17'},
-  {id:'regen3a',   icon:'💞',name:'RÉGÉN. DIVINE',      desc:'+8 PV/seconde.',                      hint:'Vague 17'},
-  {id:'hp3',       icon:'🏰',name:'TITAN',              desc:'PV max +100.',                        hint:'Vague 18'},
-  {id:'dmg3',      icon:'☢️',name:'ANTI-MATIÈRE',       desc:'+80% dégâts.',                        hint:'Vague 18'},
-  {id:'n_nova',    icon:'🌸',name:'NOVA',               desc:'Explosion circulaire / 8s.',          hint:'Vague 18'},
-  {id:'n_charge',  icon:'🔋',name:'CHARGE',             desc:'Plus vite = plus de dégâts.',         hint:'Vague 18'},
-  {id:'orbit2b',   icon:'🌌',name:'GALAXIE NAISSANTE',  desc:'+3 orbes.',                           hint:'Vague 18'},
-  {id:'n_overload',icon:'🔌',name:'SURCHARGE',          desc:'Toutes les 10s, balle x5.',           hint:'Vague 19'},
-  {id:'vamp3a',    icon:'🩸',name:'SEIGNEUR SANG',      desc:'+8 PV par kill.',                     hint:'Vague 19'},
-  {id:'tri1b',     icon:'🎆',name:'QUINTUPLE TIR',      desc:'Tir en éventail x5.',                 hint:'Vague 19'},
-  {id:'turret1',   icon:'🤖',name:'TOURELLE',           desc:'Invoque une tourelle auto.',           hint:'Vague 20'},
-  {id:'multi3',    icon:'🌪️',name:'MITRAILLE',          desc:'+3 projectiles.',                     hint:'Vague 20'},
-  {id:'n_phoenix', icon:'🔥',name:'PHÉNIX',             desc:'Reviens à 30% PV (1x).',              hint:'Vague 20'},
-  {id:'n_rupture', icon:'💥',name:'RUPTURE',            desc:'Chaque kill = onde de choc.',         hint:'Vague 20'},
-  {id:'slow1b',    icon:'⏳',name:'ENGOURDISSEMENT',    desc:'Ennemis -30% vitesse.',               hint:'Vague 20'},
-  {id:'hp4a',      icon:'🦾',name:'COLOSSE',            desc:'PV max +150.',                        hint:'Vague 20'},
-  {id:'explode2',  icon:'🌟',name:'SUPERNOVA',          desc:'Explosion x2 plus grande.',           hint:'Vague 22'},
-  {id:'speed3',    icon:'🌩️',name:'ÉCLAIR',              desc:'+50% vitesse.',                       hint:'Vague 22'},
-  {id:'n_gravity', icon:'🌑',name:'GRAVITÉ NOIRE',      desc:'Attire les ennemis (risqué !).',      hint:'Vague 22'},
-  {id:'chain1b',   icon:'⚡',name:'ARC ÉLECTRIQUE',     desc:'Balles rebondissent x3.',             hint:'Vague 22'},
-  {id:'aura2',     icon:'🌋',name:'INFERNO',            desc:'Aura géante +35/s.',                  hint:'Vague 22'},
-  {id:'n_shadow',  icon:'🥷',name:'OMBRE',              desc:'50% chance esquiver.',                hint:'Vague 24'},
-  {id:'freeze2',   icon:'❄️',name:'TEMPÊTE GLACÉE',     desc:'Balles gèlent 1.5s.',                hint:'Vague 24'},
-  {id:'turret2',   icon:'🤖',name:'BATTERIE',           desc:'+1 tourelle auto.',                   hint:'Vague 24'},
-  {id:'regen4a',   icon:'⛲',name:'FONTAINE DE VIE',    desc:'+12 PV/seconde.',                     hint:'Vague 24'},
-  {id:'bsize2',    icon:'💣',name:'OBUS',               desc:'Balles x2.5 plus grosses.',           hint:'Vague 25'},
-  {id:'orbit3',    icon:'🪐',name:'GALAXIE',            desc:'+3 orbes géants.',                    hint:'Vague 25'},
-  {id:'n_clone',   icon:'👥',name:'CLONE',              desc:'Clone fantôme qui tire aussi.',       hint:'Vague 25'},
-  {id:'multi4',    icon:'🌪️',name:'TEMPÊTE DE BALLES',  desc:'+4 projectiles.',                     hint:'Vague 25'},
-  {id:'dmg4a',     icon:'☢️',name:'DESTRUCTEUR',        desc:'+100% dégâts.',                       hint:'Vague 25'},
-  {id:'n_laser2',  icon:'🔴',name:'MEGA LASER',         desc:'Laser géant auto / 6s.',              hint:'Vague 26'},
-  {id:'n_wrath',   icon:'😡',name:'COURROUX',           desc:'+100% dégâts 3s après heal.',         hint:'Vague 26'},
-  {id:'vamp4a',    icon:'🧛',name:'VAMPYRE ANCIEN',     desc:'+12 PV par kill.',                    hint:'Vague 26'},
-  {id:'chain2',    icon:'⚡',name:'TEMPÊTE ÉCLAIR',     desc:'Balles rebondissent x5.',             hint:'Vague 28'},
-  {id:'crit3',     icon:'🎭',name:'ASSASSIN',           desc:'Crit x4 dégâts, 40% chance.',        hint:'Vague 28'},
-  {id:'n_hyper',   icon:'🌠',name:'HYPER BALLE',        desc:'1 balle/4 fait x10 dégâts.',         hint:'Vague 28'},
-  {id:'n_sentinel',icon:'🛸',name:'SENTINELLE',         desc:'Tourelle mobile avec toi.',           hint:'Vague 28'},
-  {id:'slow3',     icon:'🕰️',name:'DISTORSION TOTALE', desc:'Ennemis -50% vitesse.',               hint:'Vague 28'},
-  {id:'slow2',     icon:'🕰️',name:'DISTORSION',        desc:'Ennemis -50% vitesse.',               hint:'Vague 30'},
-  {id:'vamp2',     icon:'🩸',name:'DIEU SANG',          desc:'+10 PV par kill.',                    hint:'Vague 30'},
-  {id:'orbit5',    icon:'🌌',name:'SYSTÈME SOLAIRE',    desc:'+5 orbes géants.',                    hint:'Vague 30'},
-  {id:'hp5a',      icon:'♾️',name:'IMMORTALITÉ+',      desc:'PV max +200.',                        hint:'Vague 30'},
-  {id:'pierce3',   icon:'🔱',name:'ABSOLU',             desc:'Balles traversent tout x2.',          hint:'Vague 30'},
-  {id:'n_reaper',  icon:'☠️',name:'FAUCHEUR',           desc:'10% tuer instantanément.',           hint:'Vague 32'},
-  {id:'n_omega',   icon:'Ω', name:'OMEGA',              desc:'Dernière balle de rafale géante.',    hint:'Vague 32'},
-  {id:'dmg5a',     icon:'💀',name:'FORCE PRIMORDIALE',  desc:'+150% dégâts.',                       hint:'Vague 32'},
-  {id:'multi5',    icon:'🌊',name:'DÉLUGE',             desc:'+5 projectiles.',                     hint:'Vague 32'},
-  {id:'fire3',     icon:'🌀⚡',name:'HYPERION',          desc:'Cadence quasi-instantanée.',          hint:'Vague 35'},
-  {id:'dmg4',      icon:'🔱',name:'DIEU GUERRE',        desc:'+200% dégâts.',                       hint:'Vague 35'},
-  {id:'n_singularity',icon:'🌌',name:'SINGULARITÉ',     desc:'Trou noir aspire ennemis / 15s.',     hint:'Vague 35'},
-  {id:'n_judgment',icon:'⚖️',name:'JUGEMENT',           desc:'Tue tout ennemi < 10% PV.',          hint:'Vague 35'},
-  {id:'n_abyss',   icon:'🕳️',name:'ABÎME',             desc:'Aspire ennemis proches / 20s.',      hint:'Vague 36'},
-  {id:'n_rebirth', icon:'🔄',name:'RENAISSANCE',        desc:'Reviens à 50% PV (1x).',              hint:'Vague 38'},
-  {id:'n_overcharge',icon:'🔌⚡',name:'SURPUISSANCE',   desc:'+20% stats / 5s chaque 20s.',         hint:'Vague 38'},
-  {id:'invincible',icon:'✝️',name:'ÉCLAT DIVIN',        desc:'Invincible 3s / 15s.',               hint:'Vague 40'},
-  {id:'hp4',       icon:'♾️',name:'IMMORTEL',           desc:'PV max +300.',                        hint:'Vague 40'},
-  {id:'n_timeloop',icon:'⌛',name:'BOUCLE TEMPORELLE',  desc:'Retour position si PV<20%.',          hint:'Vague 40'},
-  {id:'aura3',     icon:'⭐',name:'ÉTOILE DE NEUTRONS', desc:'Aura géante +60/s.',                  hint:'Vague 40'},
-  {id:'n_heaven',  icon:'🌤️',name:'CÉLESTE',            desc:'Regen rapide sans ennemi proche.',   hint:'Vague 42'},
-  {id:'n_galaxy',  icon:'🌠',name:'VOIE LACTÉE',        desc:'+5 orbes ultra-rapides.',             hint:'Vague 42'},
-  {id:'n_chaos',   icon:'🃏',name:'CHAOS',              desc:'Applique 3 upgrades aléatoires.',     hint:'Vague 45'},
-  {id:'n_eternal', icon:'∞', name:'ÉTERNEL',            desc:'Invincible 5s / 30s.',                hint:'Vague 45'},
-  {id:'n_armageddon',icon:'🌋',name:'ARMAGEDDON',       desc:'Explosion massive tue tout / 30s.',   hint:'Vague 48'},
-  {id:'godmode',   icon:'👑',name:'MODE DIEU',          desc:'Tous les stats x2.',                  hint:'Vague 50'},
-  {id:'n_apocalypse',icon:'🔥',name:'APOCALYPSE',       desc:'Balle = explosion+poison+gel.',       hint:'Vague 50'},
-
-  // ── NOUVELLES ARMES & OBJETS ──
-  {id:'w_laser', icon:'🔴',name:'LASER', desc:'Laser continu vers ennemi le plus proche', hint:'Vague 3'},
-  {id:'w_knife', icon:'🔪',name:'COUTEAUX', desc:'2 couteaux orbitent et transpercent', hint:'Vague 2'},
-  {id:'w_knife2', icon:'🔪',name:'COUTEAUX+', desc:'+2 couteaux supplémentaires', hint:'Vague 8'},
-  {id:'w_boomerang', icon:'🪃',name:'BOOMERANG', desc:'Balle qui fait un arc et revient', hint:'Vague 5'},
-  {id:'w_mine', icon:'💣',name:'MINES', desc:'Pose une mine tous les 3s', hint:'Vague 6'},
-  {id:'w_beam', icon:'⚡',name:'RAYON OMEGA', desc:"Rayon qui traverse tout l'écran / 4s", hint:'Vague 10'},
-  {id:'w_saw', icon:'⚙️',name:'SCIE ROTATIVE', desc:'Grande scie qui tourne autour de toi', hint:'Vague 8'},
-  {id:'w_tornado', icon:'🌪️',name:'TORNADE', desc:'Tornade qui aspire et broie les ennemis / 8s', hint:'Vague 12'},
-  {id:'w_whip', icon:'〰️',name:'FOUET', desc:'Coup de fouet frontal qui repousse fort', hint:'Vague 7'},
-  {id:'w_grenade', icon:'💥',name:'GRENADIER', desc:'Lance une grenade lobée / 2s', hint:'Vague 9'},
-  {id:'w_crossbow', icon:'🏹',name:'ARBALÈTE', desc:'Carreau perforant toutes les 1.5s', hint:'Vague 6'},
-  {id:'w_magnet_shot', icon:'🧲',name:'TIR MAGNÉTIQUE', desc:'Balle qui courbe vers les ennemis', hint:'Vague 11'},
-  {id:'w_shield_bash', icon:'🛡️',name:'BOUCLIER CHOC', desc:'Bouclier qui fait des dégâts au contact', hint:'Vague 8'},
-  {id:'w_dart', icon:'🎯',name:'FLÉCHETTES', desc:"3 fléchettes rapides vers l'ennemi ciblé", hint:'Vague 4'},
-  {id:'w_shuriken', icon:'⭐',name:'SHURIKEN', desc:'Shuriken qui rebondit entre 4 ennemis', hint:'Vague 7'},
-  {id:'p_bouncy', icon:'🏀',name:'ÉLASTIQUE', desc:'Toutes tes armes rebondissent 1 fois de plus', hint:'Vague 5'},
-  {id:'p_bigger', icon:'🔭',name:'GROSSISSEMENT', desc:'Tout x1.5 plus gros (balles, orbes, scie...)', hint:'Vague 3'},
-  {id:'p_faster', icon:'⚡',name:'CADENCE GLOBALE', desc:'Toutes les armes tirent 30% plus vite', hint:'Vague 6'},
-  {id:'p_toxic_trail', icon:'☠️',name:'TRAÎNÉE TOXIQUE', desc:'Tu laisses une traînée de poison derrière toi', hint:'Vague 10'},
-  {id:'p_magnet_orb', icon:'🌀',name:'ORBES MAGNÉTIQUES', desc:'Tes orbes attirent les ennemis vers eux', hint:'Vague 12'},
-  {id:'p_blood_price', icon:'🩸',name:'PACTE DE SANG', desc:'-30 PV max mais +150% dégâts', hint:'Vague 15'},
-  {id:'p_glass', icon:'🔮',name:'CANON DE VERRE', desc:'1 PV max mais dégâts x10', hint:'Vague 14'},
-  {id:'p_leech', icon:'🐛',name:'SANGSUE', desc:'Chaque tir soigne 0.5 PV', hint:'Vague 13'},
-  {id:'p_double_dmg', icon:'🎰',name:'DOUBLE MISE', desc:'50% chance x2 dégâts, 50% chance x0', hint:'Vague 18'},
-  {id:'p_combo', icon:'🔢',name:'COMPTEUR COMBO', desc:'Chaque kill consécutif +5% dégâts (max +200%)', hint:'Vague 16'},
-  {id:'p_mirror_shot', icon:'🪞',name:'TIR MIROIR', desc:'Chaque balle tire une copie dans la direction opposée', hint:'Vague 14'},
-  {id:'p_icicle', icon:'❄️',name:'LANCES DE GLACE', desc:'Tes orbes laissent des pics de glace', hint:'Vague 11'},
-  {id:'p_fire_trail', icon:'🔥',name:'TRAÎNÉE DE FEU', desc:'Tes balles laissent une traînée de feu', hint:'Vague 9'},
-  {id:'p_splitter', icon:'💠',name:'FRAGMENTEUR', desc:'Tes balles se fractionnent en 3 à mi-chemin', hint:'Vague 13'},
-  {id:'p_chain_lightning', icon:'⚡',name:'FOUDRE EN CHAÎNE', desc:'Chaque kill libère un arc électrique sur 3 ennemis', hint:'Vague 20'},
-  {id:'p_book', icon:'📕',name:'GRIMOIRE', desc:'Active 1 effet aléatoire toutes les 10s', hint:'Vague 22'},
-  {id:'p_dead_cat', icon:'🐱',name:'CHAT MORT', desc:'PV bloqués à 1 pendant 30s puis reviens à max', hint:'Vague 25'},
-  {id:'p_Isaac', icon:'😢',name:'LARMES DE ISAAC', desc:'Toutes tes stats augmentent avec tes larmes (kills)', hint:'Vague 20'},
-  // ── 50 NOUVELLES UPGRADES ──
-  {id:'x_volley', icon:'🏹', name:'VOLÉE', desc:'+4 projectiles en éventail large', hint:'Vague 4'},
-  {id:'x_snipe2', icon:'🎯', name:"TIREUR D'ÉLITE", desc:'1 balle / 3 fait x5 dégâts', hint:'Vague 10'},
-  {id:'x_hollow', icon:'🟡', name:'BALLE CREUSE', desc:'Balles explosent en 6 éclats à impact', hint:'Vague 8'},
-  {id:'x_acid', icon:'🧪', name:'ACIDE', desc:'Dégâts augmentent sur ennemi déjà touché', hint:'Vague 9'},
-  {id:'x_tracer', icon:'🔦', name:'TRACEUR', desc:'Balles laissent une traînée lumineuse +30% dmg', hint:'Vague 3'},
-  {id:'x_ghost_b', icon:'👻', name:'BALLE FANTÔME', desc:'Balles traversent les ennemis sans les toucher — sauf boss', hint:'Vague 12'},
-  {id:'x_heavy', icon:'🪨', name:'LOURD', desc:'Balles 3x plus grosses, 2x moins rapides, 3x plus de dégâts', hint:'Vague 7'},
-  {id:'x_rapid2', icon:'💫', name:'RAFALE EXTRÊME', desc:'Cadence x4 mais dégâts -60%', hint:'Vague 11'},
-  {id:'x_orbit_shot', icon:'🌐', name:'TIR ORBITAL', desc:'1 balle orbite autour de toi pendant 5s', hint:'Vague 13'},
-  {id:'x_thunder', icon:'⚡', name:'FOUDRE', desc:'10% chance de stunner un ennemi 2s', hint:'Vague 8'},
-  {id:'x_fortress2', icon:'🏯', name:'FORTERESSE II', desc:'+200 PV max', hint:'Vague 16'},
-  {id:'x_barrier', icon:'🔷', name:'BARRIÈRE', desc:'Barrière sphérique bloque les balles ennemies', hint:'Vague 14'},
-  {id:'x_reflect', icon:'🪃', name:'RÉFLECTEUR', desc:'Renvoie les balles ennemies', hint:'Vague 15'},
-  {id:'x_invuln', icon:'🌟', name:'INVULNÉRABLE', desc:'1s invincible après chaque soin', hint:'Vague 20'},
-  {id:'x_second_life', icon:'💖', name:'DEUXIÈME VIE', desc:'Survit une fois à coup fatal (recharge en 60s)', hint:'Vague 18'},
-  {id:'x_aegis', icon:'🛡️', name:'ÉGIDE', desc:'Absorbe les 5 prochains coups', hint:'Vague 22'},
-  {id:'x_mist', icon:'🌫️', name:'BRUME', desc:'Nuage autour de toi aveugle les ennemis proches', hint:'Vague 12'},
-  {id:'x_anchor', icon:'⚓', name:'ANCRE', desc:'Tu te déplaces moins vite mais -70% dégâts reçus', hint:'Vague 10'},
-  {id:'x_heal_kill', icon:'🧛', name:'VAMPIRE ROI', desc:'+20 PV par kill', hint:'Vague 24'},
-  {id:'x_regen3', icon:'💗', name:'RÉGÉN. RAPIDE', desc:'+15 PV/seconde', hint:'Vague 19'},
-  {id:'x_blink2', icon:'🔀', name:'BLINK+', desc:'Dash traverse les ennemis et les gèle', hint:'Vague 11'},
-  {id:'x_phase', icon:'👁️', name:'DÉPHASAGE', desc:'Pendant le dash : invincible et x3 dégâts', hint:'Vague 18'},
-  {id:'x_sprint', icon:'🏃', name:'SPRINT', desc:'+60% vitesse pendant 2s après un kill', hint:'Vague 5'},
-  {id:'x_rocket_boots', icon:'🚀', name:'BOTTES-FUSÉE', desc:"Tu laisses une traînée d'explosions pendant le dash", hint:'Vague 15'},
-  {id:'x_teleport2', icon:'🌀', name:'TÉLÉPORTATION', desc:"Se téléporte vers l'ennemi le plus proche toutes les 5s", hint:'Vague 20'},
-  {id:'x_inverse', icon:'🔄', name:'CONTRÔLES INVERSÉS', desc:'Contrôles inversés mais dégâts x4 et vitesse x2', hint:'Vague 20'},
-  {id:'x_minigun', icon:'🌀', name:'MINIGUN', desc:'Cadence max + balles très petites', hint:'Vague 25'},
-  {id:'x_explosive_walk', icon:'💥', name:'MINES À PAS', desc:'Chaque pas laisse une mini-mine', hint:'Vague 16'},
-  {id:'x_echo2', icon:'🔊', name:'ÉCHO TRIPLE', desc:'Toutes les 3 balles, une fait x4 dégâts', hint:'Vague 17'},
-  {id:'x_overload2', icon:'⚡', name:'SURTENSION', desc:'Après 20 kills sans mourir: toutes stats x2 pendant 10s', hint:'Vague 22'},
-  {id:'x_entropy', icon:'🌀', name:'ENTROPIE', desc:'Stats aléatoires à chaque vague (peut être x10 ou x0.1)', hint:'Vague 28'},
-  {id:'x_orbit_bomb', icon:'💣', name:'BOMBES ORBITALES', desc:'Tes orbes explosent quand ils touchent un ennemi', hint:'Vague 20'},
-  {id:'x_laser_orb', icon:'🔴', name:'ORBES LASER', desc:'Tes orbes tirent des lasers vers les ennemis proches', hint:'Vague 22'},
-  {id:'x_saw2', icon:'⚙️', name:'DOUBLE SCIE', desc:'+1 scie rotative (tourne en sens inverse)', hint:'Vague 18'},
-  {id:'x_knife_explode', icon:'🔪', name:'COUTEAUX EXPLOSIFS', desc:'Tes couteaux explosent sur impact', hint:'Vague 20'},
-  {id:'x_tornado2', icon:'🌪️', name:'SUPER TORNADE', desc:'Tornade permanente autour de toi', hint:'Vague 30'},
-  {id:'x_time_stop', icon:'⏹️', name:'ARRÊT DU TEMPS', desc:'Gèle TOUT pendant 5s / 45s', hint:'Vague 35'},
-  {id:'x_death_nova', icon:'💀', name:'NOVA DE MORT', desc:'En mourant (avant résurrection): explosion massive', hint:'Vague 24'},
-  {id:'x_lucky', icon:'🍀', name:'CHANCEUX', desc:'+50% chances upgrades rares et +', hint:'Vague 6'},
-  {id:'x_cursed', icon:'💀', name:'MAUDIT', desc:'PV max /2 mais toutes les upgrades sont Mythiques', hint:'Vague 20'},
-  {id:'x_kamikaze', icon:'💥', name:'KAMIKAZEMODE', desc:'En mourant: explosion x300 dégâts tout autour', hint:'Vague 22'},
-  {id:'x_necro_up', icon:'💀', name:'NÉCROMANCIEN', desc:'Chaque ennemi tué revient combattre pour toi 5s', hint:'Vague 25'},
-  {id:'x_singularity2', icon:'🌌', name:'SINGULARITÉ II', desc:'Trou noir permanent aspire tout dans un rayon de 150px', hint:'Vague 40'},
-  {id:'x_phoenix2', icon:'🔥', name:'PHÉNIX ÉTERNEL', desc:'Ressuscite infiniment à 10% PV (60s cooldown)', hint:'Vague 30'},
-  {id:'x_fire_ice', icon:'🌊🔥', name:'PARADOXE', desc:'Balles gèlent ET brûlent en même temps', hint:'Vague 20'},
-  {id:'x_all_aura', icon:'✨', name:'AURA TOTALE', desc:'Feu + Glace + Poison + Électricité autour de toi', hint:'Vague 35'},
-  {id:'x_blood_god', icon:'🩸', name:'DIEU DU SANG', desc:'+50 PV par kill, PV max augmente indéfiniment', hint:'Vague 40'},
-  {id:'x_everything', icon:'🎁', name:'TOUT EN UN', desc:'Active TOUTES les armes simultanément', hint:'Vague 50'},
-
-  // ── AUTO-GÉNÉRÉ ──
-  {id:'b_dmg_1',icon:'⚔️',name:'LAME+',desc:'+12% dégâts',hint:'Vague 1'},
-  {id:'b_dmg_2',icon:'🗡️',name:'TRANCHANT',desc:'+18% dégâts',hint:'Vague 2'},
-  {id:'b_dmg_3',icon:'🔪',name:'AFFÛTÉ',desc:'+25% dégâts',hint:'Vague 3'},
-  {id:'b_dmg_4',icon:'⚔️',name:'ACÉRÉ',desc:'+30% dégâts',hint:'Vague 4'},
-  {id:'b_dmg_5',icon:'💀',name:'MORTEL',desc:'+40% dégâts',hint:'Vague 6'},
-  {id:'b_dmg_6',icon:'💥',name:'DÉVASTATEUR',desc:'+50% dégâts',hint:'Vague 8'},
-  {id:'b_dmg_7',icon:'☢️',name:'ANNIHILATEUR',desc:'+70% dégâts',hint:'Vague 12'},
-  {id:'b_dmg_8',icon:'🔱',name:'EXTERMINATEUR',desc:'+90% dégâts',hint:'Vague 16'},
-  {id:'b_dmg_9',icon:'⚡',name:'TUEUR DE DIEUX',desc:'+150% dégâts',hint:'Vague 25'},
-  {id:'b_dmg_10',icon:'💎',name:'FORCE ABSOLUE',desc:'+200% dégâts',hint:'Vague 35'},
-  {id:'b_dmg_11',icon:'🔧',name:'COUTEAU SUISSE',desc:'+8% dégâts, +5% vitesse balle',hint:'Vague 1'},
-  {id:'b_dmg_12',icon:'🎯',name:'FRAPPE PRÉCISE',desc:'+20% dégâts si ennemi gelé',hint:'Vague 5'},
-  {id:'b_dmg_13',icon:'😤',name:'RAGE DE COMBAT',desc:'+15% dégâts, -10% PV max',hint:'Vague 7'},
-  {id:'b_dmg_14',icon:'☠️',name:'LAME EMPOISONNÉE',desc:'+35% dégâts, balles empoisonnent',hint:'Vague 9'},
-  {id:'b_dmg_15',icon:'🔵',name:'CALIBRE LOURD',desc:'+45% dégâts, balles 2x plus grosses',hint:'Vague 10'},
-  {id:'b_dmg_16',icon:'🎲',name:'COUP CRITIQUE+',desc:'+25% chance crit',hint:'Vague 6'},
-  {id:'b_dmg_17',icon:'💥',name:'CRIT PUISSANT',desc:'+15% crit, critiques x0.5 bonus',hint:'Vague 10'},
-  {id:'b_dmg_18',icon:'🎭',name:'ASSASSIN PRÉCIS',desc:'+30% crit, critiques x1 bonus',hint:'Vague 18'},
-  {id:'b_dmg_19',icon:'👑',name:'DIEU CRITIQUE',desc:'Critiques TOUJOURS, x4 dégâts',hint:'Vague 30'},
-  {id:'b_dmg_20',icon:'🔩',name:'BALLES EN ACIER',desc:'Balles 1.3x plus grosses, +8% dégâts',hint:'Vague 2'},
-  {id:'b_dmg_21',icon:'💨',name:'CANON LÉGER',desc:'+15% vitesse balle',hint:'Vague 1'},
-  {id:'b_dmg_22',icon:'🚀',name:'BALLE RAPIDE',desc:'+30% vitesse balle',hint:'Vague 4'},
-  {id:'b_dmg_23',icon:'⚡',name:'HYPERSONIQUE',desc:'+60% vitesse balle',hint:'Vague 9'},
-  {id:'b_dmg_24',icon:'✨',name:'LUMIÈRE',desc:'+100% vitesse balle',hint:'Vague 18'},
-  {id:'b_dmg_25',icon:'🩸',name:'MALEDICTION ROUGE',desc:'MALUS: -20% HP max mais +80% dégâts',hint:'Vague 12'},
-  {id:'b_dmg_26',icon:'😈',name:'PACTE DÉMONIAQUE',desc:'MALUS: PV max -50% mais dégâts x3',hint:'Vague 20'},
-  {id:'b_dmg_27',icon:'🐯',name:'ŒIL DU TIGRE',desc:'+20% dégâts contre ennemis > 50% HP',hint:'Vague 6'},
-  {id:'b_dmg_28',icon:'⚔️',name:'ACHÈVEMENT',desc:'+50% dégâts contre ennemis < 30% HP',hint:'Vague 11'},
-  {id:'b_dmg_29',icon:'⚔️',name:'DOUBLE TRANCHANT',desc:'+80% dégâts mais -30% cadence',hint:'Vague 15'},
-  {id:'b_dmg_30',icon:'🗡️',name:'LAME BRISÉE',desc:'MALUS: -5% dégâts mais +20% cadence',hint:'Vague 1'},
-  {id:'f_fire_1',icon:'🔫',name:'GÂCHETTE LÉGÈRE',desc:'Cadence +10%',hint:'Vague 1'},
-  {id:'f_fire_2',icon:'💫',name:'TIR RAPIDE',desc:'Cadence +18%',hint:'Vague 2'},
-  {id:'f_fire_3',icon:'🔥',name:'RAFALE',desc:'Cadence +28%',hint:'Vague 4'},
-  {id:'f_fire_4',icon:'💥',name:'MITRAILLE',desc:'Cadence +45%',hint:'Vague 8'},
-  {id:'f_fire_5',icon:'🌪️',name:'TEMPÊTE DE BALLES',desc:'Cadence +70%',hint:'Vague 14'},
-  {id:'f_fire_6',icon:'⚡',name:'AUTO-TURBO',desc:'Cadence quasi-instantanée',hint:'Vague 22'},
-  {id:'f_proj_1',icon:'🎯',name:'DOUBLE TIR',desc:'+1 projectile',hint:'Vague 3'},
-  {id:'f_proj_2',icon:'🎯',name:'TRIPLE TIR',desc:'+2 projectiles',hint:'Vague 6'},
-  {id:'f_proj_3',icon:'🎆',name:'PENTASHOT',desc:'+4 projectiles',hint:'Vague 10'},
-  {id:'f_proj_4',icon:'🌟',name:'DÉCASHOT',desc:'+7 projectiles',hint:'Vague 18'},
-  {id:'f_proj_5',icon:'🌊',name:'DÉLUGE',desc:'+12 projectiles',hint:'Vague 28'},
-  {id:'f_spread_1',icon:'🌀',name:'ÉVENTAIL',desc:'Tir en éventail x3',hint:'Vague 5'},
-  {id:'f_spread_2',icon:'🌈',name:'GRAND ÉVENTAIL',desc:'Tir en éventail x5',hint:'Vague 10'},
-  {id:'f_spread_3',icon:'🔄',name:'360°',desc:'Tire dans toutes les directions',hint:'Vague 20'},
-  {id:'f_pierce_1',icon:'🔰',name:'PERÇANT I',desc:'Balles traversent +1',hint:'Vague 5'},
-  {id:'f_pierce_2',icon:'🔰',name:'PERÇANT II',desc:'Balles traversent +2',hint:'Vague 10'},
-  {id:'f_pierce_3',icon:'🔰',name:'PERÇANT III',desc:'Balles traversent +4',hint:'Vague 18'},
-  {id:'f_pierce_4',icon:'∞',name:'INFINI',desc:'Balles traversent tout',hint:'Vague 30'},
-  {id:'f_bounce_1',icon:'🏀',name:'REBOND',desc:'Balles rebondissent x2',hint:'Vague 10'},
-  {id:'f_bounce_2',icon:'🔄',name:'SUPER REBOND',desc:'Balles rebondissent x4',hint:'Vague 18'},
-  {id:'f_split_1',icon:'💠',name:'FRACTIONNEMENT',desc:'Balles se fractionnent en 2 à mi-chemin',hint:'Vague 12'},
-  {id:'f_split_2',icon:'⚛️',name:'ATOME',desc:'Balles se fractionnent en 4',hint:'Vague 20'},
-  {id:'f_mag_1',icon:'🧲',name:'MAGNÉTISME I',desc:'Portée XP +40%',hint:'Vague 1'},
-  {id:'f_mag_2',icon:'🧲',name:'MAGNÉTISME II',desc:'Portée XP +80%',hint:'Vague 5'},
-  {id:'f_mag_3',icon:'🔮',name:'SUPER AIMANT',desc:'Portée XP x3',hint:'Vague 10'},
-  {id:'f_mag_4',icon:'⭐',name:'ATTRACTION DIVINE',desc:'Portée XP x6',hint:'Vague 20'},
-  {id:'f_back_1',icon:'↩️',name:'TIR ARRIÈRE',desc:'1 balle supplémentaire derrière toi',hint:'Vague 6'},
-  {id:'f_snipe_1',icon:'🎯',name:'SNIPE ALÉATOIRE',desc:'20% chance de super-projectile x5',hint:'Vague 8'},
-  {id:'f_burst_1',icon:'🔫',name:'RAFALE 3',desc:"Tire 3 balles d'un coup toutes les 3 tirs",hint:'Vague 7'},
-  {id:'f_slow_1',icon:'⚓',name:'BALLES PESANTES',desc:'MALUS: -20% vitesse balle mais +20% dégâts et taille',hint:'Vague 2'},
-  {id:'s_hp_1',icon:'❤️',name:'PV+',desc:'PV max +25',hint:'Vague 1'},
-  {id:'s_hp_2',icon:'❤️',name:'PV++',desc:'PV max +40',hint:'Vague 2'},
-  {id:'s_hp_3',icon:'🛡️',name:'ARMURE',desc:'PV max +70',hint:'Vague 4'},
-  {id:'s_hp_4',icon:'🏗️',name:'FORTIF.',desc:'PV max +100',hint:'Vague 7'},
-  {id:'s_hp_5',icon:'🏰',name:'COLOSSE',desc:'PV max +180',hint:'Vague 12'},
-  {id:'s_hp_6',icon:'🗿',name:'TITAN',desc:'PV max +300',hint:'Vague 20'},
-  {id:'s_hp_7',icon:'♾️',name:'IMMORTEL',desc:'PV max +500',hint:'Vague 30'},
-  {id:'s_hp_8',icon:'👑',name:'DEMI-DIEU',desc:'PV max x2',hint:'Vague 45'},
-  {id:'s_regen_1',icon:'🌱',name:'REGEN I',desc:'+1 PV/sec',hint:'Vague 1'},
-  {id:'s_regen_2',icon:'💚',name:'REGEN II',desc:'+3 PV/sec',hint:'Vague 5'},
-  {id:'s_regen_3',icon:'🌿',name:'REGEN III',desc:'+6 PV/sec',hint:'Vague 10'},
-  {id:'s_regen_4',icon:'🌊',name:'REGEN IV',desc:'+12 PV/sec',hint:'Vague 18'},
-  {id:'s_regen_5',icon:'⛲',name:'REGEN V',desc:'+25 PV/sec',hint:'Vague 28'},
-  {id:'s_regen_6',icon:'🌀',name:'REGEN FOLLE',desc:'+50 PV/sec',hint:'Vague 40'},
-  {id:'s_dodge_1',icon:'🌬️',name:'ESQUIVE I',desc:'+8% esquiver',hint:'Vague 4'},
-  {id:'s_dodge_2',icon:'💨',name:'ESQUIVE II',desc:'+15% esquiver',hint:'Vague 10'},
-  {id:'s_dodge_3',icon:'🌪️',name:'ESQUIVE III',desc:'+25% esquiver',hint:'Vague 18'},
-  {id:'s_dodge_4',icon:'👻',name:'FANTÔME',desc:'50% esquiver',hint:'Vague 28'},
-  {id:'s_vamp_1',icon:'🩸',name:'VAMPIRISME I',desc:'+3 PV/kill',hint:'Vague 8'},
-  {id:'s_vamp_2',icon:'🩸',name:'VAMPIRISME II',desc:'+6 PV/kill',hint:'Vague 12'},
-  {id:'s_vamp_3',icon:'🩸',name:'VAMPIRISME III',desc:'+12 PV/kill',hint:'Vague 20'},
-  {id:'s_vamp_4',icon:'🧛',name:'SEIGNEUR SANG II',desc:'+20 PV/kill',hint:'Vague 28'},
-  {id:'s_vamp_5',icon:'🩸',name:'DIEU SANG II',desc:'+40 PV/kill',hint:'Vague 38'},
-  {id:'s_thorns_1',icon:'🌵',name:'ÉPINES I',desc:'Renvoie 15% dégâts',hint:'Vague 8'},
-  {id:'s_thorns_2',icon:'🌵',name:'ÉPINES II',desc:'Renvoie 35% dégâts',hint:'Vague 16'},
-  {id:'s_thorns_3',icon:'🗡️',name:'ÉPINES III',desc:'Renvoie 75% dégâts',hint:'Vague 25'},
-  {id:'s_shield_1',icon:'🔵',name:'BOUCLIER I',desc:'Bouclier recharge en 8s',hint:'Vague 8'},
-  {id:'s_shield_2',icon:'🔮',name:'BOUCLIER II',desc:'Bouclier recharge en 5s',hint:'Vague 14'},
-  {id:'s_shield_3',icon:'💎',name:'BOUCLIER III',desc:'Bouclier recharge en 2s',hint:'Vague 22'},
-  {id:'s_malus_1',icon:'💔',name:'CORPS FRAGILE',desc:'MALUS: PV max -40 mais +2 orbes',hint:'Vague 5'},
-  {id:'s_malus_2',icon:'🎲',name:'RISQUE-TOUT',desc:'MALUS: PV max /3 mais +200% dégâts',hint:'Vague 10'},
-  {id:'s_malus_3',icon:'😡',name:'BERSERKER FOU',desc:'MALUS: plus de régén mais +300% dégâts quand blessé',hint:'Vague 15'},
-  {id:'s_life_steal',icon:'🐛',name:'DRAIN TOTAL',desc:'Chaque balle soigne 0.3 PV',hint:'Vague 12'},
-  {id:'s_second',icon:'💖',name:'VIE SUPPLÉMENTAIRE',desc:'Survit une fois à mort (60s CD)',hint:'Vague 15'},
-  {id:'s_overheal',icon:'💉',name:'SURCHARGE PV',desc:'PV peuvent dépasser le max x1.5',hint:'Vague 10'},
-  {id:'s_food_1',icon:'🍞',name:'PAIN SEC',desc:'MALUS: drôle — +2 PV max. Wow.',hint:'Vague 1'},
-  {id:'s_bandage',icon:'🩹',name:'BANDAGE',desc:'+15 PV maintenant',hint:'Vague 2'},
-  {id:'s_firstaid',icon:'🏥',name:'TROUSSE',desc:'+40 PV maintenant',hint:'Vague 5'},
-  {id:'s_fullheal',icon:'✨',name:'GUÉRISON',desc:'PV au maximum',hint:'Vague 10'},
-  {id:'s_curse_hp',icon:'💀',name:'MALÉDICTION PV',desc:'MALUS: PV max =1 pendant 20s puis x3',hint:'Vague 20'},
-  {id:'v_speed_1',icon:'🏃',name:'SPRINT I',desc:'+12% vitesse',hint:'Vague 1'},
-  {id:'v_speed_2',icon:'🏃',name:'SPRINT II',desc:'+18% vitesse',hint:'Vague 2'},
-  {id:'v_speed_3',icon:'💨',name:'COURSE',desc:'+28% vitesse',hint:'Vague 4'},
-  {id:'v_speed_4',icon:'🐎',name:'GALOP',desc:'+38% vitesse',hint:'Vague 6'},
-  {id:'v_speed_5',icon:'🏎️',name:'TURBO',desc:'+55% vitesse',hint:'Vague 9'},
-  {id:'v_speed_6',icon:'🌩️',name:'SUPERSONIQUE',desc:'+80% vitesse',hint:'Vague 14'},
-  {id:'v_speed_7',icon:'⚡',name:'HYPERSONIQUE',desc:'+120% vitesse',hint:'Vague 20'},
-  {id:'v_speed_8',icon:'✨',name:'LUMIÈRE II',desc:'Vitesse x3',hint:'Vague 30'},
-  {id:'v_speed_9',icon:'🐝',name:'BOURDON',desc:'MALUS: vitesse -10% mais cadence +20%',hint:'Vague 1'},
-  {id:'v_speed_10',icon:'🐢',name:'LENT MAIS SÛR',desc:'MALUS: vitesse -30% mais PV max +150',hint:'Vague 5'},
-  {id:'v_dash_1',icon:'💨',name:'DASH I',desc:'Dash + CD -1s',hint:'Vague 5'},
-  {id:'v_dash_2',icon:'⚡',name:'DASH II',desc:'Dash CD -1.5s supplémentaires',hint:'Vague 10'},
-  {id:'v_dash_3',icon:'🌀',name:'DASH III',desc:'Dash quasi-instantané (0.5s CD)',hint:'Vague 18'},
-  {id:'v_dash_4',icon:'🔀',name:'BLINK TOTAL',desc:'2 charges de dash',hint:'Vague 25'},
-  {id:'v_dash_5',icon:'💥',name:'DASH OFFENSIF',desc:'Dash fait des dégâts au passage',hint:'Vague 12'},
-  {id:'v_drift_1',icon:'🧊',name:'GLISSE',desc:'Garde ton inertie — plus difficile à arrêter',hint:'Vague 6'},
-  {id:'v_ghost_1',icon:'🌤️',name:'LÉVITATION',desc:'Traverse les obstacles du biome',hint:'Vague 10'},
-  {id:'v_teleport_1',icon:'🌀',name:'TÉLÉTRANSPORT I',desc:'Se téléporte vers ennemi ciblé toutes les 5s',hint:'Vague 18'},
-  {id:'v_boots_1',icon:'⚓',name:'BOTTES DE PLOMB',desc:'MALUS: vitesse -15%, gain PV regen +2',hint:'Vague 2'},
-  {id:'v_sprint_kill',icon:'🏃',name:'SPRINT APRÈS KILL',desc:'Sprint +50% pendant 2s après chaque kill',hint:'Vague 8'},
-  {id:'w2_orb_1',icon:'🌀',name:'ORBE I',desc:'+1 orbe protecteur',hint:'Vague 4'},
-  {id:'w2_orb_2',icon:'🌀',name:'ORBE II',desc:'+2 orbes',hint:'Vague 7'},
-  {id:'w2_orb_3',icon:'🌌',name:'ORBE III',desc:'+3 orbes',hint:'Vague 12'},
-  {id:'w2_orb_4',icon:'🪐',name:'GALAXIE III',desc:'+5 orbes géants',hint:'Vague 20'},
-  {id:'w2_orb_5',icon:'⭐',name:'ANNEAU COSMIQUE',desc:'+8 orbes massifs',hint:'Vague 30'},
-  {id:'w2_orb_6',icon:'💫',name:'ORBES RAPIDES',desc:'Orbes 2x plus rapides',hint:'Vague 10'},
-  {id:'w2_orb_7',icon:'🔭',name:'ORBES GÉANTS',desc:'Orbes 2x plus gros',hint:'Vague 12'},
-  {id:'w2_orb_8',icon:'💣',name:'ORBES EXPLOSIFS II',desc:'Orbes explosent sur impact',hint:'Vague 18'},
-  {id:'w2_aura_1',icon:'🌐',name:'AURA I',desc:'Aura +12/sec',hint:'Vague 6'},
-  {id:'w2_aura_2',icon:'🔥',name:'AURA II',desc:'Aura +22/sec',hint:'Vague 11'},
-  {id:'w2_aura_3',icon:'🌋',name:'AURA III',desc:'Aura +40/sec',hint:'Vague 18'},
-  {id:'w2_aura_4',icon:'☀️',name:'NOVA AURA',desc:'Aura +80/sec',hint:'Vague 28'},
-  {id:'w2_corona_1',icon:'☀️',name:'COURONNE I',desc:'Halo de feu +18/sec',hint:'Vague 15'},
-  {id:'w2_corona_2',icon:'🌟',name:'COURONNE II',desc:'Halo de feu +40/sec',hint:'Vague 25'},
-  {id:'w2_turret_1',icon:'🤖',name:'TOURELLE I',desc:'+1 tourelle automatique',hint:'Vague 10'},
-  {id:'w2_turret_2',icon:'🤖',name:'TOURELLE II',desc:'+2 tourelles',hint:'Vague 18'},
-  {id:'w2_turret_3',icon:'🏭',name:'TOURELLE III',desc:'+3 tourelles turbo',hint:'Vague 28'},
-  {id:'w2_turret_4',icon:'⚔️',name:'ARMÉE DE TOURELLES',desc:'+5 tourelles',hint:'Vague 40'},
-  {id:'w2_explode_1',icon:'💥',name:'EXPLOSIF I',desc:'Balles explosent',hint:'Vague 8'},
-  {id:'w2_explode_2',icon:'🌋',name:'EXPLOSIF II',desc:'Explosions 1.5x plus grandes',hint:'Vague 14'},
-  {id:'w2_explode_3',icon:'🌟',name:'EXPLOSIF III',desc:'Explosions massives x3',hint:'Vague 22'},
-  {id:'w2_freeze_1',icon:'❄️',name:'GEL I',desc:'Balles gèlent 0.8s',hint:'Vague 8'},
-  {id:'w2_freeze_2',icon:'🌨️',name:'GEL II',desc:'Balles gèlent 2s',hint:'Vague 14'},
-  {id:'w2_freeze_3',icon:'🧊',name:'GEL III',desc:'Balles gèlent 4s',hint:'Vague 22'},
-  {id:'w2_poison_1',icon:'☠️',name:'POISON I',desc:'Balles empoisonnent',hint:'Vague 9'},
-  {id:'w2_poison_2',icon:'🐍',name:'POISON II',desc:'Poison plus fort',hint:'Vague 15'},
-  {id:'w2_chain_1',icon:'⚡',name:'CHAÎNE I',desc:'Balles rebondissent x2',hint:'Vague 12'},
-  {id:'w2_chain_2',icon:'⚡',name:'CHAÎNE II',desc:'Balles rebondissent x5',hint:'Vague 20'},
-  {id:'w2_blizzard',icon:'🌨️',name:'BLIZZARD',desc:'Zone de givre permanente',hint:'Vague 15'},
-  {id:'w2_nova_1',icon:'🌸',name:'NOVA I',desc:'Onde de choc / 8s',hint:'Vague 15'},
-  {id:'w2_nova_2',icon:'🌺',name:'NOVA II',desc:'Double onde / 5s',hint:'Vague 22'},
-  {id:'w2_pulse_1',icon:'📡',name:'PULSATION I',desc:'Onde / 5s',hint:'Vague 12'},
-  {id:'w2_pulse_2',icon:'📡',name:'PULSATION II',desc:'Onde géante / 3s',hint:'Vague 18'},
-  {id:'w2_gravity',icon:'🌑',name:'GRAVITÉ',desc:'Attire les ennemis',hint:'Vague 20'},
-  {id:'w2_singul',icon:'🌌',name:'SINGULARITÉ',desc:'Trou noir / 15s',hint:'Vague 30'},
-  {id:'w2_arma',icon:'🌋',name:'ARMAGEDDON',desc:'Explosion totale / 30s',hint:'Vague 40'},
-  {id:'w2_clone_1',icon:'👥',name:'CLONE',desc:'Clone fantôme qui tire',hint:'Vague 22'},
-  {id:'w2_sentinel',icon:'🛸',name:'SENTINELLE',desc:'Tourelle mobile',hint:'Vague 25'},
-  {id:'w2_saw_2',icon:'⚙️',name:'SCIE+',desc:'Scie rotative',hint:'Vague 14'},
-  {id:'w2_tornado_1',icon:'🌪️',name:'TORNADE',desc:'Tornade / 8s',hint:'Vague 10'},
-  {id:'w2_whip_1',icon:'〰️',name:'FOUET',desc:'Coup de fouet / 2s',hint:'Vague 7'},
-  {id:'w2_grenade_1',icon:'💥',name:'GRENADIER',desc:'Lance-grenades / 2s',hint:'Vague 8'},
-  {id:'w2_shuriken_1',icon:'⭐',name:'SHURIKEN',desc:'Shuriken rebondissant / 2.5s',hint:'Vague 6'},
-  {id:'w2_mine_1',icon:'💣',name:'MINES',desc:'Pose des mines / 3s',hint:'Vague 5'},
-  {id:'w2_laser_1',icon:'🔴',name:'LASER',desc:'Laser continu',hint:'Vague 3'},
-  {id:'w2_crossbow_1',icon:'🏹',name:'ARBALÈTE',desc:'Carreau perforant / 1.5s',hint:'Vague 5'},
-  {id:'w2_beam_1',icon:'⚡',name:'RAYON OMEGA',desc:'Rayon qui traverse / 4s',hint:'Vague 8'},
-  {id:'w2_knife_1',icon:'🔪',name:'COUTEAUX',desc:'2 couteaux orbitaux',hint:'Vague 2'},
-  {id:'w2_knife_2',icon:'🔪',name:'COUTEAUX+',desc:'+2 couteaux',hint:'Vague 7'},
-  {id:'w2_knife_3',icon:'🔪',name:'COUTEAUX++',desc:'+4 couteaux explosifs',hint:'Vague 14'},
-  {id:'e_xp_1',icon:'✨',name:'XP+ I',desc:'+20% XP',hint:'Vague 1'},
-  {id:'e_xp_2',icon:'✨',name:'XP+ II',desc:'+35% XP',hint:'Vague 2'},
-  {id:'e_xp_3',icon:'⭐',name:'XP+ III',desc:'+60% XP',hint:'Vague 5'},
-  {id:'e_xp_4',icon:'🌟',name:'XP+ IV',desc:'+100% XP',hint:'Vague 10'},
-  {id:'e_xp_5',icon:'💫',name:'XP+ V',desc:'+200% XP',hint:'Vague 18'},
-  {id:'e_xp_6',icon:'👑',name:'XP DIVIN',desc:'+500% XP',hint:'Vague 28'},
-  {id:'e_coin_1',icon:'🪙',name:'PIÈCES+ I',desc:'+20% pièces',hint:'Vague 1'},
-  {id:'e_coin_2',icon:'🪙',name:'PIÈCES+ II',desc:'+40% pièces',hint:'Vague 5'},
-  {id:'e_coin_3',icon:'💰',name:'AVARICE',desc:'+80% pièces',hint:'Vague 10'},
-  {id:'e_coin_4',icon:'💎',name:'COFFRE AU TRÉSOR',desc:'+150% pièces',hint:'Vague 18'},
-  {id:'e_coin_5',icon:'👑',name:'MIDAS',desc:'+400% pièces',hint:'Vague 25'},
-  {id:'e_xp_next_1',icon:'📚',name:'APPRENTI',desc:'XP requis -8%',hint:'Vague 1'},
-  {id:'e_xp_next_2',icon:'📖',name:'ÉTUDIANT',desc:'XP requis -15%',hint:'Vague 5'},
-  {id:'e_xp_next_3',icon:'🎓',name:'SAGE',desc:'XP requis -25%',hint:'Vague 10'},
-  {id:'e_xp_next_4',icon:'👨‍🏫',name:'MAÎTRE',desc:'XP requis -40%',hint:'Vague 18'},
-  {id:'e_xp_next_5',icon:'🧠',name:'OMNISCIENT',desc:'XP requis -60%',hint:'Vague 28'},
-  {id:'e_mag_coins',icon:'🧲',name:'AIMANT PIÈCES',desc:'Portée pièces +100',hint:'Vague 5'},
-  {id:'e_on_kill_xp',icon:'💀',name:'XP PAR KILL',desc:'+5 XP flat par kill',hint:'Vague 8'},
-  {id:'e_level_hp',icon:'📈',name:'NIVEAU→PV',desc:'Chaque niveau donne +15 PV',hint:'Vague 6'},
-  {id:'e_greed',icon:'💸',name:'AVIDITÉ',desc:'MALUS: +200% pièces mais -20% dégâts',hint:'Vague 10'},
-  {id:'e_charity',icon:'🎁',name:'CHARITÉ',desc:'MALUS: 0 pièces mais +50% XP',hint:'Vague 4'},
-  {id:'e_gamble_xp',icon:'🎰',name:'PARI XP',desc:'50% chance: XP x5 ou XP /5',hint:'Vague 12'},
-  {id:'e_energy_1',icon:'🔋',name:'ÉNERGIE+',desc:'Énergie max +1 (meta-game)',hint:'Vague 1'},
-  {id:'e_luck_1',icon:'🍀',name:'CHANCE I',desc:'+20% chance upgrades rares+',hint:'Vague 5'},
-  {id:'e_luck_2',icon:'🍀',name:'CHANCE II',desc:'+35% chance epics+',hint:'Vague 12'},
-  {id:'e_curse_items',icon:'💀',name:'OBJETS MAUDITS',desc:'MALUS: toutes tes upgrades ont des malus mais x3 effets',hint:'Vague 20'},
-  {id:'e_reroll',icon:'🔄',name:'RÉORGANISATION',desc:"Prochains choix: 2x plus d'options",hint:'Vague 8'},
-  {id:'e_sacrifice',icon:'🩸',name:'SACRIFICE',desc:'MALUS: perd 1 upgrade aléatoire, gagne 3 autres',hint:'Vague 15'},
-  {id:'e_hoarder',icon:'📦',name:'ACCUMULATEUR',desc:'+10 de tout au prochain niveau',hint:'Vague 6'},
-  {id:'e_poor',icon:'😢',name:'PAUVRE',desc:'MALUS drôle: 0 pièces ce run. En revanche +40% XP.',hint:'Vague 1'},
-  {id:'c_fury_1',icon:'🔱',name:'FURIE I',desc:'+3% dégâts par kill (stack)',hint:'Vague 8'},
-  {id:'c_fury_2',icon:'💀',name:'FURIE II',desc:'+6% dégâts par kill',hint:'Vague 15'},
-  {id:'c_fury_3',icon:'☠️',name:'FURIE III',desc:'+12% dégâts par kill',hint:'Vague 25'},
-  {id:'c_berserk_1',icon:'😤',name:'BERSERK I',desc:'+40% dégâts si PV<30%',hint:'Vague 8'},
-  {id:'c_berserk_2',icon:'😡',name:'BERSERK II',desc:'+100% dégâts si PV<30%',hint:'Vague 15'},
-  {id:'c_berserk_3',icon:'🩸',name:'BERSERK III',desc:'+200% dégâts si PV<50%',hint:'Vague 25'},
-  {id:'c_combo_1',icon:'🔢',name:'COMBO I',desc:'Stack dégâts par kill consécutif',hint:'Vague 12'},
-  {id:'c_combo_2',icon:'🔥',name:'COMBO II',desc:'Combo x2 plus rapide à stacker',hint:'Vague 20'},
-  {id:'c_echo_1',icon:'🔊',name:'ÉCHO I',desc:'Toutes les 5 balles, x3',hint:'Vague 12'},
-  {id:'c_echo_2',icon:'📢',name:'ÉCHO II',desc:'Toutes les 3 balles, x4',hint:'Vague 18'},
-  {id:'c_overload_1',icon:'🔌',name:'SURCHARGE I',desc:'Toutes les 10s, balle x5',hint:'Vague 18'},
-  {id:'c_overload_2',icon:'⚡',name:'SURCHARGE II',desc:'Toutes les 6s, balle x8',hint:'Vague 28'},
-  {id:'c_shadow_1',icon:'🥷',name:'OMBRE I',desc:'50% esquiver',hint:'Vague 20'},
-  {id:'c_reaper_1',icon:'☠️',name:'FAUCHEUR I',desc:'10% tuer instantanément',hint:'Vague 28'},
-  {id:'c_reaper_2',icon:'💀',name:'FAUCHEUR II',desc:'20% tuer instantanément',hint:'Vague 38'},
-  {id:'c_judgment_1',icon:'⚖️',name:'JUGEMENT',desc:'Tue tout ennemi <10% PV',hint:'Vague 30'},
-  {id:'c_omega_1',icon:'Ω',name:'OMEGA',desc:'Dernière balle de rafale géante',hint:'Vague 28'},
-  {id:'c_mirror_s',icon:'🪞',name:'TIR MIROIR',desc:'Copie dans direction opposée',hint:'Vague 12'},
-  {id:'c_glass_c',icon:'🔮',name:'CANON VERRE',desc:'1 PV mais x10 dégâts',hint:'Vague 14'},
-  {id:'c_lifeSteal_2',icon:'🐛',name:'DRAIN II',desc:'Tir soigne 1 PV',hint:'Vague 18'},
-  {id:'c_double_b',icon:'🎲',name:'DOUBLE MISE II',desc:'50/50 x3 ou x0',hint:'Vague 18'},
-  {id:'c_time_st',icon:'⏹️',name:'ARRÊT TEMPS',desc:'Gèle tout 5s/45s',hint:'Vague 30'},
-  {id:'c_necro_2',icon:'💀',name:'NÉCROMANCIEN',desc:'Ennemis tués reviennent 5s',hint:'Vague 25'},
-  {id:'c_phoenix_e',icon:'🔥',name:'PHÉNIX ÉTERNEL',desc:'Ressuscite inf. à 10% (60s CD)',hint:'Vague 28'},
-  {id:'c_dead_c',icon:'🐱',name:'CHAT MORT',desc:'PV =1 pendant 30s puis max',hint:'Vague 22'},
-  {id:'c_book_2',icon:'📕',name:'GRIMOIRE II',desc:'Effet aléatoire / 8s',hint:'Vague 20'},
-  {id:'c_isaac',icon:'😢',name:'LARMES ISAAC',desc:'Stats up avec kills',hint:'Vague 18'},
-  {id:'c_entropy_2',icon:'🌀',name:'ENTROPIE',desc:'Stats aléatoires par vague',hint:'Vague 28'},
-  {id:'c_blood_g',icon:'🩸',name:'DIEU SANG III',desc:'+50 PV max/kill indéfini',hint:'Vague 35'},
-  {id:'c_everything_2',icon:'🎁',name:'ARSENAL TOTAL',desc:'Active toutes les armes',hint:'Vague 40'},
-  {id:'c_inverse_2',icon:'🔄',name:'INVERSÉ',desc:'MALUS/BONUS: contrôles inversés + x4 dégâts',hint:'Vague 18'},
-  {id:'c_allergy',icon:'🤧',name:'ALLERGIE',desc:'MALUS drôle: éternue toutes les 5s et se téléporte',hint:'Vague 5'},
-  {id:'c_drunk',icon:'🍺',name:'IVRE',desc:'MALUS: contrôles oscillants mais +60% dégâts',hint:'Vague 8'},
-  {id:'c_paranoid',icon:'👁️',name:'PARANOÏAQUE',desc:'MALUS: tire dans toutes les directions (gaspille balles)',hint:'Vague 6'},
-  {id:'c_nostalgia',icon:'🎵',name:'NOSTALGIE',desc:'MALUS: reviens aux stats de départ mais +1 vie',hint:'Vague 3'},
-  {id:'c_coffee',icon:'☕',name:'CAFÉ',desc:'Cadence +50% mais PV descend de 1/sec',hint:'Vague 4'},
-  {id:'c_rage_mode',icon:'😤',name:'MODE RAGE',desc:'PV<50%: cadence x2, vitesse x1.5',hint:'Vague 10'},
-  {id:'c_mirror_world',icon:'🪞',name:'MONDE MIROIR',desc:'Tes ennemis coulent aussi tes upgrades défensives',hint:'Vague 22'},
-  {id:'c_piggy_b',icon:'🐷',name:'TIRELIRE',desc:'MALUS drôle: collecte pièces mais les perd toutes à la mort de wave',hint:'Vague 8'},
-  {id:'c_fire_and_ice',icon:'🌊🔥',name:'PARADOXE II',desc:'Balles gèlent ET brûlent x1.8',hint:'Vague 22'},
-  {id:'c_kamikaze_d',icon:'💥',name:'KAMIKAZE MORT',desc:'Mort=explosion x500',hint:'Vague 20'},
-  {id:'c_death_nova_2',icon:'💀',name:'NOVA MORT II',desc:'Mort=explosion massive',hint:'Vague 22'},
-  {id:'c_slow_time',icon:'⏳',name:'DISTORSION I',desc:'Ennemis -25% vitesse',hint:'Vague 14'},
-  {id:'c_slow_time_2',icon:'🕰️',name:'DISTORSION II',desc:'Ennemis -45% vitesse',hint:'Vague 20'},
-  {id:'c_slow_time_3',icon:'⌛',name:'DISTORSION III',desc:'Ennemis -65% vitesse',hint:'Vague 30'},
-  {id:'c_absorb',icon:'🌀',name:'ABSORPTION',desc:'10% PV de chaque ennemi tué',hint:'Vague 18'},
-  {id:'c_shield_bash_2',icon:'🛡️',name:'BOUCLIER CHOC',desc:'Bouclier fait des dégâts',hint:'Vague 10'},
-  {id:'c_barrier_2',icon:'🔷',name:'BARRIÈRE',desc:'Bloque les balles ennemies',hint:'Vague 12'},
-  {id:'c_reflect_2',icon:'🪃',name:'RÉFLEXION',desc:'Renvoie balles ennemies',hint:'Vague 14'},
-  {id:'c_immune_fire',icon:'🔥',name:'IMMUNITÉ FEU',desc:'Immunisé aux zones de feu',hint:'Vague 10'},
-  {id:'c_immune_ice',icon:'❄️',name:'IMMUNITÉ GLACE',desc:'Immunisé aux plaques de glace',hint:'Vague 10'},
-  {id:'c_immune_poison',icon:'☠️',name:'IMMUNITÉ POISON',desc:'Immunisé aux zones toxiques',hint:'Vague 10'},
-  {id:'c_all_immune',icon:'🛡️',name:'IMMUNITÉ TOTALE',desc:'Immunisé à tous les obstacles de biome',hint:'Vague 30'},
-  {id:'c_yolo',icon:'🎲',name:'YOLO',desc:'TOUT aléatoire: chaque balle a un effet différent',hint:'Vague 15'},
-  {id:'c_perfection',icon:'💎',name:'PERFECTION',desc:'Toutes les stats x1.5',hint:'Vague 40'},
-  {id:'c_lucky_b',icon:'🍀',name:'LUCKY BOY',desc:'Toutes les 10s, gain aléatoire',hint:'Vague 10'},
-  {id:'c_echo_kill',icon:'🔊',name:'SON DU KILL',desc:'Kill libère une onde sonore',hint:'Vague 8'},
-  {id:'c_nuke_kill',icon:'☢️',name:'RÉACTION',desc:'10% chance nuke à la mort',hint:'Vague 18'},
-  {id:'c_magnet_2',icon:'🧲',name:'ATTRACTION',desc:'Ennemis proches attirés',hint:'Vague 8'},
-  {id:'c_lifesteal_o',icon:'🌀',name:'DRAIN ORBES',desc:'Orbes drainent PV ennemis',hint:'Vague 15'},
-  {id:'c_poison_walk',icon:'☠️',name:'TRAÎNÉE TOXIQUE',desc:'Traînée empoisonnée',hint:'Vague 10'},
-  {id:'c_fire_walk',icon:'🔥',name:'TRAÎNÉE FEU',desc:'Traînée de feu',hint:'Vague 8'},
-  {id:'c_ice_walk',icon:'❄️',name:'TRAÎNÉE GLACE',desc:'Traînée gelante',hint:'Vague 9'},
-  {id:'c_all_trails',icon:'🌈',name:'TRAÎNÉE TOTALE',desc:'3 traînées simultanées',hint:'Vague 22'},
-  {id:'c_money_dmg',icon:'💰',name:'PIÈCES EXPLOSIVES',desc:'Pièces ramassées font +5% dégâts temporaire',hint:'Vague 8'},
-  {id:'c_level_dmg',icon:'📊',name:'PUISSANCE DE NIVEAU',desc:'Chaque niveau +10% dégâts',hint:'Vague 10'},
-  {id:'c_wave_dmg',icon:'⚔️',name:'VÉTÉRAN',desc:'Chaque vague survécue +2% dégâts',hint:'Vague 5'},
-  {id:'c_time_bonus',icon:'⏱️',name:'ENDURANT',desc:'Chaque seconde +0.1% dégâts',hint:'Vague 6'},
-  {id:'c_damage_floor',icon:'🏠',name:'PLANCHER DÉGÂTS',desc:'Minimum 50 dégâts par balle',hint:'Vague 15'},
-  {id:'c_damage_cap',icon:'♾️',name:'PLAFOND RETIRÉ',desc:'Pas de limite de dégâts',hint:'Vague 25'},
-  {id:'funny_1',icon:'😒',name:'MAUVAISE HUMEUR',desc:"MALUS: tire en arrière au lieu d'en avant. Bonne chance.",hint:'Vague 1'},
-  {id:'funny_2',icon:'🤝',name:'TREMBLEMENT',desc:'MALUS: tes balles zigzaguent aléatoirement',hint:'Vague 2'},
-  {id:'funny_3',icon:'👓',name:'MYOPE',desc:'MALUS: portée XP -50% mais +30% cadence',hint:'Vague 3'},
-  {id:'funny_4',icon:'🤧',name:'ALLERGIQUE AUX COINS',desc:'MALUS: pièces comptent -5. Pourquoi pas.',hint:'Vague 1'},
-  {id:'funny_5',icon:'😨',name:'PHOBIE DES ENNEMIS',desc:'MALUS: -30% dégâts si ennemi à moins de 100px',hint:'Vague 5'},
-  {id:'funny_6',icon:'🍔',name:'TROP GROS',desc:'MALUS: +200 PV mais vitesse /3. Comme une baleine.',hint:'Vague 6'},
-  {id:'funny_7',icon:'🪳',name:'CAFARD',desc:'MALUS: peur du noir — dégâts -50% dans biomes sombres',hint:'Vague 4'},
-  {id:'funny_8',icon:'🤧',name:'ÉTERNUEMENT',desc:'MALUS: éternue toutes les 8s (téléportation aléatoire)',hint:'Vague 8'},
-  {id:'funny_9',icon:'🙃',name:'MALADROIT',desc:'MALUS: dash va dans la mauvaise direction',hint:'Vague 3'},
-  {id:'funny_10',icon:'🔃',name:'AIMANT INVERSE',desc:'MALUS: XP et pièces fuient dans la direction opposée',hint:'Vague 8'},
-  {id:'funny_11',icon:'🔄',name:'TOURNER EN ROND',desc:"MALUS drôle: orbite autour d'un point fixe pendant 3s / 10s",hint:'Vague 12'},
-  {id:'funny_13',icon:'🍷',name:'IVRE II',desc:'MALUS: stats changent aléatoirement toutes les 5s',hint:'Vague 12'},
-  {id:'funny_14',icon:'😇',name:'GENTILLESSE',desc:'MALUS: balles font 1 dégât. Mais tu soignes les ennemis... non attends.',hint:'Vague 2'},
-  {id:'funny_15',icon:'🥚',name:'SUPER FRAGILE',desc:'MALUS ULTIME: 1 PV max pour toujours... mais +1000% dégâts',hint:'Vague 10'},
-  {id:'funny_16',icon:'💘',name:'ATTIRANCE FATALE',desc:'MALUS: ennemis se dirigent vers toi 2x plus vite',hint:'Vague 4'},
-  {id:'funny_17',icon:'😴',name:'INSOMNIE',desc:'MALUS: jeu en noir et blanc (visuel seulement)',hint:'Vague 6'},
-  {id:'funny_18',icon:'😴',name:'PARESSEUX',desc:'MALUS: -40% vitesse mais coup critique garanti',hint:'Vague 5'},
-  {id:'funny_19',icon:'😱',name:'PEUR DES BOSS',desc:'MALUS: -60% dégâts contre les boss',hint:'Vague 8'},
-  {id:'funny_20',icon:'🤞',name:'BONNE CHANCE!',desc:'Effet complètement aléatoire. Peut être x0 dégâts ou godmode.',hint:'Vague 1'},
-
-];
-
-
-
-
-
 function openCodex(fromStats=false){
   if(fromStats)document.getElementById('stats-screen').classList.remove('show');
   syncTitlesToCodex();
@@ -1813,29 +1274,28 @@ function _renderLBData(lb){window._renderLBData(lb);}
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
-const SHOP_VERSION='v6'; // Cristaux XP par monde + classement & boss — incrémenter pour forcer reset boutique (localStorage)
+const SHOP_VERSION='v7'; // Équilibre meta / boutique / codex — incrémenter pour forcer reset niveaux boutique
 
-// Vérifier la version au chargement — reset si version différente
+// Vérifier la version au chargement — reset des achats boutique si version différente
 (function checkShopVersion(){
-  if(false&&localStorage.getItem(KSH_VER)!==SHOP_VERSION){
+  if(localStorage.getItem(KSH_VER)!==SHOP_VERSION){
     localStorage.removeItem(KSH);
-    localStorage.removeItem('surv_coins');
     localStorage.setItem(KSH_VER,SHOP_VERSION);
-    console.log('Mise à jour v6 — Cristaux XP par monde, classement & boss (boutique réinitialisée)');
+    console.log('Mise à jour v7 — boutique réinitialisée (équilibre meta & codex)');
   }
 })();
 const SHOP_ITEMS=[
   // ── CATÉGORIE 1 : COMBAT DE BASE ──
-  {id:'s_hp',    icon:'❤️', name:'PV DE DÉPART+',      desc:'+20 PV max',           baseCost:150, maxLvl:10,effect:s=>{s.player.maxHp+=20;s.player.hp+=20;}},
-  {id:'s_dmg',   icon:'⚔️', name:'DÉGÂTS DE BASE+',    desc:'+6 dégâts/balle',      baseCost:200, maxLvl:8, effect:s=>s.player.bulletDmg+=6},
+  {id:'s_hp',    icon:'❤️', name:'PV DE DÉPART+',      desc:'+20 PV max',           baseCost:150, maxLvl:7,effect:s=>{s.player.maxHp+=20;s.player.hp+=20;}},
+  {id:'s_dmg',   icon:'⚔️', name:'DÉGÂTS DE BASE+',    desc:'+6 dégâts/balle',      baseCost:200, maxLvl:6, effect:s=>s.player.bulletDmg+=6},
   {id:'s_spd',   icon:'👟', name:'VITESSE DE BASE+',    desc:'+0.2 vitesse',          baseCost:175, maxLvl:8, effect:s=>s.player.speed+=.2},
-  {id:'s_fire',  icon:'🔥', name:'CADENCE DE BASE+',    desc:'-20ms entre tirs',      baseCost:250, maxLvl:6, effect:s=>s.player.fireRate=Math.max(80,s.player.fireRate-20)},
+  {id:'s_fire',  icon:'🔥', name:'CADENCE DE BASE+',    desc:'-18ms entre tirs (min. ~118ms)', baseCost:250, maxLvl:5, effect:s=>s.player.fireRate=Math.max(118,s.player.fireRate-18)},
   {id:'s_bspd',  icon:'🚀', name:'VITESSE BALLE+',      desc:'+1 vitesse des balles', baseCost:180, maxLvl:6, effect:s=>s.player.bulletSpeed+=1},
   {id:'s_bsz',   icon:'🟠', name:'CALIBRE+',            desc:'Balles +15% grosses',   baseCost:160, maxLvl:6, effect:s=>s.player.bulletSize*=1.15},
   {id:'s_pierce',icon:'🔰', name:'PERÇANT DE BASE',     desc:'Balles traversent +1',  baseCost:400, maxLvl:4, effect:s=>s.player.pierce++},
   {id:'s_multi', icon:'🎯', name:'MULTI-TIR DE BASE',   desc:'+1 projectile',         baseCost:500, maxLvl:3, effect:s=>s.player.multiShot++},
-  {id:'s_crit',  icon:'🎲', name:'CRITIQUE DE BASE',    desc:'+8% chance crit',       baseCost:350, maxLvl:5, effect:s=>s.player.critChance=Math.min(.8,s.player.critChance+.08)},
-  {id:'s_critmult',icon:'💥',name:'PUISSANCE CRIT+',    desc:'Critiques x0.25 bonus', baseCost:450, maxLvl:5, effect:s=>s.player.critMult=(s.player.critMult||2)+.25},
+  {id:'s_crit',  icon:'🎲', name:'CRITIQUE DE BASE',    desc:'+6% chance crit (plafond global)', baseCost:350, maxLvl:4, effect:s=>s.player.critChance=Math.min(.68,s.player.critChance+.06)},
+  {id:'s_critmult',icon:'💥',name:'PUISSANCE CRIT+',    desc:'Mult. critique +0.25 (additif)', baseCost:450, maxLvl:5, effect:s=>s.player.critMult=(s.player.critMult||2)+.25},
   // ── CATÉGORIE 2 : SURVIE ──
   {id:'s_regen', icon:'💚', name:'RÉGÉN. DE BASE',      desc:'+1 PV/sec',             baseCost:325, maxLvl:5, effect:s=>s.player.regen+=1},
   {id:'s_shield',icon:'🔵', name:'BOUCLIER AU DÉPART',  desc:'Commence avec bouclier',baseCost:450, maxLvl:1, effect:s=>{s.player.hasShield=true;s.player.shieldCd=0;}},
@@ -1846,14 +1306,14 @@ const SHOP_ITEMS=[
   {id:'s_siphon',icon:'🩺', name:'SIPHON DE BASE',      desc:'+3 PV par kill',        baseCost:380, maxLvl:4, effect:s=>s.player.siphon=(s.player.siphon||0)+3},
   {id:'s_phoenix',icon:'🔥',name:'PHÉNIX DE BASE',      desc:'Reviens à 20% PV (1x)', baseCost:800, maxLvl:1, effect:s=>s.player.phoenix=true},
   // ── CATÉGORIE 3 : UTILITÉ ──
-  {id:'s_xp',    icon:'✨', name:'BONUS XP',            desc:'+15% XP par kill',      baseCost:225, maxLvl:5, effect:s=>s.xpMult=(s.xpMult||1)*1.15},
-  {id:'s_coin',  icon:'🪙', name:'BONUS PIÈCES',        desc:'+20% pièces/partie',    baseCost:300, maxLvl:5, effect:s=>s.coinMult=(s.coinMult||1)*1.20},
+  {id:'s_xp',    icon:'✨', name:'BONUS XP',            desc:'+15% XP par kill',      baseCost:225, maxLvl:4, effect:s=>s.xpMult=(s.xpMult||1)*1.15},
+  {id:'s_coin',  icon:'🪙', name:'BONUS PIÈCES',        desc:'+20% pièces/partie',    baseCost:300, maxLvl:4, effect:s=>s.coinMult=(s.coinMult||1)*1.20},
   {id:'s_orb',   icon:'🌀', name:'ORBE DE DÉPART',      desc:'Commence avec 1 orbe',  baseCost:400, maxLvl:3, effect:s=>s.player.orbCount++},
   {id:'s_orbsz', icon:'🪐', name:'ORBES GÉANTS',        desc:'Orbes +20% plus gros',  baseCost:300, maxLvl:4, effect:s=>s.player.orbSize=(s.player.orbSize||7)*1.2},
   {id:'s_mag',   icon:'🧲', name:'MAGNÉT. DE BASE',     desc:'Portée XP +30%',        baseCost:275, maxLvl:4, effect:s=>s.player.xpRadius*=1.3},
   {id:'s_dash',  icon:'💨', name:'ESQUIVE AU DÉPART',   desc:'Dash débloqué dès le début', baseCost:600, maxLvl:1, effect:s=>{s.player.hasDash=true;}},
   {id:'s_dashcd',icon:'🔀', name:'DASH RAPIDE',         desc:'Dash -0.5s cooldown',   baseCost:350, maxLvl:4, effect:s=>s.player.dashCooldownMax=Math.max(1000,(s.player.dashCooldownMax||3000)-500)},
-  {id:'s_energy',icon:'🔋', name:'ÉNERGIE DE BASE',     desc:'+1 énergie max',        baseCost:1000,maxLvl:5, effect:s=>{}}, // cosmétique
+  {id:'s_energy',icon:'🔋', name:'ÉNERGIE DE BASE',     desc:'Trophée (sans effet pour l’instant)', baseCost:1000,maxLvl:1, effect:s=>{}},
   // ── CATÉGORIE 4 : OFFENSIF AVANCÉ ──
   {id:'s_explode',icon:'💥',name:'EXPLOSION DE BASE',   desc:'Balles explosent au départ',baseCost:700,maxLvl:1,effect:s=>s.player.explode=true},
   {id:'s_explsz', icon:'🌋',name:'RAYON EXPLOSION+',   desc:'+10 rayon explosion',    baseCost:400, maxLvl:5, effect:s=>s.player.explodeRadius=(s.player.explodeRadius||55)+10},
@@ -1862,7 +1322,7 @@ const SHOP_ITEMS=[
   {id:'s_aura',   icon:'🌐',name:'AURA DE DÉPART',      desc:'Aura brûlante +10/s',   baseCost:550, maxLvl:3, effect:s=>s.player.aura=(s.player.aura||0)+10},
   {id:'s_turret', icon:'🤖',name:'TOURELLE AU DÉPART',  desc:'Commence avec tourelle', baseCost:900, maxLvl:2, effect:s=>s.player.turretCount=(s.player.turretCount||0)+1},
   // ── CATÉGORIE 5 : PASSIFS PUISSANTS ──
-  {id:'s_fury',   icon:'🔱',name:'FURIE AU DÉPART',     desc:'Stack dégâts par kill',  baseCost:700, maxLvl:1, effect:s=>s.player.furyStacks=0},
+  {id:'s_fury',   icon:'🔱',name:'FURIE AU DÉPART',     desc:'Débloque la fureur (+3% dégâts par kill, stack)', baseCost:700, maxLvl:1, effect:s=>s.player.furyStacks=0},
   {id:'s_berserk',icon:'😤',name:'BERSERK AU DÉPART',   desc:'+40% dégâts si PV<30%', baseCost:600, maxLvl:1, effect:s=>s.player.berserker=true},
   {id:'s_poison', icon:'☠️',name:'POISON AU DÉPART',    desc:'Balles empoisonnent',   baseCost:650, maxLvl:1, effect:s=>s.player.poisonBullet=true},
   {id:'s_slow',   icon:'⏳',name:'TEMPS LENT DE BASE',  desc:'Ennemis -10% vitesse',  baseCost:500, maxLvl:4, effect:s=>s.player.slowMult=Math.max(.2,s.player.slowMult-.1)},
@@ -1884,7 +1344,7 @@ const SHOP_ITEMS=[
   {id:'s_pulse',  icon:'📡',name:'PULSATION',           desc:'Onde choc / 5s',        baseCost:800, maxLvl:1, effect:s=>s.player.pulseTimer=0},
   {id:'s_blizzard',icon:'🌨️',name:'BLIZZARD',           desc:'Zone givre permanente',  baseCost:1000,maxLvl:1, effect:s=>s.player.blizzard=true},
   {id:'s_gravity',icon:'🌑',name:'GRAVITÉ NOIRE',       desc:'Attire ennemis (risqué)',baseCost:1200,maxLvl:1, effect:s=>s.player.gravityField=true},
-  {id:'s_godmode',icon:'👑',name:'MODE DIEU PARTIEL',   desc:'Tous stats +15%',       baseCost:5000,maxLvl:3, effect:s=>{s.player.bulletDmg*=1.15;s.player.speed*=1.15;s.player.maxHp=Math.floor(s.player.maxHp*1.15);s.player.hp=s.player.maxHp;}},
+  {id:'s_godmode',icon:'👑',name:'MODE DIEU PARTIEL',   desc:'Dégâts, vitesse et PV max +12% ; soin +12% PV max', baseCost:5000,maxLvl:2, effect:s=>{const p=s.player;p.bulletDmg*=1.12;p.speed*=1.12;p.maxHp=Math.floor(p.maxHp*1.12);p.hp=Math.min(playerHealCap(p),Math.floor(p.hp+p.maxHp*.12));}},
 ];
 function getShopLvls(){try{return JSON.parse(localStorage.getItem(KSH))||{};}catch(e){return{};}}
 function getShopLvl(id){return getShopLvls()[id]||0;}
@@ -1893,7 +1353,25 @@ function shopCost(item){return Math.floor(item.baseCost*Math.pow(2.0,getShopLvl(
 function applyShopBonuses(s){
   const l=getShopLvls();
   SHOP_ITEMS.forEach(item=>{const lv=l[item.id]||0;for(let i=0;i<lv;i++)item.effect(s);});
+  const p=s.player;
+  if(p.fireRate<118)p.fireRate=118;
+  if((p.critChance||0)>.72)p.critChance=.72;
 }
+/** 0–100 : progression boutique (poids forts sur passifs « dieu »). */
+function getMetaPowerScore(){
+  try{
+    const l=getShopLvls();
+    let raw=0;
+    const W={s_godmode:16,s_shadow:13,s_reaper:12,s_eternal:12,s_judgment:10,s_arma:10,s_singularity:9,s_omega:9,s_clone:8,s_rebirth:8,s_phoenix:7,s_heaven:7,s_nova:6,s_blizzard:6,s_gravity:6,s_turret:5,s_explode:4,s_chain:4,s_freeze:4,s_aura:4,s_corona:4,s_berserk:4,s_poison:4,s_slow:3,s_fury:3};
+    for(const it of SHOP_ITEMS){
+      const lv=Math.min(it.maxLvl,l[it.id]||0);
+      raw+=lv*(W[it.id]||1.05);
+    }
+    return 100*(1-Math.exp(-raw/68));
+  }catch(e){return 0;}
+}
+function getMetaEnemyHpMul(){return 1+0.36*(getMetaPowerScore()/100);}
+function getMetaEnemyDmgMul(){return 1+0.5*(getMetaPowerScore()/100);}
 function buyEnergy(){
   const cost=100;
   if(!spendCoins(cost)){
@@ -2178,7 +1656,20 @@ const ALL_UPGRADES=[
   {id:'n_heaven', name:'CÉLESTE',         icon:'🌤️',rarity:'mythic',  unlockWave:42, desc:'Regen rapide sans ennemi proche',apply:s=>s.player.heaven=true},
   {id:'n_galaxy', name:'VOIE LACTÉE',     icon:'🌠',rarity:'mythic',   unlockWave:42, desc:'+5 orbes ultra-rapides',     apply:s=>{s.player.orbCount+=5;s.orbAngleSpeed=(s.orbAngleSpeed||.003)*2.5;}},
   // ── WAVE 45 ──
-  {id:'n_chaos',  name:'CHAOS',           icon:'🃏',rarity:'mythic',   unlockWave:45, desc:'Applique 3 upgrades aléatoires',apply:s=>{const r=ALL_UPGRADES[Math.floor(Math.random()*ALL_UPGRADES.length)];for(let i=0;i<3;i++)r.apply(s);}},
+  {id:'n_chaos',  name:'CHAOS',           icon:'🃏',rarity:'mythic',   unlockWave:45, desc:'Applique 3 upgrades aléatoires distincts',apply:s=>{
+    const taken=new Set((s.runUpgrades||[]).map(x=>x.id));
+    taken.add('n_chaos');
+    const pool=ALL_UPGRADES.filter(u=>u.id!=='n_chaos'&&!taken.has(u.id));
+    const picks=[];
+    for(const u of [...pool].sort(()=>Math.random()-.5)){if(picks.length>=3)break;picks.push(u);}
+    let guard=0;
+    while(picks.length<3&&guard++<500){
+      const u=ALL_UPGRADES[Math.floor(Math.random()*ALL_UPGRADES.length)];
+      if(u.id==='n_chaos'||picks.some(p=>p.id===u.id))continue;
+      picks.push(u);
+    }
+    for(const r of picks)r.apply(s);
+  }},
   {id:'n_eternal',name:'ÉTERNEL',         icon:'∞', rarity:'mythic',   unlockWave:45, desc:'Invincible 5s / 30s',         apply:s=>s.player.eternalTimer=0},
   // ── WAVE 48 ──
   {id:'n_armageddon',name:'ARMAGEDDON',   icon:'🌋',rarity:'mythic',   unlockWave:48, desc:'Explosion massive tue tout / 30s',apply:s=>s.player.armaTimer=0},
@@ -2741,6 +2232,10 @@ const ALL_UPGRADES=[
    apply:s=>{ s.player.isaacTears=0; }},
 
 ];
+const CODEX_UPGRADES=ALL_UPGRADES.map(u=>({
+  id:u.id,icon:u.icon,name:u.name,desc:u.desc,
+  hint:`Vague ${u.unlockWave} · ${u.rarity||'common'}`
+}));
 
 function getAvailableUpgrades(wave){
   return ALL_UPGRADES.filter(u=>u.unlockWave<=wave);
@@ -3049,11 +2544,12 @@ const EVENTS=[
     desc:"100 petits ennemis d'un coup !",
     color:'#88ff00',
     onStart:s=>{
+      const mHp=getMetaEnemyHpMul(),mDmg=getMetaEnemyDmgMul();
       for(let i=0;i<100&&s.enemies.length<MAX_ENEMIES_ALIVE;i++){
         const{x,y}=edgePos();const cfg=ETYPES.swarm;
-        const hm=enemyHpWaveMul(s.wave);
+        const hm=enemyHpWaveMul(s.wave)*mHp;
         const sh=cfg.hp(s.wave)*2*hm;
-        const dM=enemyDmgWaveMul(s.wave),sM=enemySpdWaveMul(s.wave);
+        const dM=enemyDmgWaveMul(s.wave)*mDmg,sM=enemySpdWaveMul(s.wave);
         s.enemies.push({x,y,type:'swarm',hp:sh,maxHp:sh,
           speed:cfg.spd(s.wave)*1.5*sM,size:cfg.sz,dmg:Math.max(1,Math.ceil(cfg.dmg*dM)),color:'#ffaa00',xp:3,coins:0,id:Math.random()});
       }
@@ -3961,7 +3457,7 @@ function getEnemyUpdatePack(){
       enemyUpdateMech:true
     };
     const nm=(ADJ[vi%ADJ.length]+' '+SUB[(vi*3)%SUB.length]+' '+String(i).padStart(2,'0')).toUpperCase();
-    codex.push({id,icon:ICONS[vi%ICONS.length],name:nm,desc:'Enemy Update — unité '+String(i).padStart(3,'0')+'. '+famDesc[vi%20],hint:'Apparaît à partir de la vague '+uw});
+    codex.push({id,icon:ICONS[vi%ICONS.length],name:nm,desc:'En jeu — unité '+String(i).padStart(3,'0')+'. '+famDesc[vi%20],hint:'Apparaît à partir de la vague '+uw});
   }
   ENEMY_UPDATE_PACK_CACHE={etypes,codex};
   return ENEMY_UPDATE_PACK_CACHE;
@@ -4256,10 +3752,13 @@ function enemyDmgWaveMul(w){
 function enduranceHpDrainRate(){
   if(!state||state.wave<12)return 0;
   const hoursSinceStart=state.elapsed/3600000;
-  if(hoursSinceStart<0.11)return 0;
-  const h=hoursSinceStart-0.11;
+  const meta=getMetaPowerScore();
+  if(hoursSinceStart<Math.max(0.06,0.11-meta/2200))return 0;
+  const h=hoursSinceStart-Math.max(0.06,0.11-meta/2200);
   const w=state.wave;
-  return h*h*2.1e-8*w+h*5.2e-7*w;
+  let r=h*h*2.1e-8*w+h*5.2e-7*w;
+  r*=1+meta/72;
+  return r;
 }
 /** Vitesse ennemie légère bonus en profondeur (pour traverser le champ de balles). */
 function enemySpdWaveMul(w){
@@ -4312,13 +3811,14 @@ function spawnEnemy(){
   const{x,y}=edgePos();
   const cfg=ETYPES[type];
   const _gm=state&&state._evGiants?3:1;
-  const _hpM=enemyHpWaveMul(w)*_gm;
+  const _mmHp=getMetaEnemyHpMul(),_mmDmg=getMetaEnemyDmgMul();
+  const _hpM=enemyHpWaveMul(w)*_gm*_mmHp;
   let _base=cfg.hp(w)*_hpM;
   if(state.player&&state.player.mirrorWorld){
     const bonus=Math.min(2.2,1+state.player.maxHp/230);
     _base*=bonus;
   }
-  const _dM=enemyDmgWaveMul(w);
+  const _dM=enemyDmgWaveMul(w)*_mmDmg;
   const _sM=enemySpdWaveMul(w);
   const _dmg=Math.max(1,Math.ceil((cfg.dmg||0)*_dM));
   const e={x,y,type,hp:_base,maxHp:_base,speed:cfg.spd(w)*_sM,size:cfg.sz*(_gm>1?2:1),dmg:_dmg,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()};
@@ -4406,8 +3906,8 @@ function spawnEnemy(){
   if(type==='twin'){
     // Spawn son jumeau
     const{x:tx2,y:ty2}=edgePos();
-    const _tHp=cfg.hp(w)*enemyHpWaveMul(w);
-    const _tDmg=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)));
+    const _tHp=cfg.hp(w)*enemyHpWaveMul(w)*getMetaEnemyHpMul();
+    const _tDmg=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)*getMetaEnemyDmgMul()));
     const twin2={x:tx2,y:ty2,type:'twin',hp:_tHp,maxHp:_tHp,speed:cfg.spd(w)*enemySpdWaveMul(w),size:cfg.sz,dmg:_tDmg,color:'#ffbbdd',xp:cfg.xp,coins:cfg.coins,id:Math.random()};
     twin2.twinId=e.id;e.twinId=twin2.id;
     state.enemies.push(twin2);discoverEntry('enemies','twin');
@@ -4428,10 +3928,11 @@ function spawnWave(){
   // Essaim à partir de vague 5
   if(w>=5&&Math.random()<.4&&state.enemies.length<cap-5){
     const swarmCount=Math.min(Math.floor(w/3), 10);
+    const _mHp=getMetaEnemyHpMul(),_mDmg=getMetaEnemyDmgMul();
     for(let i=0;i<swarmCount&&state.enemies.length<MAX_ENEMIES_ALIVE;i++){
       const{x,y}=edgePos();const cfg=ETYPES.swarm;
-      const sh=cfg.hp(w)*enemyHpWaveMul(w);
-      const sd=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)));
+      const sh=cfg.hp(w)*enemyHpWaveMul(w)*_mHp;
+      const sd=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)*_mDmg));
       state.enemies.push({x,y,type:'swarm',hp:sh,maxHp:sh,speed:cfg.spd(w)*enemySpdWaveMul(w),size:cfg.sz,dmg:sd,color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()});
       discoverEntry('enemies','swarm');
     }
@@ -4517,7 +4018,8 @@ function spawnBiomeBoss(){
   const w=state.wave;
   const{x,y}=edgePos();
   const cfg=ETYPES[bb.type]||ETYPES.megaboss;
-  const _bMul=enemyHpWaveMul(w);
+  const _bMul=enemyHpWaveMul(w)*getMetaEnemyHpMul();
+  const _bDmgM=enemyDmgWaveMul(w)*getMetaEnemyDmgMul();
   const boss={
     x,y,
     type:bb.type,
@@ -4525,7 +4027,7 @@ function spawnBiomeBoss(){
     maxHp:cfg.hp(w)*bb.scale*1.5*_bMul,
     speed:cfg.spd(w)*.8*enemySpdWaveMul(w),
     size: cfg.sz*bb.scale,
-    dmg:  Math.max(1,Math.ceil(cfg.dmg*1.3*enemyDmgWaveMul(w))),
+    dmg:  Math.max(1,Math.ceil(cfg.dmg*1.3*_bDmgM)),
     color:biome.accent,
     xp:   cfg.xp*3,
     coins:cfg.coins*3,
@@ -4560,7 +4062,8 @@ function spawnBoss(bossType){
   if(!cfg||state.enemies.length>=MAX_ENEMIES_ALIVE)return;
   const w=state.wave;
   const{x,y}=edgePos();
-  const _bMul=enemyHpWaveMul(w);
+  const _bMul=enemyHpWaveMul(w)*getMetaEnemyHpMul();
+  const _bDmgM=enemyDmgWaveMul(w)*getMetaEnemyDmgMul();
   const scale=t==='megaboss'?2.2:t==='cosmic'?2.4:t==='titan'?1.75:1.45;
   const b={
     x,y,type:t,
@@ -4568,7 +4071,7 @@ function spawnBoss(bossType){
     maxHp:cfg.hp(w)*scale*_bMul,
     speed:cfg.spd(w)*.82*enemySpdWaveMul(w),
     size:Math.min(52,cfg.sz*Math.min(2.4,scale+.55)),
-    dmg:Math.max(1,Math.ceil(cfg.dmg*1.28*enemyDmgWaveMul(w))),
+    dmg:Math.max(1,Math.ceil(cfg.dmg*1.28*_bDmgM)),
     color:cfg.color,xp:cfg.xp,coins:cfg.coins,id:Math.random()
   };
   if(t==='entity')b.immune=true;
@@ -4843,8 +4346,8 @@ function update(dt){
     if(state._nightmareTimer>3000){state._nightmareTimer=0;
       const{x,y}=edgePos();const cfg=ETYPES.ghost;
       const wv=state.wave;
-      const gh=cfg.hp(wv)*enemyHpWaveMul(wv);
-      const gD=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(wv)));
+      const gh=cfg.hp(wv)*enemyHpWaveMul(wv)*getMetaEnemyHpMul();
+      const gD=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(wv)*getMetaEnemyDmgMul()));
       if(state.enemies.length<MAX_ENEMIES_ALIVE)state.enemies.push({x,y,type:'ghost',hp:gh,maxHp:gh,speed:cfg.spd(wv)*1.5*enemySpdWaveMul(wv),size:cfg.sz,dmg:gD,color:'rgba(200,150,255,.7)',xp:0,coins:0,id:Math.random(),gt:0});
     }
   }
@@ -4972,7 +4475,7 @@ function update(dt){
     if(b.enemy){
       if(Math.hypot(b.x-p.x,b.y-p.y)<p.size+b.size){
         if(p.divineActive)return false;
-        if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;return false;}
+        if(p.shieldActive){p.shieldActive=false;p.shieldCd=p.shieldCooldownMax||8000;return false;}
         if(p.dodge>0&&Math.random()<p.dodge)return false;
         if(p.shadowDodge&&Math.random()<.5)return false;
         const wvB=Math.max(1,state.wave||1);
@@ -5422,7 +4925,7 @@ function update(dt){
     if(Math.hypot(p.x-e.x,p.y-e.y)<p.size+e.size){
       if(state._evPhantom&&!e.isBiomeBoss){state.enemies.splice(i,1);continue;}
       if(p.divineActive&&!e.isBiomeBoss){killEnemy(i);continue;}
-      if(p.shieldActive){p.shieldActive=false;p.shieldCd=8000;pts(p.x,p.y,'#00aaff',1.5,5);
+      if(p.shieldActive){p.shieldActive=false;p.shieldCd=p.shieldCooldownMax||8000;pts(p.x,p.y,'#00aaff',1.5,5);
         if(e.isBiomeBoss)continue;
         if(e.type==='splitter')splitEnemy(e);state.enemies.splice(i,1);continue;}
       if(e.type==='bomber'||e.type==='kamikaze'||e.type==='chain_bomber'){explodeAt(e.x,e.y,e.type==='kamikaze'?55:e.hp*.5+20);killEnemy(i);continue;}
@@ -5760,7 +5263,7 @@ function doDash(){
 }
 function splitEnemy(e){
   const w=state.wave;
-  const spdMul=enemySpdWaveMul(w),dmgMul=enemyDmgWaveMul(w);
+  const spdMul=enemySpdWaveMul(w),dmgMul=enemyDmgWaveMul(w)*getMetaEnemyDmgMul();
   for(let k=0;k<2;k++){
     const a=Math.random()*Math.PI*2;const hp=Math.floor(e.maxHp*.3);
     state.enemies.push({x:e.x+Math.cos(a)*14,y:e.y+Math.sin(a)*14,type:'fast',hp,maxHp:hp,speed:Math.max(1.8,2.4*spdMul),size:7,dmg:Math.max(1,Math.ceil(7*dmgMul)),color:'#ff6688',xp:4,coins:0,frozen:0});
@@ -5787,8 +5290,8 @@ function killEnemy(i){
   if(e.type==='void_phantom'&&!e.splitDone){
     for(let k=0;k<2;k++){
       const cfg=ETYPES.void_phantom;const w=state.wave;
-      const vm=enemyHpWaveMul(w);
-      const vD=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)));
+      const vm=enemyHpWaveMul(w)*getMetaEnemyHpMul();
+      const vD=Math.max(1,Math.ceil(cfg.dmg*enemyDmgWaveMul(w)*getMetaEnemyDmgMul()));
       state.enemies.push({x:e.x+(k?30:-30),y:e.y,type:'void_phantom',
         hp:cfg.hp(w)*.4*vm,maxHp:cfg.hp(w)*.4*vm,speed:cfg.spd(w)*1.3*enemySpdWaveMul(w),
         size:cfg.sz*.6,dmg:vD,color:cfg.color,xp:3,coins:0,
@@ -5807,7 +5310,7 @@ function killEnemy(i){
   if(e.type==='distortion'&&e.distSplit<1){
     const cfg=ETYPES.basic;
     for(let k=0;k<4;k++){const a=k/4*Math.PI*2;const w2=state.wave;
-      const dm=enemyHpWaveMul(w2);
+      const dm=enemyHpWaveMul(w2)*getMetaEnemyHpMul();
       state.enemies.push({x:e.x+Math.cos(a)*20,y:e.y+Math.sin(a)*20,type:'basic',
         hp:cfg.hp(w2)*.5*dm,maxHp:cfg.hp(w2)*.5*dm,speed:cfg.spd(w2)*1.5*enemySpdWaveMul(w2),
         size:e.size*.6,dmg:Math.max(1,Math.ceil(e.dmg*.5)),color:'#4400cc',xp:2,coins:0,id:Math.random(),distSplit:1});

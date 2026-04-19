@@ -1,4 +1,4 @@
-const CACHE = 'survivor-v6-xp-monde-2026-04-15';
+const CACHE = 'survivor-v7-equilibre-meta-codex-2026-04-15';
 const ASSETS = [
   './',
   './index.html',
