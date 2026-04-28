@@ -227,7 +227,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.1 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -587,7 +587,7 @@ function snd(type){
 ══════════════════════════════════════════════ */
 const EMAX=10,EREGEN=30*60*1000;
 const KE='surv_e',KR='surv_r';
-const ENERGY_UPDATE_GRANT_KEY='surv_energy_grant_once_2026_04';
+const ENERGY_UPDATE_GRANT_KEY='surv_energy_grant_once_2026_04_v711';
 function loadE(){const v=parseInt(localStorage.getItem(KE));return isNaN(v)?EMAX:Math.min(v,EMAX);}
 function saveE(v){localStorage.setItem(KE,String(v));}
 function getE(){
@@ -1276,7 +1276,8 @@ function _renderLBData(lb){window._renderLBData(lb);}
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
-const SHOP_VERSION='v7.1'; // Migration boutique non destructive
+const KSH_BAK='surv_shop_bak';
+const SHOP_VERSION='v7.1.1'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -1356,9 +1357,32 @@ const SHOP_ITEMS=[
   {id:'s_gravity',icon:'🌑',name:'GRAVITÉ NOIRE',       desc:'Attire ennemis (risqué)',baseCost:1200,maxLvl:1, effect:s=>s.player.gravityField=true},
   {id:'s_godmode',icon:'👑',name:'MODE DIEU PARTIEL',   desc:'Dégâts, vitesse et PV max +12% ; soin +12% PV max', baseCost:5000,maxLvl:2, effect:s=>{const p=s.player;p.bulletDmg*=1.12;p.speed*=1.12;p.maxHp=Math.floor(p.maxHp*1.12);p.hp=Math.min(playerHealCap(p),Math.floor(p.hp+p.maxHp*.12));}},
 ];
-function getShopLvls(){try{return JSON.parse(localStorage.getItem(KSH))||{};}catch(e){return{};}}
+function _normalizeShopLvls(raw){
+  const out={};
+  if(!raw||typeof raw!=='object')return out;
+  for(const it of SHOP_ITEMS){
+    const v=Number(raw[it.id]);
+    if(Number.isFinite(v)&&v>0)out[it.id]=Math.min(it.maxLvl,Math.floor(v));
+  }
+  return out;
+}
+function _shopLvlsTotal(lvls){return Object.values(lvls).reduce((a,b)=>a+(Number(b)||0),0);}
+function saveShopLvls(lvls){
+  const safe=_normalizeShopLvls(lvls);
+  localStorage.setItem(KSH,JSON.stringify(safe));
+  localStorage.setItem(KSH_BAK,JSON.stringify(safe));
+}
+function getShopLvls(){
+  let primary={},backup={};
+  try{primary=_normalizeShopLvls(JSON.parse(localStorage.getItem(KSH)||'{}'));}catch(e){primary={};}
+  try{backup=_normalizeShopLvls(JSON.parse(localStorage.getItem(KSH_BAK)||'{}'));}catch(e){backup={};}
+  const best=_shopLvlsTotal(backup)>_shopLvlsTotal(primary)?backup:primary;
+  // Répare automatiquement une sauvegarde principale incomplète/corrompue.
+  if(_shopLvlsTotal(best)!==_shopLvlsTotal(primary))localStorage.setItem(KSH,JSON.stringify(best));
+  return best;
+}
 function getShopLvl(id){return getShopLvls()[id]||0;}
-function upgShop(id){const l=getShopLvls();l[id]=(l[id]||0)+1;localStorage.setItem(KSH,JSON.stringify(l));}
+function upgShop(id){const l=getShopLvls();l[id]=(l[id]||0)+1;saveShopLvls(l);}
 function shopCost(item){return Math.floor(item.baseCost*Math.pow(2.0,getShopLvl(item.id)));}
 function applyShopBonuses(s){
   const l=getShopLvls();
@@ -1367,6 +1391,8 @@ function applyShopBonuses(s){
   if(p.fireRate<118)p.fireRate=118;
   if((p.critChance||0)>.72)p.critChance=.72;
 }
+// S'assure qu'une copie backup existe et synchronise les deux stockages.
+(function syncShopStorage(){saveShopLvls(getShopLvls());})();
 /** 0–100 : progression boutique (poids forts sur passifs « dieu »). */
 function getMetaPowerScore(){
   try{
@@ -2284,6 +2310,7 @@ const IS_APPLE_WEBKIT=/(iphone|ipad|ipod|macintosh)/i.test(_ua)&&/webkit/i.test(
 const PERF_SHADOW_SCALE=IS_APPLE_WEBKIT?.45:1;
 const PERF_GRID_STEP=IS_APPLE_WEBKIT?2:1;
 const PERF_MAX_DMG_NUMS=IS_APPLE_WEBKIT?75:180;
+const PLAYER_HIT_IFRAME_MS=IS_APPLE_WEBKIT?260:120;
 function perfBlur(v){return Math.max(0,v*PERF_SHADOW_SCALE);}
 let W,H;
 function resizeCanvas(){
@@ -2370,6 +2397,7 @@ function mkState(){
       chain:false,chainCount:2,
       freeze:false,vamp:0,regen:0,regenTimer:0,
       hasDash:false,dashCd:0,
+      hitCd:0,
       triShot:false,critChance:0,critMult:2,slowMult:1,
       hasShield:false,shieldCd:0,shieldActive:false,
       turretCount:0,divineTimer:-1,divineActive:false,
@@ -3038,7 +3066,10 @@ function updateObstacles(dt){
       ob.x+=ob.vx;ob.y+=ob.vy;
       // Touche le joueur
       if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size){
-        if(!p.divineActive&&!p.shieldActive){p.hp-=ob.dmg;pts(p.x,p.y,'#ff6600',1,3);if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
+        if(!p.divineActive&&!p.shieldActive&&(p.hitCd||0)<=0){
+          p.hp-=ob.dmg;p.hitCd=PLAYER_HIT_IFRAME_MS;pts(p.x,p.y,'#ff6600',1,3);
+          if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}
+        }
       }
       // Touche les ennemis
       for(let j=state.enemies.length-1;j>=0;j--){
@@ -3053,8 +3084,9 @@ function updateObstacles(dt){
     if((ob.type==='fire_zone'||ob.type==='toxic_pool'||ob.type==='lightning_zone')&&!ob.solid){
       if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size*.5){
         const skipToxic=ob.type==='toxic_pool'&&p.immunePoison;
-        if(!skipToxic&&!p.divineActive&&Math.random()<.08){
+        if(!skipToxic&&!p.divineActive&&(p.hitCd||0)<=0&&Math.random()<.08){
           p.hp-=(ob.dmg||5);
+          p.hitCd=PLAYER_HIT_IFRAME_MS;
           if(ob.slow)p.speed=Math.max(.5,p.speed*ob.slow);
           if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}
         }
@@ -3097,11 +3129,11 @@ function updateObstacles(dt){
         if(Math.abs(dx)<ob.w*.5+p.size&&Math.abs(dy)<ob.h*.5+p.size){
           if(Math.abs(dx)-ob.w*.5>Math.abs(dy)-ob.h*.5)p.x+=dx>0?2:-2;
           else p.y+=dy>0?2:-2;
-          if(ob.dmg){p.hp-=ob.dmg*.1;if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
+          if(ob.dmg&&(p.hitCd||0)<=0){p.hp-=ob.dmg*.1;p.hitCd=PLAYER_HIT_IFRAME_MS;if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
         }
       } else if(dist<minDist){
         const push=minDist-dist;p.x+=dx/(dist||1)*push;p.y+=dy/(dist||1)*push;
-        if(ob.dmg&&Math.random()<.05){p.hp-=ob.dmg;if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
+        if(ob.dmg&&(p.hitCd||0)<=0&&Math.random()<.05){p.hp-=ob.dmg;p.hitCd=PLAYER_HIT_IFRAME_MS;if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}}
       }
     }
 
@@ -4162,16 +4194,22 @@ function loop(ts=0){
 /** Phénix / renaissance / 2e vie / phénix éternel — retourne true si la mort est évitée. */
 function tryPlayerRevives(p){
   if(!p||p.hp>0)return false;
-  if(p.phoenix){p.hp=p.maxHp*.3;p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);return true;}
-  if(p.rebirth){p.hp=p.maxHp*.5;p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);return true;}
-  if(p.phoenixInfinite&&!(p.phoenixCd>0)){p.hp=Math.max(1,Math.floor(p.maxHp*.1));p.phoenixCd=60000;pts(p.x,p.y,'#ff4400',2,6);return true;}
-  if(p.secondLife&&!(p.secondLifeCd>0)){p.secondLife=false;p.secondLifeCd=60000;p.hp=Math.max(1,Math.floor(p.maxHp*.25));pts(p.x,p.y,'#ff88dd',2,6);return true;}
+  if(p.phoenix){p.hp=p.maxHp*.3;p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);return true;}
+  if(p.rebirth){p.hp=p.maxHp*.5;p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);return true;}
+  if(p.phoenixInfinite&&!(p.phoenixCd>0)){p.hp=Math.max(1,Math.floor(p.maxHp*.1));p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.phoenixCd=60000;pts(p.x,p.y,'#ff4400',2,6);return true;}
+  if(p.secondLife&&!(p.secondLifeCd>0)){p.secondLife=false;p.secondLifeCd=60000;p.hp=Math.max(1,Math.floor(p.maxHp*.25));p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);pts(p.x,p.y,'#ff88dd',2,6);return true;}
   return false;
 }
 
 function update(dt){
   if(!state||!state.player)return;
   const p=state.player;
+  if((state.resumeFreezeMs||0)>0){
+    state.resumeFreezeMs=Math.max(0,state.resumeFreezeMs-dt);
+    updateHUD();
+    return;
+  }
+  if((p.hitCd||0)>0){p.hitCd=Math.max(0,p.hitCd-dt);}
   if((p.secondLifeCd||0)>0){p.secondLifeCd-=dt;if(p.secondLifeCd<=0){p.secondLifeCd=0;p.secondLife=true;}}
   if((p.phoenixCd||0)>0){p.phoenixCd-=dt;if(p.phoenixCd<=0)p.phoenixCd=0;}
   state.elapsed+=dt;state.waveTimer+=dt;
@@ -4491,12 +4529,14 @@ function update(dt){
     if(b.enemy){
       if(Math.hypot(b.x-p.x,b.y-p.y)<p.size+b.size){
         if(p.divineActive)return false;
+        if((p.hitCd||0)>0)return false;
         if(p.shieldActive){p.shieldActive=false;p.shieldCd=p.shieldCooldownMax||8000;return false;}
         if(p.dodge>0&&Math.random()<p.dodge)return false;
         if(p.shadowDodge&&Math.random()<.5)return false;
         const wvB=Math.max(1,state.wave||1);
         const projMul=enemyWorld3PerWaveDmgMul(wvB)*enemySecteurBrutalityMul(wvB);
         p.hp-=Math.max(10,(7+wvB*1.08)*projMul);
+        p.hitCd=PLAYER_HIT_IFRAME_MS;
         pts(p.x,p.y,'#ff3c6e',.6,2.5);
         if(p.hp<=0){if(tryPlayerRevives(p))return false;gameOver();return false;}
         return false;
@@ -4952,13 +4992,14 @@ function update(dt){
         e._bioTouchT=(e._bioTouchT||0)+dt;
         if(e._bioTouchT>=520){
           e._bioTouchT=0;
-          if(!p.divineActive){p.hp-=e.dmg;pts(p.x,p.y,'#ff3c6e',.8,2.5);
+          if(!p.divineActive&&(p.hitCd||0)<=0){p.hp-=e.dmg;p.hitCd=PLAYER_HIT_IFRAME_MS;pts(p.x,p.y,'#ff3c6e',.8,2.5);
             if(p.hp<=0){if(tryPlayerRevives(p))continue;gameOver();return;}}
         }
         continue;
       }
       if(e.type==='thief'){const steal=Math.min(state.coinsRun,5+state.wave);state.coinsRun=Math.max(0,state.coinsRun-steal);if(steal>0){dmgNum(p.x,p.y-10,'-'+steal+'🪙','#ffcc00');}}
-      p.hp-=e.dmg;pts(p.x,p.y,'#ff3c6e',.8,2.5);
+      if((p.hitCd||0)>0)continue;
+      p.hp-=e.dmg;p.hitCd=PLAYER_HIT_IFRAME_MS;pts(p.x,p.y,'#ff3c6e',.8,2.5);
       if(e.type==='splitter')splitEnemy(e);
       if(e.type==='toxic'){p.speed=Math.max(.5,p.speed*.9);}
       state.enemies.splice(i,1);
@@ -4977,7 +5018,7 @@ function update(dt){
   state.particles.forEach(pt=>{
     if(!pt.toxic)return;
     if(Math.hypot(pt.x-p.x,pt.y-p.y)<p.size+pt.size){
-      if(!p.immunePoison){p.hp-=pt.dmg*.1;pt.toxic=false;}
+      if(!p.immunePoison&&(p.hitCd||0)<=0){p.hp-=pt.dmg*.1;p.hitCd=PLAYER_HIT_IFRAME_MS;pt.toxic=false;}
       else pt.toxic=false;
       if(p.hp<=0){if(tryPlayerRevives(p))return;gameOver();return;}
     }
@@ -5494,6 +5535,9 @@ function showUpgrades(){
       if(state.runUpgrades)state.runUpgrades.push({id:u.id,name:u.name,icon:u.icon,rarity:u.rarity,wave:state.wave});
       if(typeof checkSynergy==='function')checkSynergy(u.id);
       sc.classList.remove('show');
+      // Petit gel après le choix d'upgrade pour reprendre le contrôle sans mort instant.
+      state.resumeFreezeMs=250;
+      state.player.hitCd=Math.max(state.player.hitCd||0,320);
       state.paused=false;
     };
     c.addEventListener('click',pick);
