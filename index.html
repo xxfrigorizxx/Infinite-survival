@@ -227,7 +227,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -587,6 +587,7 @@ function snd(type){
 ══════════════════════════════════════════════ */
 const EMAX=10,EREGEN=30*60*1000;
 const KE='surv_e',KR='surv_r';
+const ENERGY_UPDATE_GRANT_KEY='surv_energy_grant_once_2026_04';
 function loadE(){const v=parseInt(localStorage.getItem(KE));return isNaN(v)?EMAX:Math.min(v,EMAX);}
 function saveE(v){localStorage.setItem(KE,String(v));}
 function getE(){
@@ -601,6 +602,7 @@ function nextRegen(){const l=parseInt(localStorage.getItem(KR))||Date.now();retu
    PIÈCES
 ══════════════════════════════════════════════ */
 const KC='surv_coins';
+const COIN_PICKUP_COLOR='#f4a61d';
 function getCoins(){return parseInt(localStorage.getItem(KC))||0;}
 function addCoins(n){localStorage.setItem(KC,String(getCoins()+n));}
 function spendCoins(n){const c=getCoins();if(c<n)return false;localStorage.setItem(KC,String(c-n));return true;}
@@ -638,7 +640,7 @@ function confirmReset(){
 
 function doReset(){
   // Effacer toutes les données locales
-  const keys=['surv_e','surv_r','surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw','surv_device_id'];
+  const keys=['surv_e','surv_r',ENERGY_UPDATE_GRANT_KEY,'surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw','surv_device_id'];
   keys.forEach(k=>localStorage.removeItem(k));
   // Fermer les modals
   document.getElementById('reset-confirm').style.display='none';
@@ -1274,14 +1276,22 @@ function _renderLBData(lb){window._renderLBData(lb);}
 ══════════════════════════════════════════════ */
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
-const SHOP_VERSION='v7'; // Équilibre meta / boutique / codex — incrémenter pour forcer reset niveaux boutique
+const SHOP_VERSION='v7.1'; // Migration boutique non destructive
 
-// Vérifier la version au chargement — reset des achats boutique si version différente
+// Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
   if(localStorage.getItem(KSH_VER)!==SHOP_VERSION){
-    localStorage.removeItem(KSH);
     localStorage.setItem(KSH_VER,SHOP_VERSION);
-    console.log('Mise à jour v7 — boutique réinitialisée (équilibre meta & codex)');
+    console.log('Mise à jour boutique détectée — progression conservée');
+  }
+})();
+// Bonus update one-shot : redonner toute l'énergie une seule fois
+(function grantUpdateEnergyOnce(){
+  if(!localStorage.getItem(ENERGY_UPDATE_GRANT_KEY)){
+    saveE(EMAX);
+    localStorage.removeItem(KR);
+    localStorage.setItem(ENERGY_UPDATE_GRANT_KEY,'1');
+    console.log('Mise à jour détectée — énergie restaurée au maximum');
   }
 })();
 const SHOP_ITEMS=[
@@ -1903,7 +1913,7 @@ const ALL_UPGRADES=[
   {id:'c_mirror_s',name:'TIR MIROIR',icon:'🪞',rarity:'epic',unlockWave:12,desc:'Copie dans direction opposée',apply:s=>{  s.player.mirrorShot=true;discoverEntry('upgrades','c_mirror_s'); }},
   {id:'c_glass_c',name:'CANON VERRE',icon:'🔮',rarity:'legendary',unlockWave:14,desc:'1 PV mais x10 dégâts',apply:s=>{  s.player.maxHp=1;s.player.hp=1;s.player.bulletDmg*=10;discoverEntry('upgrades','c_glass_c'); }},
   {id:'c_lifeSteal_2',name:'DRAIN II',icon:'🐛',rarity:'legendary',unlockWave:18,desc:'Tir soigne 1 PV',apply:s=>{  s.player.lifeSteal=true;s.player.lifeStealAmt=1;discoverEntry('upgrades','c_lifeSteal_2'); }},
-  {id:'c_double_b',name:'DOUBLE MISE II',icon:'🎲',rarity:'legendary',unlockWave:18,desc:'50/50 x3 ou x0',apply:s=>{  s.player.doubleBet=true;discoverEntry('upgrades','c_double_b'); }},
+  {id:'c_double_b',name:'DOUBLE MISE II',icon:'🎲',rarity:'legendary',unlockWave:18,desc:'50/50 x1.6 ou x0.4',apply:s=>{  s.player.doubleBet=true;discoverEntry('upgrades','c_double_b'); }},
   {id:'c_time_st',name:'ARRÊT TEMPS',icon:'⏹️',rarity:'mythic',unlockWave:30,desc:'Gèle tout 5s/45s',apply:s=>{  s.player.timeStopTimer=0;discoverEntry('upgrades','c_time_st'); }},
   {id:'c_necro_2',name:'NÉCROMANCIEN',icon:'💀',rarity:'legendary',unlockWave:25,desc:'Ennemis tués reviennent 5s',apply:s=>{  s.player.necroRaise=true;discoverEntry('upgrades','c_necro_2'); }},
   {id:'c_phoenix_e',name:'PHÉNIX ÉTERNEL',icon:'🔥',rarity:'mythic',unlockWave:28,desc:'Ressuscite inf. à 10% (60s CD)',apply:s=>{  s.player.phoenixInfinite=true;s.player.phoenixCd=0;discoverEntry('upgrades','c_phoenix_e'); }},
@@ -2192,7 +2202,7 @@ const ALL_UPGRADES=[
    apply:s=>{ s.player.lifeSteal=true; }},
 
   {id:'p_double_dmg',name:'DOUBLE MISE',    icon:'🎰',rarity:'legendary',unlockWave:18,
-   desc:'50% chance x2 dégâts, 50% chance x0',
+   desc:'50% chance x1.6 dégâts, 50% chance x0.4',
    apply:s=>{ s.player.doubleBet=true; }},
 
   {id:'p_combo',    name:'COMPTEUR COMBO',  icon:'🔢',rarity:'epic',     unlockWave:16,
@@ -2269,6 +2279,12 @@ function pickUpgrades(wave,n=3){
 ══════════════════════════════════════════════ */
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
+const _ua=navigator.userAgent||'';
+const IS_APPLE_WEBKIT=/(iphone|ipad|ipod|macintosh)/i.test(_ua)&&/webkit/i.test(_ua)&&!/(crios|fxios|edgios|opr\/)/i.test(_ua);
+const PERF_SHADOW_SCALE=IS_APPLE_WEBKIT?.45:1;
+const PERF_GRID_STEP=IS_APPLE_WEBKIT?2:1;
+const PERF_MAX_DMG_NUMS=IS_APPLE_WEBKIT?75:180;
+function perfBlur(v){return Math.max(0,v*PERF_SHADOW_SCALE);}
 let W,H;
 function resizeCanvas(){
   const r=canvas.getBoundingClientRect();
@@ -4500,14 +4516,13 @@ function update(dt){
         // Omega : dernier projectile gros
         if(p.omegaShot!=null){p.omegaShot++;if(p.omegaShot>=(p.multiShot+1+(p.triShot?2:0))){p.omegaShot=0;dmg*=4;b.size*=2.5;}}
         const cr=Math.random()<p.critChance;
-        if(cr){dmg*=(p.critMult||2);state.stats.crits++;dmgNum(e.x,e.y,Math.round(dmg),'#ffd700',true);}
-        else dmgNum(e.x,e.y,Math.round(dmg),'#ff6');
-        // Entity : immunisé aux non-critiques
-        if(e.immune&&!cr){pts(b.x,b.y,'#ff00ff',.6,1.5);if(b.pierce<=0)return false;b.pierce--;continue;}
+        if(cr){dmg*=(p.critMult||2);state.stats.crits++;}
+        // Entity : résistance hors critiques (plus de hit à 0)
+        if(e.immune&&!cr){dmg*=.25;pts(b.x,b.y,'#ff00ff',.6,1.5);}
         // Combo — bonus de dégâts
         if(state.player.combo>0)dmg*=1+state.player.combo*.05;
-        // Double mise — 50/50
-        if(state.player.doubleBet)dmg=Math.random()<.5?dmg*2:0;
+        // Double mise — variance sans annuler complètement les dégâts (moyenne neutre)
+        if(state.player.doubleBet)dmg*=Math.random()<.5?1.6:.4;
         // Armure : réduit les dégâts de 50%
         if(e.armor)dmg*=.5;
         // Void : absorbe les balles non-critiques
@@ -4519,6 +4534,7 @@ function update(dt){
         // Gardien bouclé : réduit les dégâts des ennemis proches protégés
         if(e._shielded>0){dmg*=.4;e._shielded-=dt;}
         dmg=applyConditionalDmgMul(p,e,dmg);
+        if(dmg>0)dmgNum(e.x,e.y,Math.max(1,Math.round(dmg)),cr?'#ffd700':(e.immune?'#ff9bff':'#ff6'),cr);
         e.hp-=dmg;state.stats.totalDmg+=dmg;
         if(p.poisonBullet&&e.hp>0){e.playerPoisonT=3000;}
         // Reaper / Judgment — pas sur le boss de biome (sinon mort « gratuite »)
@@ -5474,6 +5490,7 @@ function showUpgrades(){
     const pick=()=>{
       u.apply(state);
       discoverEntry('upgrades',u.id);
+      if(!known)showInfoBanner(`✦ ${u.name} — ${u.desc}`,3800);
       if(state.runUpgrades)state.runUpgrades.push({id:u.id,name:u.name,icon:u.icon,rarity:u.rarity,wave:state.wave});
       if(typeof checkSynergy==='function')checkSynergy(u.id);
       sc.classList.remove('show');
@@ -5567,6 +5584,20 @@ function showWaveBanner(w){
   el.textContent=`⚠ VAGUE ${w} ⚠`;el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2500);
 }
+function showInfoBanner(msg,duration=3200){
+  const el=document.getElementById('wave-banner');
+  if(!el)return;
+  if(showInfoBanner._timer)clearTimeout(showInfoBanner._timer);
+  el.textContent=msg;
+  el.style.color='#00ffe7';
+  el.style.background='rgba(0,255,231,.15)';
+  el.style.borderColor='rgba(0,255,231,.42)';
+  el.classList.add('show');
+  showInfoBanner._timer=setTimeout(()=>{
+    el.classList.remove('show');
+    el.style.color='';el.style.background='';el.style.borderColor='';
+  },duration);
+}
 function updateHUD(){
   const p=state.player;
   const he=document.getElementById('hud-hp');
@@ -5653,11 +5684,14 @@ function draw(){
 
   // Grille biome — se déplace avec la caméra (effet infini)
   ctx.strokeStyle=biome.grid;ctx.lineWidth=1;
-  const gSize=38;
+  const gSize=IS_APPLE_WEBKIT?52:38;
   const offX=((camX%gSize)+gSize)%gSize;
   const offY=((camY%gSize)+gSize)%gSize;
-  for(let x=-offX;x<W+gSize;x+=gSize){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=-offY;y<H+gSize;y+=gSize){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.beginPath();
+  let gx=0,gy=0;
+  for(let x=-offX;x<W+gSize;x+=gSize){if(gx++%PERF_GRID_STEP)continue;ctx.moveTo(x,0);ctx.lineTo(x,H);}
+  for(let y=-offY;y<H+gSize;y+=gSize){if(gy++%PERF_GRID_STEP)continue;ctx.moveTo(0,y);ctx.lineTo(W,y);}
+  ctx.stroke();
 
     // ── Tout ce qui suit est dans l'espace monde ──
   const ZOOM=getZoom();
@@ -5668,7 +5702,12 @@ function draw(){
   ctx.translate(-camX,-camY);
 
   // Pièces
-  state.coinPickups.forEach(c=>{ctx.font='13px serif';ctx.textAlign='center';ctx.fillText('🪙',c.x,c.y);ctx.textAlign='left';});
+  state.coinPickups.forEach(c=>{
+    ctx.beginPath();ctx.arc(c.x,c.y,5,0,Math.PI*2);
+    ctx.fillStyle=COIN_PICKUP_COLOR;ctx.fill();
+    ctx.beginPath();ctx.arc(c.x-1.2,c.y-1.2,2.3,0,Math.PI*2);
+    ctx.fillStyle='#ffd700';ctx.fill();
+  });
 
   // Obstacles de biome
   if(state.obstacles){
@@ -5742,7 +5781,7 @@ function draw(){
     ctx.fillStyle='#200';ctx.fillRect(e.x-bw/2,e.y-e.size-8,bw,4);
     ctx.fillStyle=e.type==='megaboss'?'#ff0040':e.type==='boss'?'#ff2080':e.type==='healer'?'#00ff88':'#f40';
     ctx.fillRect(e.x-bw/2,e.y-e.size-8,bw*(e.hp/e.maxHp),4);
-    ctx.save();ctx.translate(e.x,e.y);ctx.shadowBlur=9;ctx.shadowColor=e.color;
+    ctx.save();ctx.translate(e.x,e.y);ctx.shadowBlur=perfBlur(9);ctx.shadowColor=e.color;
     if(e.frozen>0){ctx.globalAlpha=.7;}
     if(e.type==='megaboss'||e.type==='boss'){
       const pts2=e.type==='megaboss'?12:8;
@@ -6098,9 +6137,9 @@ function draw(){
   // Balles
   state.bullets.forEach(b=>{
     ctx.beginPath();ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
-    if(b.isChain||b.isTurret){ctx.fillStyle='#aaff44';ctx.shadowBlur=7;ctx.shadowColor='#aaff44';}
+    if(b.isChain||b.isTurret){ctx.fillStyle='#aaff44';ctx.shadowBlur=perfBlur(7);ctx.shadowColor='#aaff44';}
     else if(b.enemy){ctx.fillStyle='#ff4444';}
-    else{ctx.fillStyle='#fff';ctx.shadowBlur=8;ctx.shadowColor='#00ffe7';}
+    else{ctx.fillStyle='#fff';ctx.shadowBlur=perfBlur(8);ctx.shadowColor='#00ffe7';}
     ctx.fill();ctx.shadowBlur=0;
   });
 
@@ -6109,7 +6148,8 @@ function draw(){
   ctx.globalAlpha=1;
 
   // Chiffres
-  state.dmgNums.forEach(d=>{
+  const dmgNumsToDraw=state.dmgNums.length>PERF_MAX_DMG_NUMS?state.dmgNums.slice(-PERF_MAX_DMG_NUMS):state.dmgNums;
+  dmgNumsToDraw.forEach(d=>{
     ctx.globalAlpha=d.life;ctx.fillStyle=d.color;
     ctx.font=`bold ${d.size}px 'Share Tech Mono'`;ctx.textAlign='center';ctx.fillText(d.val,d.x,d.y);
   });ctx.globalAlpha=1;ctx.textAlign='left';

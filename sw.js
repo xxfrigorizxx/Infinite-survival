@@ -1,4 +1,4 @@
-const CACHE = 'survivor-v7-equilibre-meta-codex-2026-04-15';
+const CACHE = 'survivor-v7.1-balance-apple-shop-stable-2026-04-28';
 const ASSETS = [
   './',
   './index.html',
