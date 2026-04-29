@@ -1,4 +1,4 @@
-const CACHE = 'survivor-v7.1.4-effects-wave-cleanup-2026-04-28';
+const CACHE = 'survivor-v7.1.6-hotfix-mobile-pause-resume-2026-04-29';
 const ASSETS = [
   './',
   './index.html',

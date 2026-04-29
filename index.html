@@ -109,6 +109,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 #dash-btn.ready{border-color:var(--neon);box-shadow:0 0 13px rgba(0,255,231,.48);}
 #dash-btn.cooldown{opacity:.32;}
 #dash-btn .di{font-size:clamp(.78rem,2.8vw,1.1rem);}
+#pause-btn{position:absolute;left:10px;bottom:50px;width:44px;height:44px;border-radius:50%;background:rgba(0,255,231,.08);border:1px solid rgba(0,255,231,.35);color:var(--neon);font-family:'Orbitron',sans-serif;font-size:.95rem;display:flex;align-items:center;justify-content:center;z-index:21;cursor:pointer;-webkit-appearance:none;}
+#pause-overlay{display:none;position:absolute;inset:0;z-index:120;background:rgba(4,8,15,.82);align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;padding:20px;}
+#pause-overlay h3{font-family:'Orbitron',sans-serif;color:var(--neon);font-size:clamp(.9rem,4vw,1.2rem);}
+#pause-overlay p{color:#89a;font-size:clamp(.62rem,2.4vw,.75rem);}
+#resume-btn{display:none;width:230px;}
 #upgrade-screen{display:none;position:absolute;inset:0;background:rgba(4,8,15,.93);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px;overflow-y:auto;}
 #upgrade-screen.show{display:flex;}
 #upgrade-screen h2{font-family:'Orbitron',sans-serif;color:var(--gold);text-shadow:0 0 16px var(--gold);font-size:clamp(.82rem,3.5vw,1.1rem);letter-spacing:.09em;}
@@ -227,7 +232,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.4 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.6 HOTFIX MOBILE · PAUSE · REPRISE RUN —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -241,6 +246,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
   <div class="title-btns">
     <button id="start-btn" onclick="tryStart()">▶ JOUER  (-1 ⚡)</button>
+    <button class="mbtn" id="resume-btn" onclick="resumeSavedRun()">↻ REPRENDRE LA PARTIE</button>
     <div class="menu-row">
       <button class="mbtn" id="shop-btn" onclick="openShop()">🛒 BOUTIQUE</button>
       <button class="mbtn" id="codex-btn" onclick="openCodex()">📖 CODEX</button>
@@ -289,6 +295,13 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div id="mini-map"><canvas id="mini-canvas" width="80" height="80"></canvas></div>
   <div id="joystick-zone"><div id="joystick-base"></div><div id="joystick-thumb"></div></div>
   <div id="dash-btn"><span class="di">⚡</span><span>DASH</span></div>
+  <button id="pause-btn" onclick="togglePause()" title="Pause">⏸</button>
+  <div id="pause-overlay">
+    <h3>PAUSE</h3>
+    <p>La partie est en pause.</p>
+    <button class="mbtn" id="pause-resume-btn" onclick="closePause()">▶ REPRENDRE</button>
+    <button class="mbtn" id="pause-menu-btn" onclick="backToTitle()">← MENU PRINCIPAL</button>
+  </div>
   <div id="upgrade-screen">
     <h2>⬆ NIVEAU SUPÉRIEUR !</h2>
     <p id="upg-unlock-hint"></p>
@@ -587,15 +600,21 @@ function snd(type){
 ══════════════════════════════════════════════ */
 const EMAX=10,EREGEN=30*60*1000;
 const KE='surv_e',KR='surv_r';
+const KEMETA='surv_meta_energy_bonus';
 const ENERGY_UPDATE_GRANT_KEY='surv_energy_grant_once_2026_04_v711';
-function loadE(){const v=parseInt(localStorage.getItem(KE));return isNaN(v)?EMAX:Math.min(v,EMAX);}
+const KRUN='surv_run_save_v1';
+function getMetaEnergyBonus(){const v=parseInt(localStorage.getItem(KEMETA));return isNaN(v)?0:Math.max(0,v);}
+function addMetaEnergyBonus(n){localStorage.setItem(KEMETA,String(Math.max(0,getMetaEnergyBonus()+Math.floor(n||0))));}
+function getEnergyMax(){return Math.min(30,EMAX+getShopLvl('s_energy')+getMetaEnergyBonus());}
+function loadE(){const v=parseInt(localStorage.getItem(KE));const mx=getEnergyMax();return isNaN(v)?mx:Math.min(v,mx);}
 function saveE(v){localStorage.setItem(KE,String(v));}
 function getE(){
+  const mx=getEnergyMax();
   let e=loadE();
-  if(e<EMAX){const l=parseInt(localStorage.getItem(KR))||Date.now();const el=Date.now()-l;const g=Math.floor(el/EREGEN);if(g>0){e=Math.min(EMAX,e+g);saveE(e);localStorage.setItem(KR,String(Date.now()-(el%EREGEN)));}}
+  if(e<mx){const l=parseInt(localStorage.getItem(KR))||Date.now();const el=Date.now()-l;const g=Math.floor(el/EREGEN);if(g>0){e=Math.min(mx,e+g);saveE(e);localStorage.setItem(KR,String(Date.now()-(el%EREGEN)));}}
   return e;
 }
-function spendE(){const e=getE();if(e<=0)return false;saveE(e-1);if(e-1<EMAX)localStorage.setItem(KR,String(Date.now()));return true;}
+function spendE(){const e=getE();const mx=getEnergyMax();if(e<=0)return false;saveE(e-1);if(e-1<mx)localStorage.setItem(KR,String(Date.now()));return true;}
 function nextRegen(){const l=parseInt(localStorage.getItem(KR))||Date.now();return Math.max(0,EREGEN-((Date.now()-l)%EREGEN));}
 
 /* ══════════════════════════════════════════════
@@ -640,7 +659,7 @@ function confirmReset(){
 
 function doReset(){
   // Effacer toutes les données locales
-  const keys=['surv_e','surv_r',ENERGY_UPDATE_GRANT_KEY,'surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw','surv_device_id'];
+  const keys=['surv_e','surv_r',KEMETA,ENERGY_UPDATE_GRANT_KEY,'surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw','surv_device_id'];
   keys.forEach(k=>localStorage.removeItem(k));
   // Fermer les modals
   document.getElementById('reset-confirm').style.display='none';
@@ -1277,7 +1296,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v7.1.4'; // Migration boutique non destructive
+const SHOP_VERSION='v7.1.6'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -1289,7 +1308,7 @@ const SHOP_VERSION='v7.1.4'; // Migration boutique non destructive
 // Bonus update one-shot : redonner toute l'énergie une seule fois
 (function grantUpdateEnergyOnce(){
   if(!localStorage.getItem(ENERGY_UPDATE_GRANT_KEY)){
-    saveE(EMAX);
+    saveE(getEnergyMax());
     localStorage.removeItem(KR);
     localStorage.setItem(ENERGY_UPDATE_GRANT_KEY,'1');
     console.log('Mise à jour détectée — énergie restaurée au maximum');
@@ -1324,7 +1343,7 @@ const SHOP_ITEMS=[
   {id:'s_mag',   icon:'🧲', name:'MAGNÉT. DE BASE',     desc:'Portée XP +30%',        baseCost:275, maxLvl:4, effect:s=>s.player.xpRadius*=1.3},
   {id:'s_dash',  icon:'💨', name:'ESQUIVE AU DÉPART',   desc:'Dash débloqué dès le début', baseCost:600, maxLvl:1, effect:s=>{s.player.hasDash=true;}},
   {id:'s_dashcd',icon:'🔀', name:'DASH RAPIDE',         desc:'Dash -0.5s cooldown',   baseCost:350, maxLvl:4, effect:s=>s.player.dashCooldownMax=Math.max(1000,(s.player.dashCooldownMax||3000)-500)},
-  {id:'s_energy',icon:'🔋', name:'ÉNERGIE DE BASE',     desc:'Trophée (sans effet pour l’instant)', baseCost:1000,maxLvl:1, effect:s=>{}},
+  {id:'s_energy',icon:'🔋', name:'ÉNERGIE DE BASE',     desc:'Énergie max +1 (meta)', baseCost:1000,maxLvl:1, effect:s=>{}},
   // ── CATÉGORIE 4 : OFFENSIF AVANCÉ ──
   {id:'s_explode',icon:'💥',name:'EXPLOSION DE BASE',   desc:'Balles explosent au départ',baseCost:700,maxLvl:1,effect:s=>s.player.explode=true},
   {id:'s_explsz', icon:'🌋',name:'RAYON EXPLOSION+',   desc:'+10 rayon explosion',    baseCost:400, maxLvl:5, effect:s=>s.player.explodeRadius=(s.player.explodeRadius||55)+10},
@@ -1415,8 +1434,9 @@ function buyEnergy(){
     if(btn){btn.textContent='❌ Pas assez de pièces !';setTimeout(()=>{btn.textContent='⚡ ACHETER 1 ÉNERGIE — 100 🪙';},1500);}
     return;
   }
+  const mx=getEnergyMax();
   const e=getE();
-  if(e>=EMAX){
+  if(e>=mx){
     // Remboursement
     localStorage.setItem(KC,String(getCoins()+cost));
     const btn=document.getElementById('buy-energy-btn');
@@ -1428,7 +1448,7 @@ function buyEnergy(){
   renderShop();
   updateEnergyUI();
   const btn=document.getElementById('buy-energy-btn');
-  if(btn){btn.textContent=`✅ Énergie ajoutée ! (${getE()}/${EMAX})`;setTimeout(()=>{btn.textContent='⚡ ACHETER 1 ÉNERGIE — 100 🪙';},2000);}
+  if(btn){btn.textContent=`✅ Énergie ajoutée ! (${getE()}/${mx})`;setTimeout(()=>{btn.textContent='⚡ ACHETER 1 ÉNERGIE — 100 🪙';},2000);}
 }
 function openShop(fromStats=false){
   if(fromStats)document.getElementById('stats-screen').classList.remove('show');
@@ -1806,7 +1826,7 @@ const ALL_UPGRADES=[
   {id:'s_malus_2',name:'RISQUE-TOUT',icon:'🎲',rarity:'epic',unlockWave:10,desc:'MALUS: PV max /3 mais +200% dégâts',apply:s=>{  s.player.maxHp=Math.max(5,Math.floor(s.player.maxHp/3));s.player.hp=Math.min(s.player.hp,playerHealCap(s.player));s.player.bulletDmg*=3;discoverEntry('upgrades','s_malus_2'); }},
   {id:'s_malus_3',name:'BERSERKER FOU',icon:'😡',rarity:'legendary',unlockWave:15,desc:'MALUS: plus de régén mais +300% dégâts quand blessé',apply:s=>{  s.player.regen=0;s.player.crazyBerserk=true;discoverEntry('upgrades','s_malus_3'); }},
   {id:'s_life_steal',name:'DRAIN TOTAL',icon:'🐛',rarity:'epic',unlockWave:12,desc:'Chaque balle soigne 0.3 PV',apply:s=>{  s.player.lifeSteal=true;discoverEntry('upgrades','s_life_steal'); }},
-  {id:'s_second',name:'VIE SUPPLÉMENTAIRE',icon:'💖',rarity:'legendary',unlockWave:15,desc:'Survit une fois à mort (60s CD)',apply:s=>{  s.player.secondLife=true;discoverEntry('upgrades','s_second'); }},
+  {id:'s_second',name:'VIE SUPPLÉMENTAIRE',icon:'💖',rarity:'legendary',unlockWave:15,desc:'Survit une fois à mort (60s CD)',apply:s=>{  s.player.secondLife=true;s.player.secondLifeCd=0;discoverEntry('upgrades','s_second'); }},
   {id:'s_overheal',name:'SURCHARGE PV',icon:'💉',rarity:'epic',unlockWave:10,desc:'PV peuvent dépasser le max x1.5',apply:s=>{  s.player.overheal=true;discoverEntry('upgrades','s_overheal'); }},
   {id:'s_food_1',name:'PAIN SEC',icon:'🍞',rarity:'common',unlockWave:1,desc:'MALUS: drôle — +2 PV max. Wow.',apply:s=>{  s.player.maxHp+=2;s.player.hp=Math.min(s.player.hp+2,playerHealCap(s.player));discoverEntry('upgrades','s_food_1'); }},
   {id:'s_bandage',name:'BANDAGE',icon:'🩹',rarity:'common',unlockWave:2,desc:'+15 PV maintenant',apply:s=>{  s.player.hp=Math.min(playerHealCap(s.player),s.player.hp+15);discoverEntry('upgrades','s_bandage'); }},
@@ -1911,7 +1931,7 @@ const ALL_UPGRADES=[
   {id:'e_greed',name:'AVIDITÉ',icon:'💸',rarity:'epic',unlockWave:10,desc:'MALUS: +200% pièces mais -20% dégâts',apply:s=>{  s.coinMult=(s.coinMult||1)*3;s.player.bulletDmg*=.80;discoverEntry('upgrades','e_greed'); }},
   {id:'e_charity',name:'CHARITÉ',icon:'🎁',rarity:'rare',unlockWave:4,desc:'MALUS: 0 pièces mais +50% XP',apply:s=>{  s.coinMult=0;s.xpMult=(s.xpMult||1)*1.50;discoverEntry('upgrades','e_charity'); }},
   {id:'e_gamble_xp',name:'PARI XP',icon:'🎰',rarity:'legendary',unlockWave:12,desc:'50% chance: XP x5 ou XP /5',apply:s=>{  Math.random()<.5?(s.xpMult=(s.xpMult||1)*5):(s.xpMult=(s.xpMult||1)*.2);discoverEntry('upgrades','e_gamble_xp'); }},
-  {id:'e_energy_1',name:'ÉNERGIE+',icon:'🔋',rarity:'common',unlockWave:1,desc:'Énergie max +1 (meta-game)',apply:s=>{  /* */;discoverEntry('upgrades','e_energy_1'); }},
+  {id:'e_energy_1',name:'ÉNERGIE+',icon:'🔋',rarity:'common',unlockWave:1,desc:'Énergie max +1 (meta-game)',apply:s=>{  addMetaEnergyBonus(1);saveE(getEnergyMax());discoverEntry('upgrades','e_energy_1'); }},
   {id:'e_luck_1',name:'CHANCE I',icon:'🍀',rarity:'rare',unlockWave:5,desc:'+20% chance upgrades rares+',apply:s=>{  s.player.lucky=true;discoverEntry('upgrades','e_luck_1'); }},
   {id:'e_luck_2',name:'CHANCE II',icon:'🍀',rarity:'epic',unlockWave:12,desc:'+35% chance epics+',apply:s=>{  s.player.superLucky=true;discoverEntry('upgrades','e_luck_2'); }},
   {id:'e_curse_items',name:'OBJETS MAUDITS',icon:'💀',rarity:'mythic',unlockWave:20,desc:'MALUS: toutes tes upgrades ont des malus mais x3 effets',apply:s=>{  s.player.cursed=true;discoverEntry('upgrades','e_curse_items'); }},
@@ -1953,7 +1973,7 @@ const ALL_UPGRADES=[
   {id:'c_allergy',name:'ALLERGIE',icon:'🤧',rarity:'rare',unlockWave:5,desc:'MALUS drôle: éternue toutes les 5s et se téléporte',apply:s=>{  s.player.allergy=true;discoverEntry('upgrades','c_allergy'); }},
   {id:'c_drunk',name:'IVRE',icon:'🍺',rarity:'epic',unlockWave:8,desc:'MALUS: contrôles oscillants mais +60% dégâts',apply:s=>{  s.player.drunk=true;s.player.bulletDmg*=1.60;discoverEntry('upgrades','c_drunk'); }},
   {id:'c_paranoid',name:'PARANOÏAQUE',icon:'👁️',rarity:'rare',unlockWave:6,desc:'MALUS: tire dans toutes les directions (gaspille balles)',apply:s=>{  s.player.paranoid=true;discoverEntry('upgrades','c_paranoid'); }},
-  {id:'c_nostalgia',name:'NOSTALGIE',icon:'🎵',rarity:'common',unlockWave:3,desc:'MALUS: reviens aux stats de départ mais +1 vie',apply:s=>{  s.player.secondLife=true;discoverEntry('upgrades','c_nostalgia'); }},
+  {id:'c_nostalgia',name:'NOSTALGIE',icon:'🎵',rarity:'common',unlockWave:3,desc:'MALUS: reviens aux stats de départ mais +1 vie',apply:s=>{  s.player.secondLife=true;s.player.secondLifeCd=0;discoverEntry('upgrades','c_nostalgia'); }},
   {id:'c_coffee',name:'CAFÉ',icon:'☕',rarity:'rare',unlockWave:4,desc:'Cadence +50% mais PV descend de 1/sec',apply:s=>{  s.player.fireRate=Math.max(60,s.player.fireRate*.67);s.player.coffeeDebuff=true;discoverEntry('upgrades','c_coffee'); }},
   {id:'c_rage_mode',name:'MODE RAGE',icon:'😤',rarity:'epic',unlockWave:10,desc:'PV<50%: cadence x2, vitesse x1.5',apply:s=>{  s.player.rageMode=true;discoverEntry('upgrades','c_rage_mode'); }},
   {id:'c_mirror_world',name:'MONDE MIROIR',icon:'🪞',rarity:'legendary',unlockWave:22,desc:'Tes ennemis coulent aussi tes upgrades défensives',apply:s=>{  s.player.mirrorWorld=true;s.player.maxHp+=200;s.player.bulletDmg*=2;discoverEntry('upgrades','c_mirror_world'); }},
@@ -2046,7 +2066,7 @@ const ALL_UPGRADES=[
   {id:'x_invuln',  name:'INVULNÉRABLE',  icon:'🌟',rarity:'legendary',unlockWave:20,
    desc:'1s invincible après chaque soin', apply:s=>s.player.invulnAfterHeal=true},
   {id:'x_second_life',name:'DEUXIÈME VIE',icon:'💖',rarity:'legendary',unlockWave:18,
-   desc:'Survit une fois à coup fatal (recharge en 60s)', apply:s=>s.player.secondLife=true},
+   desc:'Survit une fois à coup fatal (recharge en 60s)', apply:s=>{s.player.secondLife=true;s.player.secondLifeCd=0;}},
   {id:'x_aegis',   name:'ÉGIDE',         icon:'🛡️',rarity:'legendary',unlockWave:22,
    desc:'Absorbe les 5 prochains coups', apply:s=>s.player.aegis=(s.player.aegis||0)+5},
   {id:'x_mist',    name:'BRUME',         icon:'🌫️',rarity:'rare',    unlockWave:12,
@@ -2362,12 +2382,29 @@ function joyEnd(e){for(const t of e.changedTouches){if(t.identifier===joy.id){jo
 jZone.addEventListener('touchend',joyEnd,{passive:false});
 jZone.addEventListener('touchcancel',joyEnd,{passive:false});
 const dashBtn=document.getElementById('dash-btn');
-dashBtn.addEventListener('touchstart',e=>{e.preventDefault();if(state?.player?.hasDash&&state.player.dashCd<=0)doDash();},{passive:false});
+const pauseBtn=document.getElementById('pause-btn');
+dashBtn.addEventListener('touchstart',e=>{e.preventDefault();acknowledgeResumeInput();if(state?.player?.hasDash&&state.player.dashCd<=0)doDash();},{passive:false});
 let keys={};
-document.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '&&state?.player?.hasDash&&state.player.dashCd<=0)doDash();});
+document.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  keys[k]=true;
+  if(k==='p'){e.preventDefault();togglePause();return;}
+  if(state?.awaitInputResume&&(k==='w'||k==='a'||k==='s'||k==='d'||k==='arrowup'||k==='arrowdown'||k==='arrowleft'||k==='arrowright'||e.key===' ')){
+    acknowledgeResumeInput();
+  }
+  if(e.key===' '&&state?.player?.hasDash&&state.player.dashCd<=0)doDash();
+});
 document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 let mouse={x:0,y:0};
 canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+canvas.addEventListener('mousedown',()=>acknowledgeResumeInput());
+canvas.addEventListener('touchstart',()=>acknowledgeResumeInput(),{passive:true});
+jZone.addEventListener('touchstart',()=>acknowledgeResumeInput(),{passive:true});
+jZone.addEventListener('touchmove',()=>{if(joy.active&&(Math.abs(joy.dx)+Math.abs(joy.dy))>.08)acknowledgeResumeInput();},{passive:true});
+const pauseResumeBtn=document.getElementById('pause-resume-btn');
+const pauseMenuBtn=document.getElementById('pause-menu-btn');
+pauseResumeBtn.addEventListener('touchstart',e=>{e.preventDefault();closePause();},{passive:false});
+pauseMenuBtn.addEventListener('touchstart',e=>{e.preventDefault();backToTitle();},{passive:false});
 
 /* ══════════════════════════════════════════════
    ÉTAT DU JEU
@@ -2375,7 +2412,7 @@ canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();m
 let state,gameLoop,lastTime=0;
 function mkState(){
   return{
-    running:false,paused:false,
+    running:false,paused:false,pauseReason:null,awaitInputResume:false,_saveTick:0,
     wave:1,kills:0,elapsed:0,waveTimer:0,
     camX:0,camY:0,
     biomeBossAlive:false,_biomeBossSpawned:false,waveCleared:false,
@@ -3303,8 +3340,10 @@ function showEventBanner(ev){
   if(!bar){
     bar=document.createElement('div');
     bar.id='event-bar';
-    bar.style.cssText=`position:absolute;top:0;left:0;right:0;z-index:50;padding:4px 8px;display:flex;align-items:center;gap:8px;font-family:'Orbitron',sans-serif;font-size:clamp(.52rem,2vw,.66rem);font-weight:700;letter-spacing:.08em;border-bottom:1px solid;transition:all .3s;`;
-    document.getElementById('game-screen').appendChild(bar);
+    bar.style.cssText=`position:relative;z-index:12;padding:4px 8px;display:flex;align-items:center;gap:8px;font-family:'Orbitron',sans-serif;font-size:clamp(.52rem,2vw,.66rem);font-weight:700;letter-spacing:.08em;border-bottom:1px solid;transition:all .3s;flex-shrink:0;`;
+    const hud=document.getElementById('hud');
+    if(hud)hud.insertAdjacentElement('afterend',bar);
+    else document.getElementById('game-screen').appendChild(bar);
   }
   bar.style.background=ev.color+'22';
   bar.style.borderColor=ev.color+'88';
@@ -4152,28 +4191,84 @@ function showRunTitle(s){
   const el=document.getElementById('run-title-earned');
   if(el){el.style.display='block';el.innerHTML=`<div style="font-size:.6rem;color:#567;letter-spacing:.1em;margin-bottom:4px;">TITRE GAGNÉ</div><div style="font-size:1rem;">${t.icon} <span style="font-family:'Orbitron',sans-serif;color:${t.color};text-shadow:0 0 10px ${t.color};">${t.name}</span></div><div style="font-size:.55rem;color:#89a;margin:3px 0 6px;">${t.desc}</div><button onclick="equipTitle('${t.id}')" style="font-family:'Orbitron',sans-serif;font-size:.58rem;background:transparent;border:1px solid ${t.color};color:${t.color};padding:4px 12px;cursor:pointer;">⚡ ÉQUIPER</button>`;}
 }
-function tryStart(){
-  if(!getPrf()?.name){openProfile(true);return;}
-  if(!spendE()){openNoEnergy();return;}
-  startGame();
+function clearRunSave(){try{localStorage.removeItem(KRUN);}catch(e){}updateResumeButton();}
+function updateResumeButton(){
+  const b=document.getElementById('resume-btn');if(!b)return;
+  b.style.display=localStorage.getItem(KRUN)?'':'none';
 }
-function startGame(){
+function normalizeLoadedState(s){
+  if(!s||!s.player)return null;
+  s.wave=Math.max(1,Math.floor(Number(s.wave)||1));
+  s.elapsed=Number(s.elapsed)||0;s.waveTimer=Number(s.waveTimer)||0;
+  s.enemies=Array.isArray(s.enemies)?s.enemies:[];s.bullets=Array.isArray(s.bullets)?s.bullets:[];
+  s.ebullets=Array.isArray(s.ebullets)?s.ebullets:[];s.particles=Array.isArray(s.particles)?s.particles:[];
+  s.xpGems=Array.isArray(s.xpGems)?s.xpGems:[];s.coinPickups=Array.isArray(s.coinPickups)?s.coinPickups:[];
+  s.obstacles=Array.isArray(s.obstacles)?s.obstacles:[];s.turrets=Array.isArray(s.turrets)?s.turrets:[];
+  s.dmgNums=Array.isArray(s.dmgNums)?s.dmgNums:[];s.orbs=Array.isArray(s.orbs)?s.orbs:[];
+  s.stats=s.stats&&typeof s.stats==='object'?s.stats:{kills:0,dmg:0,crits:0,boss:0,big:'-'};
+  s.player.hitCd=Number(s.player.hitCd)||0;
+  s.player.secondLifeCd=Number(s.player.secondLifeCd)||0;
+  s.player.phoenixCd=Number(s.player.phoenixCd)||0;
+  s.paused=false;s.pauseReason=null;s.awaitInputResume=false;s.running=true;
+  if(!s.biome)s.biome=getBiome(s.wave);
+  if(!Number.isFinite(s.camX))s.camX=s.player.x-W/2;
+  if(!Number.isFinite(s.camY))s.camY=s.player.y-H/2;
+  return s;
+}
+function saveRunState(force=false){
+  if(!state||!state.running||!state.player)return;
+  if(state.pauseReason==='upgrade')return;
+  if(!force&&document.getElementById('stats-screen')?.classList.contains('show'))return;
+  try{
+    const snap=JSON.parse(JSON.stringify(state));
+    snap.running=true;snap.paused=false;snap.pauseReason=null;snap.awaitInputResume=false;
+    snap._savedAt=Date.now();
+    localStorage.setItem(KRUN,JSON.stringify(snap));
+    updateResumeButton();
+  }catch(e){}
+}
+function loadSavedRun(){
+  try{return normalizeLoadedState(JSON.parse(localStorage.getItem(KRUN)||'null'));}catch(e){return null;}
+}
+function startGame(savedState=null){
   resizeCanvas();
   document.getElementById('title-screen').style.display='none';
   document.getElementById('game-screen').style.display='flex';
   document.getElementById('stats-screen').classList.remove('show');
   document.getElementById('upgrade-screen').classList.remove('show');
+  document.getElementById('pause-overlay').style.display='none';
+  hideEventBanner();
   dashBtn.style.display='none';
-  state=mkState();applyShopBonuses(state);
-  state.running=true;state.biome=getBiome(1);
-  state.camX=state.player.x-W/2;
-  state.camY=state.player.y-H/2;
+  if(savedState){
+    state=savedState;
+  }else{
+    clearRunSave();
+    state=mkState();applyShopBonuses(state);
+  }
+  syncTurrets();
+  state.running=true;state.paused=false;state.pauseReason=null;state.awaitInputResume=false;
+  state.biome=state.biome||getBiome(state.wave||1);
+  state.camX=state.camX??(state.player.x-W/2);
+  state.camY=state.camY??(state.player.y-H/2);
   setTimeout(()=>discoverEntry('biomes','void'),500);mouse={x:W/2,y:H/2};
-  updateEnergyUI();showWaveBanner(1);
+  updateEnergyUI();showWaveBanner(state.wave||1);
+  saveRunState(true);
   if(gameLoop){cancelAnimationFrame(gameLoop);gameLoop=null;}
   lastTime=0;loop();
 }
+function tryStart(){
+  if(!getPrf()?.name){openProfile(true);return;}
+  if(!spendE()){openNoEnergy();return;}
+  startGame();
+}
+function resumeSavedRun(){
+  const saved=loadSavedRun();
+  if(!saved){showInfoBanner('Aucune partie sauvegardée.',2200);updateResumeButton();return;}
+  startGame(saved);
+  showInfoBanner('↻ Partie restaurée',2200);
+}
 function backToTitle(){
+  if(state&&state.running)clearRunSave();
   // Arrêter la boucle de jeu proprement
   if(gameLoop){cancelAnimationFrame(gameLoop);gameLoop=null;}
   if(state)state.running=false;
@@ -4181,6 +4276,8 @@ function backToTitle(){
   document.getElementById('game-screen').style.display='none';
   document.getElementById('stats-screen').classList.remove('show');
   document.getElementById('upgrade-screen').classList.remove('show');
+  document.getElementById('pause-overlay').style.display='none';
+  hideEventBanner();
   document.getElementById('record-section').style.display='none';
   // Réinitialiser le joystick
   joy.active=false;joy.dx=0;joy.dy=0;
@@ -4188,9 +4285,28 @@ function backToTitle(){
   dashBtn.style.display='none';
   // Retour au titre
   document.getElementById('title-screen').style.display='';
+  updateResumeButton();
   updateEnergyUI();renderLeaderboard();renderProfileBadge();
 }
 function showDashBtn(){dashBtn.style.display='flex';dashBtn.classList.add('ready');}
+function closePause(){
+  if(!state||!state.running||state.pauseReason!=='manual')return;
+  state.paused=false;state.pauseReason=null;
+  document.getElementById('pause-overlay').style.display='none';
+}
+function togglePause(){
+  if(!state||!state.running)return;
+  if(state.pauseReason==='upgrade')return;
+  if(state.pauseReason==='manual'){closePause();return;}
+  state.paused=true;state.pauseReason='manual';
+  document.getElementById('pause-overlay').style.display='flex';
+  saveRunState(true);
+}
+function acknowledgeResumeInput(){
+  if(!state||!state.awaitInputResume)return;
+  state.awaitInputResume=false;
+  if(state.player)state.player.hitCd=Math.max(state.player.hitCd||0,420);
+}
 
 function loop(ts=0){
   if(!gameLoop&&ts>0)return; // boucle annulée
@@ -4221,11 +4337,14 @@ function tryPlayerRevives(p){
 function update(dt){
   if(!state||!state.player)return;
   const p=state.player;
-  if((state.resumeFreezeMs||0)>0){
-    state.resumeFreezeMs=Math.max(0,state.resumeFreezeMs-dt);
+  if(p.hasDash&&dashBtn.style.display!=='flex')showDashBtn();
+  if(!p.hasDash&&dashBtn.style.display!=='none')dashBtn.style.display='none';
+  if(state.awaitInputResume){
     updateHUD();
     return;
   }
+  state._saveTick=(state._saveTick||0)+dt;
+  if(state._saveTick>=2500){state._saveTick=0;saveRunState();}
   if((p.hitCd||0)>0){p.hitCd=Math.max(0,p.hitCd-dt);}
   if((p.secondLifeCd||0)>0){p.secondLifeCd-=dt;if(p.secondLifeCd<=0){p.secondLifeCd=0;p.secondLife=true;}}
   if((p.phoenixCd||0)>0){p.phoenixCd-=dt;if(p.phoenixCd<=0)p.phoenixCd=0;}
@@ -4350,7 +4469,7 @@ function update(dt){
     const er=enduranceHpDrainRate();
     if(er>0){
       p.hp-=p.maxHp*er*(dt/1000);
-      if(p.hp<=0){if(!tryPlayerRevives(p))gameOver();}
+      if(p.hp<=0){if(!tryPlayerRevives(p)){gameOver();return;}}
     }
   }
   // Miroir de dégâts — géré dans collision
@@ -4461,10 +4580,11 @@ function update(dt){
   // Shield
   if(p.hasShield){if(p.shieldCd>0)p.shieldCd-=dt;else p.shieldActive=true;}
 
-  // Invincibilité divine
+  // Invincibilité divine (fenêtres temporaires uniquement, jamais permanente)
+  let divineNow=false;
   if(p.divineTimer>=0){
     p.divineTimer+=dt;
-    p.divineActive=p.divineTimer%15000<3000;
+    divineNow = divineNow || (p.divineTimer%15000<3000);
   }
 
   // Regen
@@ -4473,10 +4593,13 @@ function update(dt){
 
   // Tourelles — tir auto
   if(p.turretCount>0){
+    syncTurrets();
     for(const t of state.turrets||[]){
       t.cooldown=(t.cooldown||0)-dt;
       if(t.cooldown<=0){t.cooldown=600;fireTurret(t);}
     }
+  }else if(state.turrets&&state.turrets.length){
+    state.turrets.length=0;
   }
 
   // ── EFFETS PASSIFS NOUVEAUX UPGRADES ──
@@ -4489,7 +4612,11 @@ function update(dt){
   if(p.overloadTimer>=0){p.overloadTimer+=dt;if(p.overloadTimer>10000){p.overloadTimer=0;p._overload=true;setTimeout(()=>{if(p)p._overload=false;},600);}}
   if(p.singTimer>=0){p.singTimer+=dt;if(p.singTimer>15000){p.singTimer=0;for(const e of state.enemies){if(e){const gx=p.x-e.x,gy=p.y-e.y,gd=Math.hypot(gx,gy)||1;e.x+=gx/gd*8;e.y+=gy/gd*8;}}pts(p.x,p.y,'#8888ff',1.5,8);}}
   if(p.armaTimer>=0){p.armaTimer+=dt;if(p.armaTimer>30000){p.armaTimer=0;for(let i=state.enemies.length-1;i>=0;i--){const ev=state.enemies[i];if(ev&&!ev.isBiomeBoss)killEnemy(i);}for(let k=0;k<20;k++)pts(p.x+(Math.random()-.5)*W*.5,p.y+(Math.random()-.5)*H*.5,'#ff4400',1.5,8);}}
-  if(p.eternalTimer>=0){p.eternalTimer+=dt;if(p.eternalTimer%30000<5000)p.divineActive=true;}
+  if(p.eternalTimer>=0){
+    p.eternalTimer+=dt;
+    divineNow = divineNow || (p.eternalTimer%30000<5000);
+  }
+  p.divineActive=divineNow;
   if(p.abyssTimer>=0){p.abyssTimer+=dt;if(p.abyssTimer>20000){p.abyssTimer=0;for(const e of state.enemies){if(e&&Math.hypot(e.x-p.x,e.y-p.y)<100){const gx=p.x-e.x,gy=p.y-e.y,gd=Math.hypot(gx,gy)||1;e.x+=gx/gd*14;e.y+=gy/gd*14;}}}}
   if(p.heaven){const near=state.enemies.some(e=>e&&Math.hypot(e.x-p.x,e.y-p.y)<200);if(!near)p.hp=Math.min(playerHealCap(p),p.hp+dt*.025);}
   if(p.coinRadius){state.coinPickups.forEach(c=>{if(Math.hypot(c.x-p.x,c.y-p.y)<p.coinRadius){const cd=Math.hypot(p.x-c.x,p.y-c.y)||1;c.x+=(p.x-c.x)/cd*6;c.y+=(p.y-c.y)/cd*6;}});}
@@ -4604,8 +4731,8 @@ function update(dt){
         if(p.explode)explodeAt(b.x,b.y,b.dmg*.55);
         if(p.chain&&b.chainLeft>0){
           let near=null,nd=Infinity;
-          for(const en of state.enemies){if(en&&en!==e){const d=Math.hypot(en.x-e.x,en.y-e.y);if(d<140&&d<nd){nd=d;near=en;}}}
-          if(near){const dx=near.x-b.x,dy=near.y-b.y,d=Math.hypot(dx,dy)||1;state.bullets.push({x:b.x,y:b.y,vx:dx/d*p.bulletSpeed,vy:dy/d*p.bulletSpeed,dmg:b.dmg*.65,size:b.size*.75,life:45,pierce:0,enemy:false,chainLeft:(p.chainCount||2)-1,isChain:true,frozen:0});}
+          for(const en of state.enemies){if(en&&en!==e){const d=Math.hypot(en.x-e.x,en.y-e.y);if(d<220&&d<nd){nd=d;near=en;}}}
+          if(near){const dx=near.x-b.x,dy=near.y-b.y,d=Math.hypot(dx,dy)||1;state.bullets.push({x:b.x,y:b.y,vx:dx/d*p.bulletSpeed,vy:dy/d*p.bulletSpeed,dmg:b.dmg*.65,size:b.size*.75,life:45,pierce:0,enemy:false,chainLeft:Math.max(0,(b.chainLeft||0)-1),isChain:true,frozen:0});}
         }
         pts(b.x,b.y,e.color,.45,1.4);
         if(e.hp<=0)killEnemy(i);
@@ -5283,13 +5410,22 @@ function fireBullet(){
   let bd=Infinity;
   for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;tx=e.x;ty=e.y;}}
   const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy)||1;
-  const sh=a=>{const c=Math.cos(a),s=Math.sin(a);
-    state.bullets.push({x:p.x,y:p.y,vx:(dx/d*c-dy/d*s)*p.bulletSpeed,vy:(dx/d*s+dy/d*c)*p.bulletSpeed,dmg:p.bulletDmg,size:p.bulletSize,life:95,pierce:p.pierce,enemy:false,chainLeft:p.chain?p.chainCount||2:0,isChain:false,frozen:0});
+  const shootFrom=(ox,oy,dmgMul=1)=>{
+    const sh=a=>{const c=Math.cos(a),s=Math.sin(a);
+      state.bullets.push({x:ox,y:oy,vx:(dx/d*c-dy/d*s)*p.bulletSpeed,vy:(dx/d*s+dy/d*c)*p.bulletSpeed,dmg:p.bulletDmg*dmgMul,size:p.bulletSize,life:95,pierce:p.pierce,enemy:false,chainLeft:p.chain?p.chainCount||2:0,isChain:false,frozen:0});
+    };
+    sh(0);for(let i=1;i<=p.multiShot;i++){sh(i*.22);sh(-i*.22);}
+    if(p.triShot){sh(.42);sh(-.42);}
+    if(p.fullCircle){for(let k=1;k<8;k++){sh(k/8*Math.PI*2);}}
   };
-  sh(0);for(let i=1;i<=p.multiShot;i++){sh(i*.22);sh(-i*.22);}
-  if(p.triShot){sh(.42);sh(-.42);}
+  shootFrom(p.x,p.y,1);
+  if(p.clone){
+    const a=(performance.now()%2600)/2600*Math.PI*2;
+    const dist=34;
+    shootFrom(p.x+Math.cos(a)*dist,p.y+Math.sin(a)*dist,.72);
+  }
   // 360° — tire dans toutes les directions
-  if(p.fullCircle){for(let k=1;k<8;k++){sh(k/8*Math.PI*2);}}
+  // (déjà géré dans shootFrom)
 
   // Tir arrière — une balle derrière
   if(p.backShot){
@@ -5330,6 +5466,23 @@ function fireTurret(t){
   for(const e of state.enemies){const d=Math.hypot(e.x-t.x,e.y-t.y);if(d<bd){bd=d;tx=e.x;ty=e.y;}}
   const dx=tx-t.x,dy=ty-t.y,d=Math.hypot(dx,dy)||1;
   state.bullets.push({x:t.x,y:t.y,vx:dx/d*7,vy:dy/d*7,dmg:state.player.bulletDmg*.6,size:5,life:80,pierce:0,enemy:false,chainLeft:0,isChain:false,frozen:0,isTurret:true});
+}
+function syncTurrets(){
+  if(!state||!state.player)return;
+  const p=state.player;
+  const need=Math.max(0,Math.floor(p.turretCount||0));
+  state.turrets=state.turrets||[];
+  while(state.turrets.length<need)state.turrets.push({x:p.x,y:p.y,cooldown:120+Math.random()*220,orbitA:Math.random()*Math.PI*2});
+  if(state.turrets.length>need)state.turrets.length=need;
+  const r=p.size+18;
+  const tSpin=state.elapsed*.0018;
+  const n=Math.max(1,state.turrets.length);
+  for(let i=0;i<state.turrets.length;i++){
+    const t=state.turrets[i];
+    const a=tSpin+i/n*Math.PI*2+(t.orbitA||0);
+    t.x=p.x+Math.cos(a)*r;
+    t.y=p.y+Math.sin(a)*r;
+  }
 }
 function doDash(){
   const p=state.player;
@@ -5521,7 +5674,7 @@ function transformXpGemsForNewWorld(){
 
 function gainXP(v){
   const p=state.player;p.xp+=v*(state._evXpMult||1);
-  if(p.xp>=p.xpNext){p.xp-=p.xpNext;p.xpNext=Math.floor(p.xpNext*1.32);p.level++;state.paused=true;showUpgrades();snd('levelup');}
+  if(p.xp>=p.xpNext){p.xp-=p.xpNext;p.xpNext=Math.floor(p.xpNext*1.32);p.level++;state.paused=true;state.pauseReason='upgrade';showUpgrades();snd('levelup');}
 }
 function showUpgrades(){
   const sc=document.getElementById('upgrade-screen');
@@ -5554,13 +5707,16 @@ function showUpgrades(){
       u.apply(state);
       discoverEntry('upgrades',u.id);
       if(!known)showInfoBanner(`✦ ${u.name} — ${u.desc}`,3800);
+      syncTurrets();
       if(state.runUpgrades)state.runUpgrades.push({id:u.id,name:u.name,icon:u.icon,rarity:u.rarity,wave:state.wave});
       if(typeof checkSynergy==='function')checkSynergy(u.id);
       sc.classList.remove('show');
-      // Petit gel après le choix d'upgrade pour reprendre le contrôle sans mort instant.
-      state.resumeFreezeMs=500;
+      // Après upgrade: reprise uniquement sur première action joueur.
+      state.awaitInputResume=true;
       state.player.hitCd=Math.max(state.player.hitCd||0,520);
-      state.paused=false;
+      state.paused=false;state.pauseReason=null;
+      showInfoBanner('Touchez/bougez pour reprendre',1800);
+      saveRunState(true);
     };
     c.addEventListener('click',pick);
     c.addEventListener('touchend',e=>{e.preventDefault();pick();},{passive:false});
@@ -5578,7 +5734,10 @@ function dmgNum(x,y,v,color='#ff6',crit=false){
 /* ── GAME OVER ── */
 function gameOver(){
   if(!state||!state.player){try{backToTitle();}catch(e){}return;}
+  clearRunSave();
   state.running=false;snd('gameover');
+  if(state.currentEvent)endEvent(state.currentEvent);
+  else hideEventBanner();
   const fmt=ms=>{const s=Math.floor(ms/1000);return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;};
   const score=calcScore(state.wave,state.kills,state.elapsed,state.player.level);
 
@@ -6185,6 +6344,16 @@ function draw(){
   else if((p.vamp||0)>10){_pc='#ff88aa';_pg='#ff4466';}
   // Aura combo
   if((p.combo||0)>5){ctx.beginPath();ctx.arc(0,0,p.size+4+(p.combo||0)*.3,0,Math.PI*2);ctx.strokeStyle=`rgba(255,150,0,${Math.min(.6,(p.combo||0)*.02)})`;ctx.lineWidth=2;ctx.stroke();}
+  if(p.aura>0){
+    const ar=p.size+20+Math.min(26,p.aura*.45);
+    ctx.beginPath();ctx.arc(0,0,ar,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,96,40,.62)';ctx.lineWidth=2.4;ctx.shadowBlur=14;ctx.shadowColor='#ff5a24';ctx.stroke();ctx.shadowBlur=0;
+  }
+  if(p.corona>0){
+    const cr=p.size+25+Math.min(30,p.corona*.36);
+    ctx.beginPath();ctx.arc(0,0,cr,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,190,40,.55)';ctx.lineWidth=2;ctx.shadowBlur=10;ctx.shadowColor='#ffb400';ctx.stroke();ctx.shadowBlur=0;
+  }
   if(p.divineActive){ctx.beginPath();ctx.arc(0,0,p.size+20,0,Math.PI*2);ctx.strokeStyle='rgba(255,215,0,.7)';ctx.lineWidth=3;ctx.shadowBlur=20;ctx.shadowColor='#ffd700';ctx.stroke();ctx.shadowBlur=0;}
   if(p.shieldActive){ctx.beginPath();ctx.arc(0,0,p.size+11,0,Math.PI*2);ctx.strokeStyle='rgba(0,150,255,.62)';ctx.lineWidth=3;ctx.shadowBlur=13;ctx.shadowColor='#0af';ctx.stroke();ctx.shadowBlur=0;}
   ctx.beginPath();ctx.arc(0,0,p.xpRadius,0,Math.PI*2);ctx.strokeStyle='rgba(0,255,231,.045)';ctx.lineWidth=1;ctx.stroke();
@@ -6342,14 +6511,14 @@ function draw(){
    UI ÉNERGIE
 ══════════════════════════════════════════════ */
 function updateEnergyUI(){
-  const e=getE(),c=getCoins();
+  const e=getE(),c=getCoins(),mx=getEnergyMax();
   const el=id=>document.getElementById(id);
-  if(el('eng-count'))el('eng-count').textContent=`${e}/${EMAX}`;
+  if(el('eng-count'))el('eng-count').textContent=`${e}/${mx}`;
   if(el('title-coins'))el('title-coins').textContent=c.toLocaleString();
   const sb=el('start-btn');
   if(sb){if(e<=0){sb.textContent='▶ JOUER (0 ⚡)';sb.classList.add('disabled');}else{sb.textContent=`▶ JOUER  (-1 ⚡)`;sb.classList.remove('disabled');}}
   const rt=el('regen-timer');
-  if(rt){if(e<EMAX){const m=Math.ceil(nextRegen()/60000);rt.textContent=`Prochain ⚡ dans ${m} min`;}else rt.textContent='';}
+  if(rt){if(e<mx){const m=Math.ceil(nextRegen()/60000);rt.textContent=`Prochain ⚡ dans ${m} min`;}else rt.textContent='';}
   const rb=el('stats-play-btn');if(rb)rb.textContent=e>0?'↺ REJOUER (-1 ⚡)':'↺ REJOUER (0 ⚡)';
 }
 setInterval(updateEnergyUI,10000);
@@ -6386,6 +6555,9 @@ function installPWA(){
 updateEnergyUI();
 renderLeaderboard();
 renderProfileBadge();
+updateResumeButton();
+window.addEventListener('visibilitychange',()=>{if(document.hidden)saveRunState(true);});
+window.addEventListener('pagehide',()=>saveRunState(true));
 // Si pas de nom → écran de connexion obligatoire
 if(!getPrf()?.name){
   setTimeout(()=>openProfile(true),400);
