@@ -227,7 +227,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.1 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.4 ÉQUILIBRE META · BOUTIQUE · CODEX EN JEU —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -1277,7 +1277,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v7.1.1'; // Migration boutique non destructive
+const SHOP_VERSION='v7.1.4'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -1579,7 +1579,7 @@ const ALL_UPGRADES=[
   {id:'fire2b',   name:'TOURELLE RAPIDE', icon:'🤖',rarity:'epic',     unlockWave:10, desc:'Tir +35% plus vite',         apply:s=>s.player.fireRate=Math.max(80,s.player.fireRate*.68)},
   // ── WAVE 11 ──
   {id:'n_orb_dmg',name:'ORBES OFFENSIFS', icon:'💫',rarity:'epic',     unlockWave:11, desc:'Orbes font x2 dégâts',       apply:s=>s.player.orbDmgMult=(s.player.orbDmgMult||1)*2},
-  {id:'n_bounce', name:'REBONDISSANTE',   icon:'⚽',rarity:'epic',     unlockWave:11, desc:'Balles rebondissent sur ennemis',apply:s=>s.player.wallBounce=true},
+  {id:'n_bounce', name:'REBONDISSANTE',   icon:'⚽',rarity:'epic',     unlockWave:11, desc:'Balles rebondissent sur ennemis',apply:s=>{s.player.chain=true;s.player.chainCount=Math.max(2,s.player.chainCount||2);}},
   {id:'vamp1b',   name:'SANGSUE',         icon:'🩸',rarity:'epic',     unlockWave:11, desc:'+5 PV par kill',             apply:s=>s.player.vamp=(s.player.vamp||0)+5},
   {id:'crit2b',   name:'INSTINCT MORTEL', icon:'🎲',rarity:'epic',     unlockWave:11, desc:'+20% crit, critiques x0.5+', apply:s=>{s.player.critChance=Math.min(.8,s.player.critChance+.2);s.player.critMult=(s.player.critMult||2)+.5;}},
   {id:'orbit1b',  name:'DOUBLE ORBITE',   icon:'🌌',rarity:'epic',     unlockWave:11, desc:'+2 orbes',                   apply:s=>s.player.orbCount+=2},
@@ -3060,6 +3060,10 @@ function updateObstacles(dt){
   for(let i=state.obstacles.length-1;i>=0;i--){
     const ob=state.obstacles[i];
     if(!ob)continue;
+    if(ob._life!=null){
+      ob._life-=dt;
+      if(ob._life<=0){state.obstacles.splice(i,1);continue;}
+    }
 
     // Météorite mobile
     if(ob.isMoving){
@@ -3080,15 +3084,28 @@ function updateObstacles(dt){
       if(ob.x<-60||ob.x>W+60||ob.y<-60||ob.y>H+60){state.obstacles.splice(i,1);continue;}
     }
 
-    // Zone de feu / toxique / éclair — dégâts au joueur
+    // Zone de feu / toxique / éclair
     if((ob.type==='fire_zone'||ob.type==='toxic_pool'||ob.type==='lightning_zone')&&!ob.solid){
-      if(Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size*.5){
+      const isPlayerHazard=!!ob._fromPlayer;
+      if(!isPlayerHazard&&Math.hypot(ob.x-p.x,ob.y-p.y)<ob.r+p.size*.5){
         const skipToxic=ob.type==='toxic_pool'&&p.immunePoison;
-        if(!skipToxic&&!p.divineActive&&(p.hitCd||0)<=0&&Math.random()<.08){
+        const skipFire=ob.type==='fire_zone'&&p.immuneFire;
+        if(!skipToxic&&!skipFire&&!p.divineActive&&(p.hitCd||0)<=0&&Math.random()<.08){
           p.hp-=(ob.dmg||5);
           p.hitCd=PLAYER_HIT_IFRAME_MS;
           if(ob.slow)p.speed=Math.max(.5,p.speed*ob.slow);
           if(p.hp<=0){if(tryPlayerRevives(p)){}else{gameOver();return;}}
+        }
+      }
+      if(isPlayerHazard||ob._hurtsEnemies){
+        for(let j=state.enemies.length-1;j>=0;j--){
+          const e=state.enemies[j];if(!e)continue;
+          if(Math.hypot(ob.x-e.x,ob.y-e.y)<ob.r+e.size*.45){
+            const tickMul=e.isBiomeBoss?.4:1;
+            e.hp-=(ob.dmg||5)*tickMul*dt*.003;
+            if(ob.slow)e.zoneSlowT=Math.max(e.zoneSlowT||0,220);
+            if(e.hp<=0)killEnemy(j);
+          }
         }
       }
     }
@@ -4247,6 +4264,9 @@ function update(dt){
     state.waveTimer=0;
     state.spawnTimer=0;
     state.wave++;
+    if(state.obstacles&&state.obstacles.length){
+      state.obstacles=state.obstacles.filter(ob=>!(ob&&((ob._ephemeral===true)||(ob._life!=null))));
+    }
     showWaveBanner(state.wave);
     spawnWave();
     if(state.wave%15===0){p.hp=Math.min(playerHealCap(p),p.hp+Math.floor(p.maxHp*.15));pts(p.x,p.y,'#00ff88',1.2,5);}
@@ -4519,7 +4539,7 @@ function update(dt){
     // Traînée de feu
     if(!b.enemy&&state.player.fireTrail&&Math.random()<.15){
       state.obstacles=state.obstacles||[];
-      state.obstacles.push({type:'fire_zone',x:b.x,y:b.y,r:8,color:'rgba(255,80,0,.2)',dmg:4,solid:false,_life:1500});
+      state.obstacles.push({type:'fire_zone',x:b.x,y:b.y,r:8,color:'rgba(255,80,0,.2)',dmg:4,solid:false,_fromPlayer:true,_hurtsEnemies:true,_ephemeral:true,_life:1500});
     }
     // Supprimer si trop loin ou vie écoulée — les balles ennemies doivent pouvoir traverser l'écran depuis les snipers / bords (ancien seuil ~1,2× écran les supprimait avant impact).
     const distP=Math.hypot(b.x-p.x,b.y-p.y);
@@ -4606,9 +4626,11 @@ function update(dt){
         if(e.hp<=0){killEnemy(i);continue;}
       }else e.playerPoisonT=0;
     }
+    if((e.zoneSlowT||0)>0)e.zoneSlowT=Math.max(0,e.zoneSlowT-dt);
     if(e.frozen>0){e.frozen-=dt;if(e.frozen<=0)e.speed=ETYPES[e.type]?.spd(state.wave)||e.speed;}
     const ex=p.x-e.x,ey=p.y-e.y,ed=Math.hypot(ex,ey)||1;
-    const sp=(e.frozen>0?e.speed*.35:e.speed*p.slowMult)*(state._evEnemySpeedMult||1);
+    const zoneSlowMul=(e.zoneSlowT||0)>0?.72:1;
+    const sp=(e.frozen>0?e.speed*.35:e.speed*p.slowMult*zoneSlowMul)*(state._evEnemySpeedMult||1);
 
     const _cfgEUpd=ETYPES[e.type];
     if(_cfgEUpd&&_cfgEUpd.enemyUpdateMech&&ENEMY_MECHANICS[e.type]){
@@ -4901,7 +4923,7 @@ function update(dt){
       e.trailTimer=(e.trailTimer||0)+dt;
       if(e.trailTimer>180){e.trailTimer=0;
         state.obstacles=state.obstacles||[];
-        state.obstacles.push({type:'fire_zone',x:e.x,y:e.y,r:15,color:'rgba(255,80,0,.2)',dmg:6,solid:false,_life:3000});
+        state.obstacles.push({type:'fire_zone',x:e.x,y:e.y,r:15,color:'rgba(255,80,0,.2)',dmg:6,solid:false,_fromEnemy:true,_ephemeral:true,_life:3000});
       }
     }else if(e.type==='ice_golem'){
       e.x+=ex/ed*sp*.7;e.y+=ey/ed*sp*.7;
@@ -5211,7 +5233,7 @@ function update(dt){
   if(p.toxicTrail&&Math.random()<.08){
     state.obstacles=state.obstacles||[];
     state.obstacles.push({type:'toxic_pool',x:p.x,y:p.y,r:12,
-      color:'rgba(85,200,0,.18)',solid:false,dmg:4,slow:.8,_life:2000});
+      color:'rgba(85,200,0,.18)',solid:false,dmg:4,slow:.8,_fromPlayer:true,_hurtsEnemies:true,_ephemeral:true,_life:2000});
   }
 
   // 🐱 CHAT MORT
@@ -5536,8 +5558,8 @@ function showUpgrades(){
       if(typeof checkSynergy==='function')checkSynergy(u.id);
       sc.classList.remove('show');
       // Petit gel après le choix d'upgrade pour reprendre le contrôle sans mort instant.
-      state.resumeFreezeMs=250;
-      state.player.hitCd=Math.max(state.player.hitCd||0,320);
+      state.resumeFreezeMs=500;
+      state.player.hitCd=Math.max(state.player.hitCd||0,520);
       state.paused=false;
     };
     c.addEventListener('click',pick);
