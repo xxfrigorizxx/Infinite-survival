@@ -1,4 +1,4 @@
-const CACHE = 'survivor-v8-update-shop-centenaire-2026-04-29';
+const CACHE = 'survivor-v8.1-update-shop-centenaire-2026-04-29';
 const ASSETS = [
   './',
   './index.html',
@@ -30,6 +30,27 @@ self.addEventListener('fetch', (e) => {
     e.request.url.includes('firebase') ||
     e.request.url.includes('googleapis.com/identitytoolkit')
   ) {
+    return;
+  }
+  if (e.request.method !== 'GET') return;
+  // iOS/Safari: on privilégie le réseau pour les navigations HTML,
+  // avec fallback cache/offline, afin de récupérer plus vite les nouvelles versions.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then((resp) => {
+          if (resp && resp.ok) {
+            const clone = resp.clone();
+            caches.open(CACHE).then((c) => c.put('./index.html', clone));
+          }
+          return resp;
+        })
+        .catch(() =>
+          caches.match(e.request).then((cached) =>
+            cached || caches.match('./index.html') || new Response('Hors ligne', { status: 503 })
+          )
+        )
+    );
     return;
   }
   e.respondWith(
