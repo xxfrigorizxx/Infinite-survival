@@ -97,6 +97,31 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .hud-val.gold{color:var(--gold);}.hud-val.coin{color:var(--coin);}
 #wave-banner{text-align:center;background:rgba(255,60,110,.13);border-bottom:1px solid var(--hot);color:var(--hot);font-family:'Orbitron',sans-serif;font-size:clamp(.52rem,2vw,.7rem);font-weight:700;letter-spacing:.17em;padding:3px;opacity:0;transition:opacity .3s;flex-shrink:0;}
 #wave-banner.show{opacity:1;}
+#discovery-toast{
+  position:absolute;
+  left:50%;
+  top:72px;
+  transform:translateX(-50%) translateY(-8px);
+  width:min(92vw,430px);
+  padding:8px 12px;
+  text-align:center;
+  background:rgba(8,26,34,.92);
+  border:1px solid rgba(0,255,231,.52);
+  color:#c9ffff;
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(.52rem,2vw,.68rem);
+  letter-spacing:.06em;
+  line-height:1.45;
+  box-shadow:0 0 18px rgba(0,255,231,.26);
+  opacity:0;
+  pointer-events:none;
+  z-index:26;
+  transition:opacity .2s ease,transform .2s ease;
+}
+#discovery-toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
 #canvas{display:block;background:#060d18;flex:1;width:100%;touch-action:none;}
 #xp-bar-wrap{height:4px;background:#0a1220;flex-shrink:0;}
 #xp-bar{height:100%;background:linear-gradient(90deg,#00b4d8,var(--neon));width:0%;transition:width .15s;box-shadow:0 0 5px var(--neon);}
@@ -209,6 +234,18 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .ne-box p{color:#89a;font-size:clamp(.62rem,2.5vw,.76rem);line-height:1.62;margin-bottom:9px;}
 #ne-recharge-info{color:var(--gold);font-size:.68rem;margin-bottom:9px;}
 #ne-wait-btn{background:transparent;border:1px solid #345;color:#789;padding:8px 22px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:.76rem;-webkit-appearance:none;}
+#revive-modal{display:none;position:fixed;inset:0;background:rgba(4,8,15,.95);z-index:650;flex-direction:column;align-items:center;justify-content:center;padding:18px;}
+#revive-modal.show{display:flex;}
+.revive-box{width:100%;max-width:320px;background:var(--panel);border:2px solid rgba(255,120,0,.55);box-shadow:0 0 28px rgba(255,120,0,.22);padding:20px 14px;text-align:center;}
+.revive-icon{font-size:2.1rem;margin-bottom:5px;}
+.revive-box h3{font-family:'Orbitron',sans-serif;color:#ff9a40;font-size:clamp(.86rem,3.7vw,1.05rem);margin-bottom:6px;text-shadow:0 0 12px rgba(255,140,0,.35);}
+#revive-modal-text{color:#9ab;font-size:clamp(.62rem,2.5vw,.76rem);line-height:1.6;margin-bottom:10px;}
+.revive-btns{display:flex;gap:8px;}
+#revive-continue-btn,#revive-stop-btn{font-family:'Orbitron',sans-serif;font-size:.76rem;font-weight:700;padding:9px 10px;cursor:pointer;letter-spacing:.05em;flex:1;-webkit-appearance:none;appearance:none;}
+#revive-continue-btn{background:rgba(255,120,0,.08);border:1px solid rgba(255,140,0,.65);color:#ffaf66;}
+#revive-continue-btn:active{background:rgba(255,140,0,.16);}
+#revive-stop-btn{background:transparent;border:1px solid #345;color:#789;}
+#revive-stop-btn:active{border-color:#567;color:#9ab;}
 #profile-modal{display:none;position:fixed;inset:0;background:rgba(4,8,15,.97);z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:18px;}
 #profile-modal.show{display:flex;}
 .prof-box{width:100%;max-width:300px;background:var(--panel);border:2px solid var(--neon);box-shadow:0 0 32px rgba(0,255,231,.16);padding:22px 16px;text-align:center;}
@@ -232,7 +269,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.6 HOTFIX MOBILE · PAUSE · REPRISE RUN —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.7 UPDATE · SHOP CENTENAIRE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -290,6 +327,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div class="hud-block"><span class="hud-label" id="hud-biome-icon">🌌</span><span class="hud-val" id="hud-biome" style="font-size:clamp(.38rem,1.5vw,.5rem);color:#789;">VIDE</span></div>
   </div>
   <div id="wave-banner">⚠ VAGUE 1 ⚠</div>
+  <div id="discovery-toast" aria-live="polite"></div>
   <canvas id="canvas"></canvas>
   <div id="xp-bar-wrap"><div id="xp-bar"></div></div>
   <div id="mini-map"><canvas id="mini-canvas" width="80" height="80"></canvas></div>
@@ -380,6 +418,19 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <p>Recharge : <b>1 par 30 minutes</b>.<br>Revenez plus tard !</p>
     <div id="ne-recharge-info"></div>
     <button id="ne-wait-btn" onclick="closeNoEnergy()">⏳ OK</button>
+  </div>
+</div>
+
+<!-- ══ REVIVE CHOICE ══ -->
+<div id="revive-modal">
+  <div class="revive-box">
+    <div class="revive-icon" id="revive-modal-icon">🔥</div>
+    <h3>DERNIÈRE CHANCE</h3>
+    <p id="revive-modal-text">Une résurrection est disponible.</p>
+    <div class="revive-btns">
+      <button id="revive-continue-btn" onclick="confirmReviveContinue()">CONTINUER</button>
+      <button id="revive-stop-btn" onclick="confirmReviveStop()">ARRÊTER</button>
+    </div>
   </div>
 </div>
 
@@ -1296,7 +1347,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v7.1.6'; // Migration boutique non destructive
+const SHOP_VERSION='v7.1.7-shop-centenaire'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -1376,12 +1427,24 @@ const SHOP_ITEMS=[
   {id:'s_gravity',icon:'🌑',name:'GRAVITÉ NOIRE',       desc:'Attire ennemis (risqué)',baseCost:1200,maxLvl:1, effect:s=>s.player.gravityField=true},
   {id:'s_godmode',icon:'👑',name:'MODE DIEU PARTIEL',   desc:'Dégâts, vitesse et PV max +12% ; soin +12% PV max', baseCost:5000,maxLvl:2, effect:s=>{const p=s.player;p.bulletDmg*=1.12;p.speed*=1.12;p.maxHp=Math.floor(p.maxHp*1.12);p.hp=Math.min(playerHealCap(p),Math.floor(p.hp+p.maxHp*.12));}},
 ];
+const SHOP_LEVEL_CAP_DEFAULT=100;
+const SHOP_LEVEL_CAP_EXCLUDED=new Set([
+  // Exclusions demandees: evitemement/invisibilite/explosif
+  's_dodge',
+  's_shadow',
+  's_explode',
+  's_explsz',
+]);
+function getShopMaxLvl(item){
+  if(!item)return 0;
+  return SHOP_LEVEL_CAP_EXCLUDED.has(item.id)?item.maxLvl:SHOP_LEVEL_CAP_DEFAULT;
+}
 function _normalizeShopLvls(raw){
   const out={};
   if(!raw||typeof raw!=='object')return out;
   for(const it of SHOP_ITEMS){
     const v=Number(raw[it.id]);
-    if(Number.isFinite(v)&&v>0)out[it.id]=Math.min(it.maxLvl,Math.floor(v));
+    if(Number.isFinite(v)&&v>0)out[it.id]=Math.min(getShopMaxLvl(it),Math.floor(v));
   }
   return out;
 }
@@ -1419,7 +1482,7 @@ function getMetaPowerScore(){
     let raw=0;
     const W={s_godmode:16,s_shadow:13,s_reaper:12,s_eternal:12,s_judgment:10,s_arma:10,s_singularity:9,s_omega:9,s_clone:8,s_rebirth:8,s_phoenix:7,s_heaven:7,s_nova:6,s_blizzard:6,s_gravity:6,s_turret:5,s_explode:4,s_chain:4,s_freeze:4,s_aura:4,s_corona:4,s_berserk:4,s_poison:4,s_slow:3,s_fury:3};
     for(const it of SHOP_ITEMS){
-      const lv=Math.min(it.maxLvl,l[it.id]||0);
+      const lv=Math.min(getShopMaxLvl(it),l[it.id]||0);
       raw+=lv*(W[it.id]||1.05);
     }
     return 100*(1-Math.exp(-raw/68));
@@ -1474,7 +1537,8 @@ function renderShop(){
 
   SHOP_ITEMS.forEach((item,idx)=>{
     const lv=getShopLvl(item.id);
-    const maxed=lv>=item.maxLvl;
+    const itemMaxLvl=getShopMaxLvl(item);
+    const maxed=lv>=itemMaxLvl;
     const cost=shopCost(item);
     const ok=getCoins()>=cost;
 
@@ -1501,7 +1565,7 @@ function renderShop(){
         <div class="si-info">
           <div class="si-name">${item.name}</div>
           <div class="si-desc">${item.desc}</div>
-          <div class="si-level">Niv. ${lv}/${item.maxLvl}</div>
+          <div class="si-level">Niv. ${lv}/${itemMaxLvl}</div>
         </div>
         ${maxed?'':`<span class="si-cost">🪙${cost}</span>`}`;
       if(!maxed){
@@ -2403,8 +2467,12 @@ jZone.addEventListener('touchstart',()=>acknowledgeResumeInput(),{passive:true})
 jZone.addEventListener('touchmove',()=>{if(joy.active&&(Math.abs(joy.dx)+Math.abs(joy.dy))>.08)acknowledgeResumeInput();},{passive:true});
 const pauseResumeBtn=document.getElementById('pause-resume-btn');
 const pauseMenuBtn=document.getElementById('pause-menu-btn');
+const reviveContinueBtn=document.getElementById('revive-continue-btn');
+const reviveStopBtn=document.getElementById('revive-stop-btn');
 pauseResumeBtn.addEventListener('touchstart',e=>{e.preventDefault();closePause();},{passive:false});
 pauseMenuBtn.addEventListener('touchstart',e=>{e.preventDefault();backToTitle();},{passive:false});
+reviveContinueBtn.addEventListener('touchstart',e=>{e.preventDefault();confirmReviveContinue();},{passive:false});
+reviveStopBtn.addEventListener('touchstart',e=>{e.preventDefault();confirmReviveStop();},{passive:false});
 
 /* ══════════════════════════════════════════════
    ÉTAT DU JEU
@@ -2413,6 +2481,7 @@ let state,gameLoop,lastTime=0;
 function mkState(){
   return{
     running:false,paused:false,pauseReason:null,awaitInputResume:false,_saveTick:0,
+    pendingReviveType:null,
     wave:1,kills:0,elapsed:0,waveTimer:0,
     camX:0,camY:0,
     biomeBossAlive:false,_biomeBossSpawned:false,waveCleared:false,
@@ -4209,6 +4278,7 @@ function normalizeLoadedState(s){
   s.player.hitCd=Number(s.player.hitCd)||0;
   s.player.secondLifeCd=Number(s.player.secondLifeCd)||0;
   s.player.phoenixCd=Number(s.player.phoenixCd)||0;
+  s.pendingReviveType=null;
   s.paused=false;s.pauseReason=null;s.awaitInputResume=false;s.running=true;
   if(!s.biome)s.biome=getBiome(s.wave);
   if(!Number.isFinite(s.camX))s.camX=s.player.x-W/2;
@@ -4237,6 +4307,7 @@ function startGame(savedState=null){
   document.getElementById('stats-screen').classList.remove('show');
   document.getElementById('upgrade-screen').classList.remove('show');
   document.getElementById('pause-overlay').style.display='none';
+  closeReviveChoice();
   hideEventBanner();
   dashBtn.style.display='none';
   if(savedState){
@@ -4272,6 +4343,7 @@ function backToTitle(){
   // Arrêter la boucle de jeu proprement
   if(gameLoop){cancelAnimationFrame(gameLoop);gameLoop=null;}
   if(state)state.running=false;
+  closeReviveChoice();
   // Cacher les écrans de jeu
   document.getElementById('game-screen').style.display='none';
   document.getElementById('stats-screen').classList.remove('show');
@@ -4308,6 +4380,83 @@ function acknowledgeResumeInput(){
   if(state.player)state.player.hitCd=Math.max(state.player.hitCd||0,420);
 }
 
+function getAvailableReviveType(p){
+  if(!p)return null;
+  if(p.phoenix)return 'phoenix';
+  if(p.rebirth)return 'rebirth';
+  if(p.phoenixInfinite&&!(p.phoenixCd>0))return 'phoenixInfinite';
+  if(p.secondLife&&!(p.secondLifeCd>0))return 'secondLife';
+  return null;
+}
+function getReviveLabel(type){
+  if(type==='phoenix')return 'Phenix';
+  if(type==='rebirth')return 'Renaissance';
+  if(type==='phoenixInfinite')return 'Phenix eternel';
+  if(type==='secondLife')return 'Vie supplementaire';
+  return 'Revive';
+}
+function getReviveMeta(type){
+  if(type==='phoenix')return {icon:'🔥',text:'Phenix: retour a 30% PV (usage unique).'};
+  if(type==='rebirth')return {icon:'🔄',text:'Renaissance: retour a 50% PV (usage unique).'};
+  if(type==='phoenixInfinite')return {icon:'♾️',text:'Phenix eternel: retour a 10% PV (cooldown 60s).'};
+  if(type==='secondLife')return {icon:'💖',text:'Vie supplementaire: retour a 25% PV (cooldown 60s).'};
+  return {icon:'✨',text:'Une resurrection est disponible.'};
+}
+function closeReviveChoice(){
+  const md=document.getElementById('revive-modal');
+  if(md)md.classList.remove('show');
+  if(state)state.pendingReviveType=null;
+}
+function openReviveChoice(type){
+  if(!state||!state.player)return false;
+  const md=document.getElementById('revive-modal');
+  const text=document.getElementById('revive-modal-text');
+  const icon=document.getElementById('revive-modal-icon');
+  if(!md||!text||!icon)return false;
+  const meta=getReviveMeta(type);
+  state.pendingReviveType=type;
+  state.paused=true;
+  state.pauseReason='revive-choice';
+  icon.textContent=meta.icon;
+  text.textContent=`${meta.text} Continuer ou arreter la partie ?`;
+  md.classList.add('show');
+  return true;
+}
+function applyReviveByType(p,type){
+  if(!p||!type)return false;
+  if(type==='phoenix'&&p.phoenix){
+    p.hp=p.maxHp*.3;p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);return true;
+  }
+  if(type==='rebirth'&&p.rebirth){
+    p.hp=p.maxHp*.5;p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);return true;
+  }
+  if(type==='phoenixInfinite'&&p.phoenixInfinite&&!(p.phoenixCd>0)){
+    p.hp=Math.max(1,Math.floor(p.maxHp*.1));p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.phoenixCd=60000;pts(p.x,p.y,'#ff4400',2,6);return true;
+  }
+  if(type==='secondLife'&&p.secondLife&&!(p.secondLifeCd>0)){
+    p.secondLife=false;p.secondLifeCd=60000;p.hp=Math.max(1,Math.floor(p.maxHp*.25));p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);pts(p.x,p.y,'#ff88dd',2,6);return true;
+  }
+  return false;
+}
+function confirmReviveContinue(){
+  if(!state||!state.player)return;
+  const p=state.player;
+  const picked=state.pendingReviveType||getAvailableReviveType(p);
+  const reviveLabel=getReviveLabel(picked);
+  closeReviveChoice();
+  if(!picked){state.paused=false;state.pauseReason=null;return;}
+  if(!applyReviveByType(p,picked)){state.paused=false;state.pauseReason=null;gameOver();return;}
+  state.paused=false;state.pauseReason=null;
+  showInfoBanner(`${reviveLabel} active`,1600);
+  saveRunState(true);
+}
+function confirmReviveStop(){
+  if(!state)return;
+  closeReviveChoice();
+  state.paused=false;state.pauseReason=null;
+  gameOver();
+}
+
 function loop(ts=0){
   if(!gameLoop&&ts>0)return; // boucle annulée
   const dt=lastTime?Math.min(ts-lastTime,50):16;
@@ -4327,11 +4476,10 @@ function loop(ts=0){
 /** Phénix / renaissance / 2e vie / phénix éternel — retourne true si la mort est évitée. */
 function tryPlayerRevives(p){
   if(!p||p.hp>0)return false;
-  if(p.phoenix){p.hp=p.maxHp*.3;p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.phoenix=false;pts(p.x,p.y,'#ff6600',2,6);return true;}
-  if(p.rebirth){p.hp=p.maxHp*.5;p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.rebirth=false;pts(p.x,p.y,'#aaaaff',2,6);return true;}
-  if(p.phoenixInfinite&&!(p.phoenixCd>0)){p.hp=Math.max(1,Math.floor(p.maxHp*.1));p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);p.phoenixCd=60000;pts(p.x,p.y,'#ff4400',2,6);return true;}
-  if(p.secondLife&&!(p.secondLifeCd>0)){p.secondLife=false;p.secondLifeCd=60000;p.hp=Math.max(1,Math.floor(p.maxHp*.25));p.hitCd=Math.max(700,PLAYER_HIT_IFRAME_MS);pts(p.x,p.y,'#ff88dd',2,6);return true;}
-  return false;
+  if(state&&state.pendingReviveType)return true;
+  const reviveType=getAvailableReviveType(p);
+  if(!reviveType)return false;
+  return openReviveChoice(reviveType);
 }
 
 function update(dt){
@@ -4639,6 +4787,18 @@ function update(dt){
   state.bullets=state.bullets.filter(b=>{
     b.x+=b.vx;b.y+=b.vy;b.life--;
     if(b.frozen>0)b.frozen-=dt;
+    // Rebond sur les bords de l'écran pour projectiles joueurs disposant d'au moins 1 rebond.
+    if(!b.enemy&&(b.chainLeft||0)>0){
+      let bouncedOnWall=false;
+      if(b.x-b.size<=0){b.x=b.size;b.vx=Math.abs(b.vx);bouncedOnWall=true;}
+      else if(b.x+b.size>=W){b.x=W-b.size;b.vx=-Math.abs(b.vx);bouncedOnWall=true;}
+      if(b.y-b.size<=0){b.y=b.size;b.vy=Math.abs(b.vy);bouncedOnWall=true;}
+      else if(b.y+b.size>=H){b.y=H-b.size;b.vy=-Math.abs(b.vy);bouncedOnWall=true;}
+      if(bouncedOnWall){
+        b.chainLeft=Math.max(0,(b.chainLeft||0)-1);
+        pts(b.x,b.y,'#8fd8ff',.4,1);
+      }
+    }
     // Balles qui zigzaguent (TREMBLEMENT)
     if(!b.enemy&&state.player.wobblyBullets){
       b.vx+=( Math.random()-.5)*.4;
@@ -4690,6 +4850,7 @@ function update(dt){
       }
       return true;
     }
+    let keepAfterEnemyHit=false;
     for(let i=state.enemies.length-1;i>=0;i--){
       const e=state.enemies[i];if(!e)continue;
       if(Math.hypot(b.x-e.x,b.y-e.y)<b.size+e.size){
@@ -4732,13 +4893,24 @@ function update(dt){
         if(p.chain&&b.chainLeft>0){
           let near=null,nd=Infinity;
           for(const en of state.enemies){if(en&&en!==e){const d=Math.hypot(en.x-e.x,en.y-e.y);if(d<220&&d<nd){nd=d;near=en;}}}
-          if(near){const dx=near.x-b.x,dy=near.y-b.y,d=Math.hypot(dx,dy)||1;state.bullets.push({x:b.x,y:b.y,vx:dx/d*p.bulletSpeed,vy:dy/d*p.bulletSpeed,dmg:b.dmg*.65,size:b.size*.75,life:45,pierce:0,enemy:false,chainLeft:Math.max(0,(b.chainLeft||0)-1),isChain:true,frozen:0});}
+          if(near){
+            const dx=near.x-b.x,dy=near.y-b.y,d=Math.hypot(dx,dy)||1;
+            b.vx=dx/d*p.bulletSpeed;b.vy=dy/d*p.bulletSpeed;
+            b.chainLeft=Math.max(0,(b.chainLeft||0)-1);
+            b.dmg*=.65;b.size*=.85;
+            b.pierce=Math.max(0,b.pierce||0);
+            b.isChain=true;
+            b.x=e.x;b.y=e.y;
+            keepAfterEnemyHit=true;
+          }
         }
         pts(b.x,b.y,e.color,.45,1.4);
         if(e.hp<=0)killEnemy(i);
+        if(keepAfterEnemyHit)break;
         if(b.pierce<=0)return false;b.pierce--;
       }
     }
+    if(keepAfterEnemyHit)return true;
     return true;
   });
 
@@ -5672,9 +5844,44 @@ function transformXpGemsForNewWorld(){
   }
 }
 
+function applyPerLevelBonuses(p){
+  const hpGain=Math.max(0,Number(p.hpPerLevel)||0);
+  if(hpGain>0){
+    p.hp=Math.min(playerHealCap(p),p.hp+hpGain);
+    dmgNum(p.x,p.y-20,`+${Math.floor(hpGain)} PV`,'#6dffa7');
+  }
+
+  const dmgPerLevel=Math.max(0,Number(p.dmgPerLevel)||0);
+  if(dmgPerLevel>0){
+    p.bulletDmg*=1+dmgPerLevel;
+    dmgNum(p.x,p.y-38,`+${Math.round(dmgPerLevel*100)}% DMG`,'#ffd166');
+  }
+
+  // ACCUMULATEUR: bonus one-shot au prochain niveau.
+  if(p.hoarder){
+    p.maxHp+=10;
+    p.hp=Math.min(playerHealCap(p),p.hp+10);
+    p.bulletDmg+=10;
+    p.bulletSpeed+=1;
+    p.speed+=0.1;
+    p.xpRadius+=10;
+    p.hoarder=false;
+    dmgNum(p.x,p.y-56,'ACCUMULATEUR +10','#7ad7ff');
+  }
+}
+
 function gainXP(v){
   const p=state.player;p.xp+=v*(state._evXpMult||1);
-  if(p.xp>=p.xpNext){p.xp-=p.xpNext;p.xpNext=Math.floor(p.xpNext*1.32);p.level++;state.paused=true;state.pauseReason='upgrade';showUpgrades();snd('levelup');}
+  if(p.xp>=p.xpNext){
+    p.xp-=p.xpNext;
+    p.xpNext=Math.floor(p.xpNext*1.32);
+    p.level++;
+    applyPerLevelBonuses(p);
+    state.paused=true;
+    state.pauseReason='upgrade';
+    showUpgrades();
+    snd('levelup');
+  }
 }
 function showUpgrades(){
   const sc=document.getElementById('upgrade-screen');
@@ -5706,7 +5913,7 @@ function showUpgrades(){
     const pick=()=>{
       u.apply(state);
       discoverEntry('upgrades',u.id);
-      if(!known)showInfoBanner(`✦ ${u.name} — ${u.desc}`,3800);
+      if(!known)showDiscoveryToast(`✦ ${u.name} — ${u.desc}`,4000);
       syncTurrets();
       if(state.runUpgrades)state.runUpgrades.push({id:u.id,name:u.name,icon:u.icon,rarity:u.rarity,wave:state.wave});
       if(typeof checkSynergy==='function')checkSynergy(u.id);
@@ -5734,6 +5941,7 @@ function dmgNum(x,y,v,color='#ff6',crit=false){
 /* ── GAME OVER ── */
 function gameOver(){
   if(!state||!state.player){try{backToTitle();}catch(e){}return;}
+  closeReviveChoice();
   clearRunSave();
   state.running=false;snd('gameover');
   if(state.currentEvent)endEvent(state.currentEvent);
@@ -5821,6 +6029,16 @@ function showInfoBanner(msg,duration=3200){
   showInfoBanner._timer=setTimeout(()=>{
     el.classList.remove('show');
     el.style.color='';el.style.background='';el.style.borderColor='';
+  },duration);
+}
+function showDiscoveryToast(msg,duration=4000){
+  const el=document.getElementById('discovery-toast');
+  if(!el)return;
+  if(showDiscoveryToast._timer)clearTimeout(showDiscoveryToast._timer);
+  el.textContent=msg;
+  el.classList.add('show');
+  showDiscoveryToast._timer=setTimeout(()=>{
+    el.classList.remove('show');
   },duration);
 }
 function updateHUD(){
