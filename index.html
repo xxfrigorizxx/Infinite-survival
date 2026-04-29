@@ -269,7 +269,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v7.1.7 UPDATE · SHOP CENTENAIRE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v8 UPDATE · SHOP CENTENAIRE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -1347,7 +1347,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v7.1.7-shop-centenaire'; // Migration boutique non destructive
+const SHOP_VERSION='v8-shop-centenaire'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -4784,16 +4784,25 @@ function update(dt){
   }
 
   // Balles
+  const viewZoom=Math.max(0.01,getZoom());
+  const viewHalfW=(W*.5)/viewZoom;
+  const viewHalfH=(H*.5)/viewZoom;
+  const viewCenterX=(state.camX||0)+W*.5;
+  const viewCenterY=(state.camY||0)+H*.5;
+  const viewMinX=viewCenterX-viewHalfW;
+  const viewMaxX=viewCenterX+viewHalfW;
+  const viewMinY=viewCenterY-viewHalfH;
+  const viewMaxY=viewCenterY+viewHalfH;
   state.bullets=state.bullets.filter(b=>{
     b.x+=b.vx;b.y+=b.vy;b.life--;
     if(b.frozen>0)b.frozen-=dt;
     // Rebond sur les bords de l'écran pour projectiles joueurs disposant d'au moins 1 rebond.
     if(!b.enemy&&(b.chainLeft||0)>0){
       let bouncedOnWall=false;
-      if(b.x-b.size<=0){b.x=b.size;b.vx=Math.abs(b.vx);bouncedOnWall=true;}
-      else if(b.x+b.size>=W){b.x=W-b.size;b.vx=-Math.abs(b.vx);bouncedOnWall=true;}
-      if(b.y-b.size<=0){b.y=b.size;b.vy=Math.abs(b.vy);bouncedOnWall=true;}
-      else if(b.y+b.size>=H){b.y=H-b.size;b.vy=-Math.abs(b.vy);bouncedOnWall=true;}
+      if(b.x-b.size<=viewMinX){b.x=viewMinX+b.size;b.vx=Math.abs(b.vx);bouncedOnWall=true;}
+      else if(b.x+b.size>=viewMaxX){b.x=viewMaxX-b.size;b.vx=-Math.abs(b.vx);bouncedOnWall=true;}
+      if(b.y-b.size<=viewMinY){b.y=viewMinY+b.size;b.vy=Math.abs(b.vy);bouncedOnWall=true;}
+      else if(b.y+b.size>=viewMaxY){b.y=viewMaxY-b.size;b.vy=-Math.abs(b.vy);bouncedOnWall=true;}
       if(bouncedOnWall){
         b.chainLeft=Math.max(0,(b.chainLeft||0)-1);
         pts(b.x,b.y,'#8fd8ff',.4,1);

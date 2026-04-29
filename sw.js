@@ -1,4 +1,4 @@
-const CACHE = 'survivor-v7.1.7-update-shop-centenaire-2026-04-29';
+const CACHE = 'survivor-v8-update-shop-centenaire-2026-04-29';
 const ASSETS = [
   './',
   './index.html',
