@@ -269,7 +269,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v8.1.1 HOTFIX · RÉCUP PROGRESSION —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v8.1.3 UPDATE · ORBES PROTECTRICES —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -674,6 +674,7 @@ function nextRegen(){const l=parseInt(localStorage.getItem(KR))||Date.now();retu
 ══════════════════════════════════════════════ */
 const KC='surv_coins';
 const COINS_COMP_V811_KEY='surv_comp_coins_v811_once';
+const COINS_COMP_V812_KEY='surv_comp_coins_v812_once';
 const COIN_PICKUP_COLOR='#f4a61d';
 function getCoins(){return parseInt(localStorage.getItem(KC))||0;}
 function addCoins(n){localStorage.setItem(KC,String(getCoins()+n));}
@@ -712,7 +713,7 @@ function confirmReset(){
 
 function doReset(){
   // Effacer toutes les données locales
-  const keys=['surv_e','surv_r',KEMETA,ENERGY_UPDATE_GRANT_KEY,COINS_COMP_V811_KEY,KRUN,KRUN_BAK,'surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw','surv_device_id'];
+  const keys=['surv_e','surv_r',KEMETA,ENERGY_UPDATE_GRANT_KEY,COINS_COMP_V811_KEY,COINS_COMP_V812_KEY,KRUN,KRUN_BAK,'surv_coins','surv_profile','surv_codex','surv_lb','surv_shop','surv_shop_ver','surv_bw','surv_device_id'];
   keys.forEach(k=>localStorage.removeItem(k));
   // Fermer les modals
   document.getElementById('reset-confirm').style.display='none';
@@ -1349,7 +1350,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v8.1.1-hotfix-recup'; // Migration boutique non destructive
+const SHOP_VERSION='v8.1.3-update-orbes-protectrices'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -1374,6 +1375,15 @@ const SHOP_VERSION='v8.1.1-hotfix-recup'; // Migration boutique non destructive
     addCoins(1000000);
     localStorage.setItem(COINS_COMP_V811_KEY,'1');
     console.log('Compensation v8.1.1 appliquée : +1 000 000 pièces');
+  }catch(e){}
+})();
+// Compensation v8.1.2 : +500 000 pièces (une seule fois par joueur)
+(function grantCompensationCoinsV812Once(){
+  if(localStorage.getItem(COINS_COMP_V812_KEY))return;
+  try{
+    addCoins(500000);
+    localStorage.setItem(COINS_COMP_V812_KEY,'1');
+    console.log('Compensation v8.1.2 appliquée : +500 000 pièces');
   }catch(e){}
 })();
 const SHOP_ITEMS=[
@@ -1401,6 +1411,7 @@ const SHOP_ITEMS=[
   {id:'s_xp',    icon:'✨', name:'BONUS XP',            desc:'+15% XP par kill',      baseCost:225, maxLvl:4, effect:s=>s.xpMult=(s.xpMult||1)*1.15},
   {id:'s_coin',  icon:'🪙', name:'BONUS PIÈCES',        desc:'+20% pièces/partie',    baseCost:300, maxLvl:4, effect:s=>s.coinMult=(s.coinMult||1)*1.20},
   {id:'s_orb',   icon:'🌀', name:'ORBE DE DÉPART',      desc:'Commence avec 1 orbe',  baseCost:400, maxLvl:3, effect:s=>s.player.orbCount++},
+  {id:'s_guard_orb', icon:'🛡️', name:'ORBE PROTECTRICE', desc:'Commence avec 1 orbe qui bloque 1 projectile', baseCost:520, maxLvl:4, effect:s=>s.player.guardOrbMax++},
   {id:'s_orbsz', icon:'🪐', name:'ORBES GÉANTS',        desc:'Orbes +20% plus gros',  baseCost:300, maxLvl:4, effect:s=>s.player.orbSize=(s.player.orbSize||7)*1.2},
   {id:'s_mag',   icon:'🧲', name:'MAGNÉT. DE BASE',     desc:'Portée XP +30%',        baseCost:275, maxLvl:4, effect:s=>s.player.xpRadius*=1.3},
   {id:'s_dash',  icon:'💨', name:'ESQUIVE AU DÉPART',   desc:'Dash débloqué dès le début', baseCost:600, maxLvl:1, effect:s=>{s.player.hasDash=true;}},
@@ -1655,6 +1666,7 @@ const ALL_UPGRADES=[
   {id:'multi1b',  name:'RAFALE',          icon:'🎰',rarity:'rare',     unlockWave:7,  desc:'+1 projectile',              apply:s=>s.player.multiShot++},
   // ── WAVE 8 ──
   {id:'vamp1',    name:'VAMPIRISME',      icon:'🩸',rarity:'epic',     unlockWave:8,  desc:'+3 PV par kill',             apply:s=>s.player.vamp=(s.player.vamp||0)+3},
+  {id:'guard_orb1',name:'ORBE BOUCLIER',  icon:'🛡️',rarity:'epic',     unlockWave:8,  desc:'+1 orbe de protection (bloque 1 projectile)', apply:s=>s.player.guardOrbMax++},
   {id:'crit2',    name:'SNIPER',          icon:'🎯',rarity:'epic',     unlockWave:8,  desc:'+30% crit, x2.5 dégâts',   apply:s=>{s.player.critChance=Math.min(.8,s.player.critChance+.3);s.player.critMult=(s.player.critMult||2)*1.25;}},
   {id:'n_berserker',name:'BERSERK',       icon:'😤',rarity:'epic',     unlockWave:8,  desc:'+40% dégâts si PV < 30%',   apply:s=>s.player.berserker=true},
   {id:'regen1b',  name:'FLUX VITAL',      icon:'🌊',rarity:'rare',     unlockWave:8,  desc:'+3 PV/seconde',              apply:s=>s.player.regen+=3},
@@ -1692,6 +1704,7 @@ const ALL_UPGRADES=[
   {id:'speed3b',  name:'TURBO',           icon:'🏎️',rarity:'epic',    unlockWave:13, desc:'+40% vitesse',               apply:s=>s.player.speed*=1.4},
   // ── WAVE 14 ──
   {id:'freeze1',  name:'GEL',             icon:'❄️',rarity:'epic',    unlockWave:14, desc:'Balles gèlent 0.5s',         apply:s=>s.player.freeze=true},
+  {id:'guard_orb2',name:'ANNEAU BOUCLIER',icon:'🛡️',rarity:'legendary',unlockWave:14, desc:'+2 orbes de protection',       apply:s=>s.player.guardOrbMax+=2},
   {id:'regen2',   name:'HYPER RÉGÉN.',    icon:'🌿',rarity:'epic',     unlockWave:14, desc:'+5 PV/seconde',              apply:s=>s.player.regen+=5},
   {id:'n_teleport',name:'BLINK',          icon:'🔀',rarity:'epic',     unlockWave:14, desc:'Cooldown Dash réduit à 1.5s',apply:s=>s.player.dashCooldownMax=1500},
   {id:'n_blade',  name:'LAMES TOURNANTES',icon:'⚔️',rarity:'epic',    unlockWave:14, desc:'Orbes 1.5x plus larges et rapides',apply:s=>{s.orbAngleSpeed=(s.orbAngleSpeed||.003)*1.8;s.player.orbSize=(s.player.orbSize||7)*1.5;}},
@@ -2510,6 +2523,7 @@ function mkState(){
       fireRate:350,lastFire:0,
       bulletDmg:18,bulletSize:6,bulletSpeed:6.5,
       multiShot:0,pierce:0,orbCount:0,orbSize:7,xpRadius:Math.min(W,H)*.14,
+      guardOrbMax:0,guardOrbBroken:0,guardOrbSize:8,
       explode:false,explodeRadius:55,
       chain:false,chainCount:2,
       freeze:false,vamp:0,regen:0,regenTimer:0,
@@ -2520,7 +2534,7 @@ function mkState(){
       turretCount:0,divineTimer:-1,divineActive:false,
     },
     bullets:[],enemies:[],particles:[],
-    xpGems:[],coinPickups:[],orbs:[],orbAngle:0,dmgNums:[],
+    xpGems:[],coinPickups:[],orbs:[],guardOrbs:[],orbAngle:0,guardOrbAngle:0,dmgNums:[],
   };
 }
 
@@ -4288,8 +4302,14 @@ function normalizeLoadedState(s){
   s.xpGems=Array.isArray(s.xpGems)?s.xpGems:[];s.coinPickups=Array.isArray(s.coinPickups)?s.coinPickups:[];
   s.obstacles=Array.isArray(s.obstacles)?s.obstacles:[];s.turrets=Array.isArray(s.turrets)?s.turrets:[];
   s.dmgNums=Array.isArray(s.dmgNums)?s.dmgNums:[];s.orbs=Array.isArray(s.orbs)?s.orbs:[];
+  s.guardOrbs=Array.isArray(s.guardOrbs)?s.guardOrbs:[];
+  s.guardOrbAngle=Number(s.guardOrbAngle)||0;
   s.stats=s.stats&&typeof s.stats==='object'?s.stats:{kills:0,dmg:0,crits:0,boss:0,big:'-'};
   s.player.hitCd=Number(s.player.hitCd)||0;
+  s.player.guardOrbMax=Math.max(0,Math.floor(Number(s.player.guardOrbMax)||0));
+  s.player.guardOrbBroken=Math.max(0,Math.floor(Number(s.player.guardOrbBroken)||0));
+  if(s.player.guardOrbBroken>s.player.guardOrbMax)s.player.guardOrbBroken=s.player.guardOrbMax;
+  s.player.guardOrbSize=Math.max(4,Number(s.player.guardOrbSize)||8);
   s.player.secondLifeCd=Number(s.player.secondLifeCd)||0;
   s.player.phoenixCd=Number(s.player.phoenixCd)||0;
   s.pendingReviveType=null;
@@ -4379,10 +4399,6 @@ function backToTitle(){
   document.getElementById('title-screen').style.display='';
   updateResumeButton();
   updateEnergyUI();renderLeaderboard();renderProfileBadge();
-  if(window.__swPendingReload&&!window.__swReloading){
-    window.__swReloading=true;
-    setTimeout(()=>window.location.reload(),120);
-  }
 }
 function showDashBtn(){dashBtn.style.display='flex';dashBtn.classList.add('ready');}
 function closePause(){
@@ -4489,8 +4505,16 @@ function loop(ts=0){
     try{update(dt);}
     catch(err){
       console.error('[update]',err);
-      try{if(state){state.running=false;state.paused=false;}gameOver();}
-      catch(e2){console.error('[gameOver]',e2);try{backToTitle();}catch(e3){}}
+      try{
+        if(state){
+          state.paused=true;
+          state.pauseReason='manual';
+          saveRunState(true);
+          const ov=document.getElementById('pause-overlay');
+          if(ov)ov.style.display='flex';
+          if(typeof showInfoBanner==='function')showInfoBanner('Erreur détectée: partie sauvegardée et mise en pause',3000);
+        }
+      }catch(e2){console.error('[runtime recovery]',e2);}
     }
   }
   if(state)draw();
@@ -4806,6 +4830,16 @@ function update(dt){
     const a=state.orbAngle+(i/p.orbCount)*Math.PI*2;
     state.orbs.push({x:p.x+Math.cos(a)*42,y:p.y+Math.sin(a)*42,size:p.orbSize||7});
   }
+  // Orbes de protection (défensives, séparées des orbes offensives)
+  p.guardOrbMax=Math.max(0,Math.floor(p.guardOrbMax||0));
+  p.guardOrbBroken=Math.max(0,Math.min(p.guardOrbMax,Math.floor(p.guardOrbBroken||0)));
+  state.guardOrbAngle=(state.guardOrbAngle||0)+dt*.0032;
+  state.guardOrbs=[];
+  const guardOrbAlive=Math.max(0,p.guardOrbMax-p.guardOrbBroken);
+  for(let i=0;i<guardOrbAlive;i++){
+    const a=state.guardOrbAngle+(i/Math.max(1,guardOrbAlive))*Math.PI*2;
+    state.guardOrbs.push({x:p.x+Math.cos(a)*58,y:p.y+Math.sin(a)*58,size:p.guardOrbSize||8});
+  }
 
   // Balles
   const viewZoom=Math.max(0.01,getZoom());
@@ -4867,6 +4901,16 @@ function update(dt){
     const maxKeep=b.enemy?scr*6+1400:scr*1.2;
     if(distP>maxKeep||b.life<=0)return false;
     if(b.enemy){
+      // Les orbes de protection absorbent un projectile ennemi puis se brisent (définitif pour la run).
+      if(state.guardOrbs&&state.guardOrbs.length){
+        for(const go of state.guardOrbs){
+          if(Math.hypot(b.x-go.x,b.y-go.y)<(b.size||4)+(go.size||8)){
+            if(p.guardOrbBroken<p.guardOrbMax)p.guardOrbBroken++;
+            pts(go.x,go.y,'#7dc9ff',1.1,4);
+            return false;
+          }
+        }
+      }
       if(Math.hypot(b.x-p.x,b.y-p.y)<p.size+b.size){
         if(p.divineActive)return false;
         if((p.hitCd||0)>0)return false;
@@ -6579,6 +6623,13 @@ function draw(){
     ctx.beginPath();ctx.arc(o.x,o.y,o.size||7,0,Math.PI*2);
     ctx.fillStyle='#00ffe7';ctx.shadowBlur=13;ctx.shadowColor='#00ffe7';ctx.fill();ctx.shadowBlur=0;
   });
+  // Orbes de protection (visuel distinct)
+  (state.guardOrbs||[]).forEach(o=>{
+    ctx.beginPath();ctx.arc(o.x,o.y,o.size||8,0,Math.PI*2);
+    ctx.fillStyle='rgba(80,140,255,.45)';ctx.shadowBlur=11;ctx.shadowColor='#6fa8ff';ctx.fill();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(o.x,o.y,(o.size||8)*.72,0,Math.PI*2);
+    ctx.strokeStyle='rgba(190,225,255,.95)';ctx.lineWidth=1.5;ctx.stroke();
+  });
 
     // Joueur
   const p=state.player;
@@ -6822,15 +6873,8 @@ if('serviceWorker' in navigator){
         try{reg.update();}catch(_){}
         setInterval(()=>{try{reg.update();}catch(_){};},30000);
         navigator.serviceWorker.addEventListener('controllerchange',()=>{
-          if(window.__swReloading)return;
-          const inRun=!!(window.state&&window.state.running);
-          if(inRun){
-            window.__swPendingReload=true;
-            if(typeof showInfoBanner==='function')showInfoBanner('Mise à jour prête — appliquée au retour menu',2600);
-            return;
-          }
-          window.__swReloading=true;
-          window.location.reload();
+          window.__swPendingReload=true;
+          if(typeof showInfoBanner==='function')showInfoBanner('Mise à jour prête — relancez l’app quand vous voulez',2800);
         });
       })
       .catch(e=>console.log('SW erreur',e));
