@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const RTC_CFG = {
+  let RTC_CFG = {
     iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }],
   };
 
@@ -16,7 +16,7 @@
     }
   }
 
-  async function waitIceComplete(pc) {
+  async function waitIceComplete(pc, timeoutMs = 15000) {
     if (pc.iceGatheringState === 'complete') return;
     await new Promise((resolve) => {
       const onChange = () => {
@@ -29,14 +29,14 @@
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', onChange);
         resolve();
-      }, 5000);
+      }, timeoutMs);
     });
   }
 
   class CoopLink {
-    constructor(role) {
+    constructor(role, rtcConfig = null) {
       this.role = role;
-      this.pc = new RTCPeerConnection(RTC_CFG);
+      this.pc = new RTCPeerConnection(rtcConfig || RTC_CFG);
       this.dc = null;
       this.onMessage = null;
       this.onStatus = null;
@@ -95,7 +95,7 @@
       this._bindDataChannel(dc);
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
-      await waitIceComplete(this.pc);
+      await waitIceComplete(this.pc, 15000);
       return JSON.stringify(this.pc.localDescription);
     }
 
@@ -106,7 +106,7 @@
       await this.pc.setRemoteDescription(offer);
       const answer = await this.pc.createAnswer();
       await this.pc.setLocalDescription(answer);
-      await waitIceComplete(this.pc);
+      await waitIceComplete(this.pc, 15000);
       return JSON.stringify(this.pc.localDescription);
     }
 
@@ -139,5 +139,10 @@
     }
   }
 
+  window.setCoopRtcIceServers = function setCoopRtcIceServers(iceServers) {
+    if (!Array.isArray(iceServers) || !iceServers.length) return false;
+    RTC_CFG = { ...RTC_CFG, iceServers };
+    return true;
+  };
   window.CoopLink = CoopLink;
 })();

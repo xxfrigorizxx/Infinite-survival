@@ -280,7 +280,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v9.1 COOP UPDATE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v9.2 COOP UPDATE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -632,15 +632,22 @@ window._coopSignalReadBestWaiting=async function(roomKey){
   if(!roomKey)return null;
   const snap=await get(ref(db,'coop_signals_rooms/'+roomKey));
   if(!snap.exists())return null;
+  const now=Date.now();
   let best=null;
   snap.forEach(c=>{
     const v=c.val();
     if(!v||!v.offer)return;
     if(v.status&&v.status!=='waiting-answer')return;
+    if((now-Number(v.ts||0))>120000)return;
     const item={sessionId:c.key,data:v};
     if(!best||Number(v.ts||0)>Number(best.data.ts||0))best=item;
   });
   return best;
+};
+window._coopSignalReadSession=async function(roomKey,sessionId){
+  if(!roomKey||!sessionId)return null;
+  const snap=await get(ref(db,'coop_signals_rooms/'+roomKey+'/'+sessionId));
+  return snap.exists()?snap.val():null;
 };
 window._coopSignalWatchSession=function(roomKey,sessionId,cb){
   if(!roomKey||!sessionId||typeof cb!=='function')return ()=>{};
@@ -1459,7 +1466,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v9.1-coop-update'; // Migration boutique non destructive
+const SHOP_VERSION='v9.2-coop-update'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -2593,7 +2600,9 @@ function sendLocalCoopInput(extra={}){
   const myRaw=(joy.active?joy.dy:0)+(keys['w']||keys['arrowup']?-1:0)+(keys['s']||keys['arrowdown']?1:0);
   const mx=Math.max(-1,Math.min(1,mxRaw));
   const my=Math.max(-1,Math.min(1,myRaw));
-  const nextInput={mx,my,dash:!!extra.dash,resume:!!extra.resume};
+  const prevSeq=Number(coopSession.localInput?.resumeSeq||0);
+  const nextSeq=extra.resume?(prevSeq+1):prevSeq;
+  const nextInput={mx,my,dash:!!extra.dash,resume:!!extra.resume,resumeSeq:nextSeq};
   coopSession.localInput=nextInput;
   const now=performance.now();
   const shouldForce=!!extra.dash||!!extra.resume;
@@ -2656,10 +2665,10 @@ let coopSession={
   connected:false,
   hostName:'',
   guestName:'',
-  remoteInput:{mx:0,my:0,dash:false,resume:false},
+  remoteInput:{mx:0,my:0,dash:false,resume:false,resumeSeq:0},
   lastSnapshotTs:0,
   pendingUpgradeChoices:null,
-  localInput:{mx:0,my:0,dash:false,resume:false},
+  localInput:{mx:0,my:0,dash:false,resume:false,resumeSeq:0},
   lastInputSentAt:0,
   hbTimer:null,
   lastRemoteSnapshotAt:0,
@@ -2669,6 +2678,9 @@ let coopSession={
   roomUnsub:null,
   roomJoinHandled:false,
   roomAnswerHandled:false,
+  reconnectTimer:null,
+  lastConsumedRemoteResumeSeq:0,
+  joinToken:'',
 };
 function mkBasePlayer(x,y,color='#00ffe7'){
   return{
@@ -2711,7 +2723,7 @@ function mkState(){
       hostName:'',
       guestName:'',
       connected:false,
-      remoteInput:{mx:0,my:0,dash:false,resume:false},
+      remoteInput:{mx:0,my:0,dash:false,resume:false,resumeSeq:0},
       upgradeVote:null,
     },
     bullets:[],enemies:[],particles:[],
@@ -2807,6 +2819,7 @@ function coopCloseLink(){
   coopSession.link=null;
   coopSession.connected=false;
   if(coopSession.hbTimer){clearInterval(coopSession.hbTimer);coopSession.hbTimer=null;}
+  if(coopSession.reconnectTimer){clearTimeout(coopSession.reconnectTimer);coopSession.reconnectTimer=null;}
   if(typeof coopSession.roomUnsub==='function'){try{coopSession.roomUnsub();}catch(e){}}
   coopSession.roomUnsub=null;
   coopSession.roomJoinHandled=false;
@@ -2821,10 +2834,12 @@ function coopDisconnect(){
   coopSession.role='solo';
   coopSession.hostName='';
   coopSession.guestName='';
-  coopSession.localInput={mx:0,my:0,dash:false,resume:false};
+  coopSession.localInput={mx:0,my:0,dash:false,resume:false,resumeSeq:0};
   coopSession.roomKey='';
   coopSession.roomWord='';
   coopSession.roomSessionId='';
+  coopSession.lastConsumedRemoteResumeSeq=0;
+  coopSession.joinToken='';
   if(state&&state.coop){
     state.coop.mode='solo';
     state.coop.connected=false;
@@ -2853,7 +2868,7 @@ function coopStartClientHeartbeat(){
   if(coopSession.hbTimer){clearInterval(coopSession.hbTimer);coopSession.hbTimer=null;}
   coopSession.hbTimer=setInterval(()=>{
     if(!coopIsClient()||!coopSession.connected)return;
-    const inp=coopSession.localInput||{mx:0,my:0,dash:false,resume:false};
+    const inp=coopSession.localInput||{mx:0,my:0,dash:false,resume:false,resumeSeq:0};
     coopSend({type:'input',input:inp});
   },50);
 }
@@ -2881,6 +2896,7 @@ function coopHandleMessage(msg){
       my:Math.max(-1,Math.min(1,Number(ri.my)||0)),
       dash:!!ri.dash,
       resume:!!ri.resume,
+      resumeSeq:Math.max(0,Math.floor(Number(ri.resumeSeq)||0)),
     };
     if(state&&state.coop)state.coop.remoteInput=coopSession.remoteInput;
     return;
@@ -2929,6 +2945,8 @@ function coopHandleMessage(msg){
       gs.style.display='flex';
       document.getElementById('stats-screen').classList.remove('show');
       document.getElementById('upgrade-screen').classList.remove('show');
+      resizeCanvas();
+      ensureGameLoop();
     }
     return;
   }
@@ -2945,6 +2963,7 @@ function coopWireLink(link){
   coopSession.link=link;
   link.onStatus=(status)=>{
     if(status==='connected'){
+      if(coopSession.reconnectTimer){clearTimeout(coopSession.reconnectTimer);coopSession.reconnectTimer=null;}
       coopSession.connected=true;
       if(state&&state.coop){
         state.coop.connected=true;
@@ -2959,7 +2978,19 @@ function coopWireLink(link){
       }else if(coopIsHost()&&coopSession.roomKey&&coopSession.roomSessionId&&window._coopSignalRemoveSession){
         window._coopSignalRemoveSession(coopSession.roomKey,coopSession.roomSessionId).catch(()=>{});
       }
-    }else if(status==='failed'||status==='closed'||status==='disconnected'){
+    }else if(status==='disconnected'){
+      if(coopSession.reconnectTimer){clearTimeout(coopSession.reconnectTimer);}
+      setCoopStatus('Connexion instable, tentative de reprise...');
+      setCoopHealth('err','P2P instable');
+      coopSession.reconnectTimer=setTimeout(()=>{
+        const stillDown=!coopSession.link||!coopSession.link.connected;
+        if(stillDown){
+          setCoopStatus('Session perdue');
+          setCoopHealth('err','P2P perdu');
+          coopDisconnect();
+        }
+      },6000);
+    }else if(status==='failed'||status==='closed'){
       setCoopStatus('Session perdue');
       setCoopHealth('err','P2P perdu');
       coopDisconnect();
@@ -2998,6 +3029,7 @@ async function coopCreateHost(){
         coopWatchRoom(coopSession.roomKey,async(data)=>{
           if(!coopIsHost()||coopSession.roomAnswerHandled)return;
           if(!data||!data.answer)return;
+          if(data.status!=='answered')return;
           try{
             await coopSession.link.acceptAnswer(data.answer);
             coopSession.roomAnswerHandled=true;
@@ -3008,7 +3040,8 @@ async function coopCreateHost(){
         setCoopHealth('ok','Lobby: disponible');
         return;
       }catch(sigErr){
-        setCoopStatus(`Host prêt (lobby indisponible). Utilise Mode avance manuel.`);
+        const sMsg=(sigErr&&sigErr.message)?String(sigErr.message):'signal indisponible';
+        setCoopStatus(`Host prêt (lobby indisponible: ${sMsg}). Utilise Mode avance manuel.`);
         setCoopHealth('err','Lobby: indisponible (manuel)');
         return;
       }
@@ -3050,6 +3083,7 @@ async function coopJoinAsClient(forceManual=false){
           roomWord,
           guestName:me,
           status:'answered',
+          joinToken:coopSession.joinToken||'',
         });
         setCoopStatus(`Lobby "${roomWord}" trouvé. Connexion...`);
       }else{
@@ -3062,12 +3096,21 @@ async function coopJoinAsClient(forceManual=false){
         if(best&&best.data&&best.data.offer){
           coopSession.roomSessionId=best.sessionId||'';
           coopSession.hostName=String(best.data.hostName||'Host').slice(0,16);
+          const joinToken='j_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
+          coopSession.joinToken=joinToken;
           if(coopSession.roomSessionId&&window._coopSignalWriteSession){
             await window._coopSignalWriteSession(coopSession.roomKey,coopSession.roomSessionId,{
               ...best.data,
               status:'joining',
               guestName:me,
+              joinToken,
             });
+            if(typeof window._coopSignalReadSession==='function'){
+              const locked=await window._coopSignalReadSession(coopSession.roomKey,coopSession.roomSessionId);
+              if(!locked||locked.joinToken!==joinToken||locked.status!=='joining'){
+                return false;
+              }
+            }
           }
           await joinWithOffer(best.data.offer);
           return true;
@@ -3165,6 +3208,8 @@ function tryResolveCoopUpgradeVote(){
   }
   state.coop.upgradeVote=null;
   state.awaitInputResume=true;
+  state._awaitResumeSince=performance.now();
+  coopSession.lastConsumedRemoteResumeSeq=Number(coopSession.remoteInput?.resumeSeq||0);
   state.player.hitCd=Math.max(state.player.hitCd||0,520);
   if(state.player2)state.player2.hitCd=Math.max(state.player2.hitCd||0,520);
   state.paused=false;state.pauseReason=null;
@@ -4991,7 +5036,7 @@ function normalizeLoadedState(s){
   s.pendingReviveType=null;
   s.paused=false;s.pauseReason=null;s.awaitInputResume=false;s.running=true;
   if(!s.coop||typeof s.coop!=='object'){
-    s.coop={mode:'solo',hostName:'',guestName:'',connected:false,remoteInput:{mx:0,my:0,dash:false,resume:false},upgradeVote:null};
+    s.coop={mode:'solo',hostName:'',guestName:'',connected:false,remoteInput:{mx:0,my:0,dash:false,resume:false,resumeSeq:0},upgradeVote:null};
   }
   if(!s.biome)s.biome=getBiome(s.wave);
   if(!Number.isFinite(s.camX))s.camX=s.player.x-W/2;
@@ -5041,7 +5086,7 @@ function startGame(savedState=null,forcedBiomeId='',forcedWave=0){
     }
   }
   syncTurrets();
-  state.coop=state.coop||{mode:'solo',hostName:'',guestName:'',connected:false,remoteInput:{mx:0,my:0,dash:false,resume:false},upgradeVote:null};
+  state.coop=state.coop||{mode:'solo',hostName:'',guestName:'',connected:false,remoteInput:{mx:0,my:0,dash:false,resume:false,resumeSeq:0},upgradeVote:null};
   state.coop.mode=coopSession.role||'solo';
   state.coop.hostName=coopSession.hostName||getPrf()?.name||'Host';
   state.coop.guestName=coopSession.guestName||'Guest';
@@ -5225,6 +5270,11 @@ function loop(ts=0){
   if(state)draw();
   gameLoop=requestAnimationFrame(loop);
 }
+function ensureGameLoop(){
+  if(gameLoop)return;
+  lastTime=0;
+  loop();
+}
 
 /** Phénix / renaissance / 2e vie / phénix éternel — retourne true si la mort est évitée. */
 function tryPlayerRevives(p){
@@ -5272,7 +5322,16 @@ function update(dt){
   if(p.hasDash&&dashBtn.style.display!=='flex')showDashBtn();
   if(!p.hasDash&&dashBtn.style.display!=='none')dashBtn.style.display='none';
   if(state.awaitInputResume){
-    if(p2&&state.coop&&state.coop.remoteInput&&state.coop.remoteInput.resume)state.awaitInputResume=false;
+    const ri=(state.coop&&state.coop.remoteInput)?state.coop.remoteInput:null;
+    const remoteSeq=Number(ri?.resumeSeq||0);
+    if(p2&&remoteSeq>Number(coopSession.lastConsumedRemoteResumeSeq||0)){
+      coopSession.lastConsumedRemoteResumeSeq=remoteSeq;
+      state.awaitInputResume=false;
+    }
+    if(state.awaitInputResume&&(performance.now()-Number(state._awaitResumeSince||0))>2500){
+      state.awaitInputResume=false;
+    }
+    publishHostSnapshot();
     updateHUD();
     return;
   }
@@ -6824,6 +6883,7 @@ function showUpgrades(forcedChoices=null,isRemotePicker=false){
       if(state.coop&&state.coop.upgradeVote){
         if(isRemotePicker){
           coopSend({type:'upgrade-pick',choice:idx});
+          sendLocalCoopInput({resume:true});
           sc.classList.remove('show');
           showInfoBanner('Choix envoyé au host',1500);
           return;
@@ -6842,6 +6902,7 @@ function showUpgrades(forcedChoices=null,isRemotePicker=false){
       sc.classList.remove('show');
       // Après upgrade: reprise uniquement sur première action joueur.
       state.awaitInputResume=true;
+      state._awaitResumeSince=performance.now();
       state.player.hitCd=Math.max(state.player.hitCd||0,520);
       state.paused=false;state.pauseReason=null;
       showInfoBanner('Touchez/bougez pour reprendre',1800);
