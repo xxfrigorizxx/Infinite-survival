@@ -280,7 +280,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v9 COOP UPDATE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v9.1 COOP UPDATE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -1459,7 +1459,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v9-coop-update'; // Migration boutique non destructive
+const SHOP_VERSION='v9.1-coop-update'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -2715,12 +2715,17 @@ function mkState(){
       upgradeVote:null,
     },
     bullets:[],enemies:[],particles:[],
-    xpGems:[],coinPickups:[],orbs:[],guardOrbs:[],orbAngle:0,guardOrbAngle:0,dmgNums:[],
+    xpGems:[],coinPickups:[],orbs:[],orbs2:[],guardOrbs:[],guardOrbs2:[],orbAngle:0,guardOrbAngle:0,dmgNums:[],
   };
 }
 function coopIsActive(){return coopSession.enabled&&coopSession.role!=='solo';}
 function coopIsHost(){return coopSession.enabled&&coopSession.role==='host';}
 function coopIsClient(){return coopSession.enabled&&coopSession.role==='client';}
+function getLocalControlledPlayer(){
+  if(!state||!state.player)return null;
+  if(coopIsClient()&&state.player2)return state.player2;
+  return state.player;
+}
 function setCoopStatus(msg){
   const el=document.getElementById('coop-status');
   if(el)el.textContent=msg||'Mode solo actif';
@@ -4969,7 +4974,9 @@ function normalizeLoadedState(s){
   s.xpGems=Array.isArray(s.xpGems)?s.xpGems:[];s.coinPickups=Array.isArray(s.coinPickups)?s.coinPickups:[];
   s.obstacles=Array.isArray(s.obstacles)?s.obstacles:[];s.turrets=Array.isArray(s.turrets)?s.turrets:[];
   s.dmgNums=Array.isArray(s.dmgNums)?s.dmgNums:[];s.orbs=Array.isArray(s.orbs)?s.orbs:[];
+  s.orbs2=Array.isArray(s.orbs2)?s.orbs2:[];
   s.guardOrbs=Array.isArray(s.guardOrbs)?s.guardOrbs:[];
+  s.guardOrbs2=Array.isArray(s.guardOrbs2)?s.guardOrbs2:[];
   s.guardOrbAngle=Number(s.guardOrbAngle)||0;
   s.stats=s.stats&&typeof s.stats==='object'?s.stats:{kills:0,dmg:0,crits:0,boss:0,big:'-'};
   s.player.hitCd=Number(s.player.hitCd)||0;
@@ -5248,8 +5255,9 @@ function update(dt){
       }
       if((p2.dashCd||0)>0)p2.dashCd=Math.max(0,p2.dashCd-dt);
       if((p2.hitCd||0)>0)p2.hitCd=Math.max(0,p2.hitCd-dt);
-      const focusX=(p.x+p2.x)*0.5;
-      const focusY=(p.y+p2.y)*0.5;
+      const local=getLocalControlledPlayer()||p2;
+      const focusX=local.x;
+      const focusY=local.y;
       const tx=focusX-W/2;
       const ty=focusY-H/2;
       state.camX=(state.camX??tx)+(tx-(state.camX??tx))*0.18;
@@ -5277,8 +5285,9 @@ function update(dt){
   state.elapsed+=dt;state.waveTimer+=dt;
 
   // Caméra suit le joueur en douceur
-  const focusX=p2?(p.x+p2.x)*0.5:p.x;
-  const focusY=p2?(p.y+p2.y)*0.5:p.y;
+  const focusLocal=getLocalControlledPlayer()||p;
+  const focusX=focusLocal.x;
+  const focusY=focusLocal.y;
   const targetCamX=focusX-W/2;
   const targetCamY=focusY-H/2;
   state.camX+=(targetCamX-state.camX)*.12;
@@ -5579,6 +5588,13 @@ function update(dt){
     const a=state.orbAngle+(i/p.orbCount)*Math.PI*2;
     state.orbs.push({x:p.x+Math.cos(a)*42,y:p.y+Math.sin(a)*42,size:p.orbSize||7});
   }
+  state.orbs2=[];
+  if(p2){
+    for(let i=0;i<p2.orbCount;i++){
+      const a2=state.orbAngle+(i/p2.orbCount)*Math.PI*2;
+      state.orbs2.push({x:p2.x+Math.cos(a2)*42,y:p2.y+Math.sin(a2)*42,size:p2.orbSize||7});
+    }
+  }
   // Orbes de protection (défensives, séparées des orbes offensives)
   p.guardOrbMax=Math.max(0,Math.floor(p.guardOrbMax||0));
   p.guardOrbBroken=Math.max(0,Math.min(p.guardOrbMax,Math.floor(p.guardOrbBroken||0)));
@@ -5588,6 +5604,16 @@ function update(dt){
   for(let i=0;i<guardOrbAlive;i++){
     const a=state.guardOrbAngle+(i/Math.max(1,guardOrbAlive))*Math.PI*2;
     state.guardOrbs.push({x:p.x+Math.cos(a)*58,y:p.y+Math.sin(a)*58,size:p.guardOrbSize||8});
+  }
+  state.guardOrbs2=[];
+  if(p2){
+    p2.guardOrbMax=Math.max(0,Math.floor(p2.guardOrbMax||0));
+    p2.guardOrbBroken=Math.max(0,Math.min(p2.guardOrbMax,Math.floor(p2.guardOrbBroken||0)));
+    const guardOrbAlive2=Math.max(0,p2.guardOrbMax-p2.guardOrbBroken);
+    for(let i=0;i<guardOrbAlive2;i++){
+      const a2=state.guardOrbAngle+(i/Math.max(1,guardOrbAlive2))*Math.PI*2;
+      state.guardOrbs2.push({x:p2.x+Math.cos(a2)*58,y:p2.y+Math.sin(a2)*58,size:p2.guardOrbSize||8});
+    }
   }
 
   // Balles
@@ -6453,6 +6479,7 @@ function update(dt){
 
 function fireBullet(shooter=null,isSecondary=false){
   const p=shooter||state.player;
+  const owner=isSecondary?'p2':'p1';
   // Si pas d'ennemis, viser devant le joueur en world coords
   let tx=isSecondary?p.x+1:(p.x+(mouse.x+state.camX-p.x)||p.x+1),
       ty=isSecondary?p.y:(p.y+(mouse.y+state.camY-p.y)||p.y);
@@ -6461,7 +6488,7 @@ function fireBullet(shooter=null,isSecondary=false){
   const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy)||1;
   const shootFrom=(ox,oy,dmgMul=1)=>{
     const sh=a=>{const c=Math.cos(a),s=Math.sin(a);
-      state.bullets.push({x:ox,y:oy,vx:(dx/d*c-dy/d*s)*p.bulletSpeed,vy:(dx/d*s+dy/d*c)*p.bulletSpeed,dmg:p.bulletDmg*dmgMul,size:p.bulletSize,life:95,pierce:p.pierce,enemy:false,chainLeft:p.chain?p.chainCount||2:0,isChain:false,frozen:0});
+      state.bullets.push({x:ox,y:oy,vx:(dx/d*c-dy/d*s)*p.bulletSpeed,vy:(dx/d*s+dy/d*c)*p.bulletSpeed,dmg:p.bulletDmg*dmgMul,size:p.bulletSize,life:95,pierce:p.pierce,enemy:false,owner,chainLeft:p.chain?p.chainCount||2:0,isChain:false,frozen:0});
     };
     sh(0);for(let i=1;i<=p.multiShot;i++){sh(i*.22);sh(-i*.22);}
     if(p.triShot){sh(.42);sh(-.42);}
@@ -6480,13 +6507,13 @@ function fireBullet(shooter=null,isSecondary=false){
   if(p.backShot){
     state.bullets.push({x:p.x,y:p.y,vx:-dx/d*p.bulletSpeed,vy:-dy/d*p.bulletSpeed,
       dmg:p.bulletDmg*.8,size:p.bulletSize,life:90,pierce:p.pierce,
-      enemy:false,chainLeft:0,isChain:false,frozen:0});
+      enemy:false,owner,chainLeft:0,isChain:false,frozen:0});
   }
   // Tir miroir — copie dans la direction opposée
   if(p.mirrorShot){
     state.bullets.push({x:p.x,y:p.y,vx:-dx/d*p.bulletSpeed,vy:-dy/d*p.bulletSpeed,
       dmg:p.bulletDmg*.7,size:p.bulletSize*.8,life:80,pierce:p.pierce,
-      enemy:false,chainLeft:0,isChain:false,frozen:0});
+      enemy:false,owner,chainLeft:0,isChain:false,frozen:0});
   }
 
   // Fléchettes — 3 tirs rapides groupés
@@ -6991,7 +7018,7 @@ function drawMiniMap(){
   const mx=mc.getContext('2d');
   if(!mx)return;
   const mw=80,mh=80,RANGE=520;
-  const anchor=(state.player2&&state.coop&&state.coop.connected)?{x:(state.player.x+state.player2.x)*.5,y:(state.player.y+state.player2.y)*.5}:state.player;
+  const anchor=getLocalControlledPlayer()||state.player;
   const px=anchor.x,py=anchor.y;
   mx.clearRect(0,0,mw,mh);
   mx.fillStyle='rgba(4,8,15,.95)';mx.fillRect(0,0,mw,mh);
@@ -7452,12 +7479,22 @@ function draw(){
     ctx.beginPath();ctx.arc(o.x,o.y,o.size||7,0,Math.PI*2);
     ctx.fillStyle='#00ffe7';ctx.shadowBlur=13;ctx.shadowColor='#00ffe7';ctx.fill();ctx.shadowBlur=0;
   });
+  (state.orbs2||[]).forEach(o=>{
+    ctx.beginPath();ctx.arc(o.x,o.y,o.size||7,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,136,204,.75)';ctx.shadowBlur=13;ctx.shadowColor='#ff88cc';ctx.fill();ctx.shadowBlur=0;
+  });
   // Orbes de protection (visuel distinct)
   (state.guardOrbs||[]).forEach(o=>{
     ctx.beginPath();ctx.arc(o.x,o.y,o.size||8,0,Math.PI*2);
     ctx.fillStyle='rgba(80,140,255,.45)';ctx.shadowBlur=11;ctx.shadowColor='#6fa8ff';ctx.fill();ctx.shadowBlur=0;
     ctx.beginPath();ctx.arc(o.x,o.y,(o.size||8)*.72,0,Math.PI*2);
     ctx.strokeStyle='rgba(190,225,255,.95)';ctx.lineWidth=1.5;ctx.stroke();
+  });
+  (state.guardOrbs2||[]).forEach(o=>{
+    ctx.beginPath();ctx.arc(o.x,o.y,o.size||8,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,120,200,.35)';ctx.shadowBlur=11;ctx.shadowColor='#ff88cc';ctx.fill();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(o.x,o.y,(o.size||8)*.72,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,210,240,.95)';ctx.lineWidth=1.5;ctx.stroke();
   });
 
     // Joueur
@@ -7502,6 +7539,24 @@ function draw(){
   if(state.player2&&state.coop&&state.coop.connected){
     const p2=state.player2;
     ctx.save();ctx.translate(p2.x,p2.y);
+    if(p2.aura>0){
+      const ar2=p2.size+20+Math.min(26,p2.aura*.45);
+      ctx.beginPath();ctx.arc(0,0,ar2,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,120,180,.56)';ctx.lineWidth=2.2;ctx.shadowBlur=13;ctx.shadowColor='#ff88cc';ctx.stroke();ctx.shadowBlur=0;
+    }
+    if(p2.corona>0){
+      const cr2=p2.size+25+Math.min(30,p2.corona*.36);
+      ctx.beginPath();ctx.arc(0,0,cr2,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,190,220,.5)';ctx.lineWidth=2;ctx.shadowBlur=10;ctx.shadowColor='#ffb4dd';ctx.stroke();ctx.shadowBlur=0;
+    }
+    if(p2.divineActive){
+      ctx.beginPath();ctx.arc(0,0,p2.size+20,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,215,0,.68)';ctx.lineWidth=3;ctx.shadowBlur=20;ctx.shadowColor='#ffd700';ctx.stroke();ctx.shadowBlur=0;
+    }
+    if(p2.shieldActive){
+      ctx.beginPath();ctx.arc(0,0,p2.size+11,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,120,200,.6)';ctx.lineWidth=3;ctx.shadowBlur=13;ctx.shadowColor='#ff88cc';ctx.stroke();ctx.shadowBlur=0;
+    }
     ctx.beginPath();ctx.arc(0,0,p2.xpRadius,0,Math.PI*2);ctx.strokeStyle='rgba(255,136,204,.04)';ctx.lineWidth=1;ctx.stroke();
     let ax=p2.x,ay=p2.y,bd=Infinity;
     for(const e2 of state.enemies){if(!e2)continue;const d2=Math.hypot(e2.x-p2.x,e2.y-p2.y);if(d2<bd){bd=d2;ax=e2.x;ay=e2.y;}}
@@ -7520,6 +7575,7 @@ function draw(){
     ctx.beginPath();ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
     if(b.isChain||b.isTurret){ctx.fillStyle='#aaff44';ctx.shadowBlur=perfBlur(7);ctx.shadowColor='#aaff44';}
     else if(b.enemy){ctx.fillStyle='#ff4444';}
+    else if(b.owner==='p2'){ctx.fillStyle='#ff9ad6';ctx.shadowBlur=perfBlur(8);ctx.shadowColor='#ff88cc';}
     else{ctx.fillStyle='#fff';ctx.shadowBlur=perfBlur(8);ctx.shadowColor='#00ffe7';}
     ctx.fill();ctx.shadowBlur=0;
   });
