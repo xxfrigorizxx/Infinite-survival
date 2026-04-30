@@ -77,6 +77,13 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mbtn{font-family:'Orbitron',sans-serif;font-size:clamp(.56rem,2.3vw,.68rem);font-weight:700;background:transparent;border:1px solid;padding:8px 0;cursor:pointer;letter-spacing:.06em;transition:all .2s;-webkit-appearance:none;flex:1;}
 #shop-btn{border-color:var(--coin);color:var(--coin);}#shop-btn:active{background:rgba(244,166,29,.1);}
 #codex-btn{border-color:var(--codex);color:var(--codex);}#codex-btn:active{background:rgba(136,136,255,.1);}
+#coop-panel{display:none;flex-direction:column;gap:6px;width:230px;padding:8px;border:1px solid rgba(0,255,231,.25);background:rgba(0,255,231,.05);}
+#coop-status{font-size:.56rem;color:#89a;text-align:left;line-height:1.4;min-height:16px;}
+.coop-row{display:flex;gap:6px;}
+.coop-text{width:100%;min-height:60px;background:#060d18;border:1px solid rgba(0,255,231,.25);color:#9fe;font-size:.58rem;padding:6px;font-family:'Share Tech Mono',monospace;}
+.coop-step{font-size:.52rem;color:#6f8ea2;line-height:1.35;}
+.coop-label{font-size:.52rem;color:#9dc7de;letter-spacing:.03em;}
+.coop-word{width:100%;background:#060d18;border:1px solid rgba(0,255,231,.3);color:#bff6ff;padding:8px 9px;font-size:.7rem;font-family:'Share Tech Mono',monospace;}
 #regen-timer{font-size:.62rem;color:#567;min-height:12px;}
 #leaderboard{width:100%;max-width:290px;margin:0 auto;}
 #leaderboard h3{font-family:'Orbitron',sans-serif;font-size:.62rem;color:#456;letter-spacing:.13em;margin-bottom:5px;text-align:center;}
@@ -269,7 +276,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v8.1.3 UPDATE · ORBES PROTECTRICES —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v8.1.4 COOP UPDATE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -283,10 +290,46 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
   <div class="title-btns">
     <button id="start-btn" onclick="tryStart()">▶ JOUER  (-1 ⚡)</button>
+    <div class="menu-row" style="margin-top:4px;align-items:center;">
+      <select id="start-biome-select" onchange="setPreferredStartBiomeId(this.value)" style="-webkit-appearance:none;appearance:none;background:rgba(0,255,231,.06);border:1px solid rgba(0,255,231,.28);color:#9fe;width:58%;padding:9px 8px;font-family:'Share Tech Mono',monospace;font-size:.72rem;cursor:pointer;">
+        <option value="">Biome de départ</option>
+      </select>
+      <button class="mbtn" id="start-biome-btn" onclick="tryStartSelectedBiome()" style="width:40%;border-color:#88aaff;color:#88aaff;">🌍 BIOME (-2 ⚡)</button>
+    </div>
     <button class="mbtn" id="resume-btn" onclick="resumeSavedRun()">↻ REPRENDRE LA PARTIE</button>
     <div class="menu-row">
       <button class="mbtn" id="shop-btn" onclick="openShop()">🛒 BOUTIQUE</button>
       <button class="mbtn" id="codex-btn" onclick="openCodex()">📖 CODEX</button>
+    </div>
+    <div class="menu-row">
+      <button class="mbtn" id="coop-toggle-btn" onclick="toggleCoopPanel()" style="border-color:#6dd5ff;color:#6dd5ff;">🌐 COOP LAN</button>
+    </div>
+    <div id="coop-panel">
+      <div id="coop-status">Mode solo actif</div>
+      <div class="coop-step">Host: choisis un mot et attends en lobby. Ami: met le même mot et clique rejoindre.</div>
+      <input id="coop-room-word" class="coop-word" type="text" maxlength="24" placeholder="Mot commun (ex: dragon123)" autocomplete="off" spellcheck="false"/>
+      <div class="coop-row">
+        <button class="mbtn" onclick="coopCreateHost()" style="border-color:#6dd5ff;color:#6dd5ff;">Host (attendre)</button>
+        <button class="mbtn" onclick="coopJoinAsClient()" style="border-color:#8aff88;color:#8aff88;">Rejoindre</button>
+      </div>
+      <div class="coop-row">
+        <button class="mbtn" onclick="coopDisconnect()" style="border-color:#ff6688;color:#ff6688;">Quitter le lobby</button>
+      </div>
+      <details style="margin-top:3px;">
+        <summary class="coop-step" style="cursor:pointer;">Options avancées (manuel)</summary>
+        <div class="coop-label">Code d'invitation</div>
+        <textarea id="coop-offer" class="coop-text" placeholder="Code d'invitation (manuel)"></textarea>
+        <div class="coop-row">
+          <button class="mbtn" onclick="coopCopyInviteCode()" style="border-color:#6dd5ff;color:#6dd5ff;">Copier invitation</button>
+          <button class="mbtn" onclick="coopPasteInviteCode()" style="border-color:#7ea8c7;color:#7ea8c7;">Coller invitation</button>
+        </div>
+        <div class="coop-label">Code de réponse</div>
+        <textarea id="coop-answer" class="coop-text" placeholder="Code de réponse (manuel)"></textarea>
+        <div class="coop-row">
+          <button class="mbtn" onclick="coopCopyReplyCode()" style="border-color:#8aff88;color:#8aff88;">Copier réponse</button>
+          <button class="mbtn" onclick="coopApplyAnswer()" style="border-color:#ffcd66;color:#ffcd66;">Appliquer réponse</button>
+        </div>
+      </details>
     </div>
         <div class="menu-row" style="margin-top:4px;">
       <button class="mbtn" id="options-btn-main" onclick="openOptions()" style="border-color:#cc44ff;color:#cc44ff;width:100%;">⚙ OPTIONS</button>
@@ -520,7 +563,7 @@ onValue(LB,snap=>{
 });
 
 // Sauvegarder — SIMPLE: juste un set(), pas de logique complexe
-window._fbSave=async function(name,score,wave,kills,date){
+window._fbSave=async function(name,score,wave,kills,date,teamName=''){
   const k=key(name);
   console.log('[FB] _fbSave called: k='+k+' score='+score);
   try{
@@ -546,7 +589,7 @@ window._fbSave=async function(name,score,wave,kills,date){
         }
       }
     }
-    const data={name:String(name),score:Number(score),wave:Number(wave||0),kills:Number(kills||0),date:String(date||''),ts:Date.now()};
+    const data={name:String(name),teamName:teamName?String(teamName):null,score:Number(score),wave:Number(wave||0),kills:Number(kills||0),date:String(date||''),ts:Date.now()};
     await set(r,data);
     console.log('[FB] ✅ Score sauvegardé dans Firebase!',data);
   }catch(err){
@@ -565,9 +608,44 @@ window._fbRefresh=function(){
   }).catch(e=>console.error('[FB] Refresh erreur:',e));
 };
 
+// Signaling coop simple via Firebase (mot commun -> lobby -> session la plus récente)
+window._coopSignalRoomKey=function(word){
+  return key('room_'+String(word||''));
+};
+window._coopSignalMakeSessionId=function(){
+  return 's_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+};
+window._coopSignalWriteSession=async function(roomKey,sessionId,payload){
+  if(!roomKey||!sessionId)throw new Error('room/session manquant');
+  await set(ref(db,'coop_signals_rooms/'+roomKey+'/'+sessionId),{...(payload||{}),ts:Date.now()});
+};
+window._coopSignalReadBestWaiting=async function(roomKey){
+  if(!roomKey)return null;
+  const snap=await get(ref(db,'coop_signals_rooms/'+roomKey));
+  if(!snap.exists())return null;
+  let best=null;
+  snap.forEach(c=>{
+    const v=c.val();
+    if(!v||!v.offer)return;
+    if(v.status&&v.status!=='waiting-answer')return;
+    const item={sessionId:c.key,data:v};
+    if(!best||Number(v.ts||0)>Number(best.data.ts||0))best=item;
+  });
+  return best;
+};
+window._coopSignalWatchSession=function(roomKey,sessionId,cb){
+  if(!roomKey||!sessionId||typeof cb!=='function')return ()=>{};
+  return onValue(ref(db,'coop_signals_rooms/'+roomKey+'/'+sessionId),snap=>cb(snap.exists()?snap.val():null));
+};
+window._coopSignalRemoveSession=async function(roomKey,sessionId){
+  if(!roomKey||!sessionId)return;
+  await remove(ref(db,'coop_signals_rooms/'+roomKey+'/'+sessionId));
+};
+
 console.log('[FB] Module prêt ✅');
 </script>
 
+<script src="./coop-webrtc.js"></script>
 <script>
 'use strict';
 
@@ -585,14 +663,14 @@ window._renderLBData=function(lb){
       el.innerHTML=lb.slice(0,10).map((e,i)=>`
         <div class="lb-row ${i===0?'gr':''}">
           <span class="lb-rank">${rankLab(i)}</span>
-          <span class="lb-name">${e.name} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
+          <span class="lb-name">${e.teamName||e.name}${e.teamName?'<span style="color:#88ccff;font-size:.5rem;"> · COOP</span>':''} <span style="color:#345;font-size:.56rem;">${e.date||''}</span></span>
           <span class="lb-score">${(e.score||0).toLocaleString()}</span>
         </div>`).join('');
     } else {
       el.innerHTML=lb.map((e,i)=>`
         <div style="display:flex;align-items:center;gap:9px;padding:10px 8px;border-bottom:1px solid rgba(255,215,0,${i===0?0.2:0.07});background:${i===0?'rgba(255,215,0,.04)':'transparent'}">
           <span style="font-family:'Orbitron',sans-serif;font-size:.68rem;color:${i===0?'var(--gold)':'#456'};min-width:2.1rem;flex-shrink:0;text-align:right;">${rankLab(i)}</span>
-          <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</span>
+          <span style="flex:1;color:${i===0?'var(--gold)':'#cde'};font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.teamName||e.name}${e.teamName?' · COOP':''}</span>
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-family:'Orbitron',sans-serif;color:${i===0?'var(--gold)':'var(--neon)'};font-size:.72rem;font-weight:700;">${(e.score||0).toLocaleString()}</div>
             <div style="color:#456;font-size:.55rem;">Vague ${e.wave||0} · ${e.kills||0} kills</div>
@@ -650,11 +728,13 @@ function snd(type){
    ÉNERGIE
 ══════════════════════════════════════════════ */
 const EMAX=10,EREGEN=30*60*1000;
+const DIRECT_BIOME_ENERGY_COST=2;
 const KE='surv_e',KR='surv_r';
 const KEMETA='surv_meta_energy_bonus';
 const ENERGY_UPDATE_GRANT_KEY='surv_energy_grant_once_2026_04_v711';
 const KRUN='surv_run_save_v1';
 const KRUN_BAK='surv_run_save_v1_bak';
+const KSTART_BIOME='surv_start_biome_pref_v1';
 function getMetaEnergyBonus(){const v=parseInt(localStorage.getItem(KEMETA));return isNaN(v)?0:Math.max(0,v);}
 function addMetaEnergyBonus(n){localStorage.setItem(KEMETA,String(Math.max(0,getMetaEnergyBonus()+Math.floor(n||0))));}
 function getEnergyMax(){return Math.min(30,EMAX+getShopLvl('s_energy')+getMetaEnergyBonus());}
@@ -666,7 +746,15 @@ function getE(){
   if(e<mx){const l=parseInt(localStorage.getItem(KR))||Date.now();const el=Date.now()-l;const g=Math.floor(el/EREGEN);if(g>0){e=Math.min(mx,e+g);saveE(e);localStorage.setItem(KR,String(Date.now()-(el%EREGEN)));}}
   return e;
 }
-function spendE(){const e=getE();const mx=getEnergyMax();if(e<=0)return false;saveE(e-1);if(e-1<mx)localStorage.setItem(KR,String(Date.now()));return true;}
+function spendEAmount(n){
+  const cost=Math.max(1,Math.floor(n||1));
+  const e=getE(),mx=getEnergyMax();
+  if(e<cost)return false;
+  saveE(e-cost);
+  if(e-cost<mx)localStorage.setItem(KR,String(Date.now()));
+  return true;
+}
+function spendE(){return spendEAmount(1);}
 function nextRegen(){const l=parseInt(localStorage.getItem(KR))||Date.now();return Math.max(0,EREGEN-((Date.now()-l)%EREGEN));}
 
 /* ══════════════════════════════════════════════
@@ -768,6 +856,7 @@ function saveProfileName(){
   // Permettre de jouer maintenant que le nom est défini
   const sb=document.getElementById('start-btn');
   if(sb)sb.classList.remove('disabled');
+  renderStartBiomeSelect();
 }
 function renderProfileBadge(){
   const p=getPrf();
@@ -776,12 +865,13 @@ function renderProfileBadge(){
   const st=document.getElementById('pb-stats');
   if(!p||!p.name){if(av)av.textContent='?';if(nm)nm.textContent='Créer mon profil';if(st)st.textContent='Aucune partie jouée';}
   else{if(av)av.textContent=p.name[0].toUpperCase();if(nm)nm.textContent=p.name;if(st)st.textContent=`${p.gamesPlayed||0} parties · Vague max ${p.bestWave||0} · 🪙 ${(p.totalCoins||0).toLocaleString()}`;}
+  renderStartBiomeSelect();
 }
 function updatePrfAfterGame(wave,kills,ms,coins){
   const p=getPrf()||{name:'',gamesPlayed:0,bestWave:0,totalKills:0,totalCoins:0,totalTime:0};
   p.gamesPlayed=(p.gamesPlayed||0)+1;p.bestWave=Math.max(p.bestWave||0,wave);
   p.totalKills=(p.totalKills||0)+kills;p.totalCoins=(p.totalCoins||0)+coins;
-  p.totalTime=(p.totalTime||0)+Math.floor(ms/1000);setPrf(p);renderProfileBadge();
+  p.totalTime=(p.totalTime||0)+Math.floor(ms/1000);setPrf(p);renderProfileBadge();renderStartBiomeSelect();
 }
 
 /* ══════════════════════════════════════════════
@@ -1255,12 +1345,21 @@ function getPlayerKey(name){
 let pendingScore=null;
 
 function openRecordSection(score,wave,kills,ms,lvl){
-  pendingScore={score,wave,kills,ms,lvl};
+  const isTeam=!!(state&&state.coop&&state.coop.connected&&state.player2);
+  const hostName=(state?.coop?.hostName||getPrf()?.name||'Host').trim();
+  const guestName=(state?.coop?.guestName||'Guest').trim();
+  pendingScore={score,wave,kills,ms,lvl,teamName:isTeam?`${hostName} + ${guestName}`:null};
   const p=getPrf();
   const rs=document.getElementById('record-section');
   rs.style.display='block';
 
-  if(p&&p.name){
+  if(isTeam){
+    _doSaveRecord(pendingScore.teamName);
+    rs.innerHTML=`<div style="text-align:center;padding:10px;">
+      <div style="font-family:'Orbitron',sans-serif;color:var(--gold);font-size:.95rem;margin-bottom:5px;">🏆 SCORE ÉQUIPE ENREGISTRÉ</div>
+      <div style="color:#89a;font-size:.74rem;"><b style="color:var(--neon);">${pendingScore.teamName}</b></div>
+    </div>`;
+  } else if(p&&p.name){
     // Nom connu → sauvegarder directement, afficher confirmation
     _doSaveRecord(p.name);
     rs.innerHTML=`<div style="text-align:center;padding:10px;">
@@ -1300,6 +1399,7 @@ function _doSaveRecord(name){
   if(!pendingScore)return;
   const d={
     name:String(name),
+    teamName:pendingScore.teamName||null,
     score:Number(pendingScore.score),
     wave:Number(pendingScore.wave),
     kills:Number(pendingScore.kills),
@@ -1322,7 +1422,7 @@ function _doSaveRecord(name){
     waited+=200;
     if(typeof window._fbSave==='function'){
       clearInterval(interval);
-      window._fbSave(d.name,d.score,d.wave,d.kills,d.date);
+      window._fbSave(d.name,d.score,d.wave,d.kills,d.date,d.teamName||'');
     } else if(waited>=10000){
       clearInterval(interval);
       console.warn('[Record] Firebase pas disponible après 10s');
@@ -2466,12 +2566,39 @@ jZone.addEventListener('touchmove',e=>{
     jThumb.style.left=(joy.ox+dx)+'px';jThumb.style.top=(joy.oy+dy)+'px';
   }
 },{passive:false});
-function joyEnd(e){for(const t of e.changedTouches){if(t.identifier===joy.id){joy.active=false;joy.dx=0;joy.dy=0;jBase.style.display=jThumb.style.display='none';}}}
+function joyEnd(e){
+  for(const t of e.changedTouches){
+    if(t.identifier===joy.id){
+      joy.active=false;joy.dx=0;joy.dy=0;jBase.style.display=jThumb.style.display='none';
+      sendLocalCoopInput();
+    }
+  }
+}
 jZone.addEventListener('touchend',joyEnd,{passive:false});
 jZone.addEventListener('touchcancel',joyEnd,{passive:false});
 const dashBtn=document.getElementById('dash-btn');
 const pauseBtn=document.getElementById('pause-btn');
-dashBtn.addEventListener('touchstart',e=>{e.preventDefault();acknowledgeResumeInput();if(state?.player?.hasDash&&state.player.dashCd<=0)doDash();},{passive:false});
+function sendLocalCoopInput(extra={}){
+  if(!coopIsClient())return;
+  const mxRaw=(joy.active?joy.dx:0)+(keys['a']||keys['arrowleft']?-1:0)+(keys['d']||keys['arrowright']?1:0);
+  const myRaw=(joy.active?joy.dy:0)+(keys['w']||keys['arrowup']?-1:0)+(keys['s']||keys['arrowdown']?1:0);
+  const mx=Math.max(-1,Math.min(1,mxRaw));
+  const my=Math.max(-1,Math.min(1,myRaw));
+  const nextInput={mx,my,dash:!!extra.dash,resume:!!extra.resume};
+  coopSession.localInput=nextInput;
+  const now=performance.now();
+  const shouldForce=!!extra.dash||!!extra.resume;
+  if(shouldForce||now-(coopSession.lastInputSentAt||0)>28){
+    coopSession.lastInputSentAt=now;
+    coopSend({type:'input',input:nextInput});
+  }
+}
+dashBtn.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  acknowledgeResumeInput();
+  if(coopIsClient()){sendLocalCoopInput({dash:true,resume:true});return;}
+  if(state?.player?.hasDash&&state.player.dashCd<=0)doDash();
+},{passive:false});
 let keys={};
 document.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
@@ -2479,16 +2606,27 @@ document.addEventListener('keydown',e=>{
   if(k==='p'){e.preventDefault();togglePause();return;}
   if(state?.awaitInputResume&&(k==='w'||k==='a'||k==='s'||k==='d'||k==='arrowup'||k==='arrowdown'||k==='arrowleft'||k==='arrowright'||e.key===' ')){
     acknowledgeResumeInput();
+    sendLocalCoopInput({resume:true});
   }
-  if(e.key===' '&&state?.player?.hasDash&&state.player.dashCd<=0)doDash();
+  if(e.key===' '){
+    if(coopIsClient()){sendLocalCoopInput({dash:true,resume:true});return;}
+    if(state?.player?.hasDash&&state.player.dashCd<=0)doDash();
+  }
+  if(coopIsClient()&&(k==='w'||k==='a'||k==='s'||k==='d'||k==='arrowup'||k==='arrowdown'||k==='arrowleft'||k==='arrowright')){
+    sendLocalCoopInput();
+  }
 });
-document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+document.addEventListener('keyup',e=>{
+  keys[e.key.toLowerCase()]=false;
+  if(coopIsClient())sendLocalCoopInput();
+});
 let mouse={x:0,y:0};
 canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
-canvas.addEventListener('mousedown',()=>acknowledgeResumeInput());
-canvas.addEventListener('touchstart',()=>acknowledgeResumeInput(),{passive:true});
-jZone.addEventListener('touchstart',()=>acknowledgeResumeInput(),{passive:true});
+canvas.addEventListener('mousedown',()=>{acknowledgeResumeInput();sendLocalCoopInput({resume:true});});
+canvas.addEventListener('touchstart',()=>{acknowledgeResumeInput();sendLocalCoopInput({resume:true});},{passive:true});
+jZone.addEventListener('touchstart',()=>{acknowledgeResumeInput();sendLocalCoopInput({resume:true});},{passive:true});
 jZone.addEventListener('touchmove',()=>{if(joy.active&&(Math.abs(joy.dx)+Math.abs(joy.dy))>.08)acknowledgeResumeInput();},{passive:true});
+jZone.addEventListener('touchmove',()=>{if(coopIsClient())sendLocalCoopInput();},{passive:true});
 const pauseResumeBtn=document.getElementById('pause-resume-btn');
 const pauseMenuBtn=document.getElementById('pause-menu-btn');
 const reviveContinueBtn=document.getElementById('revive-continue-btn');
@@ -2502,6 +2640,46 @@ reviveStopBtn.addEventListener('touchstart',e=>{e.preventDefault();confirmRevive
    ÉTAT DU JEU
 ══════════════════════════════════════════════ */
 let state,gameLoop,lastTime=0;
+let coopSession={
+  enabled:false,
+  role:'solo', // solo | host | client
+  link:null,
+  connected:false,
+  hostName:'',
+  guestName:'',
+  remoteInput:{mx:0,my:0,dash:false,resume:false},
+  lastSnapshotTs:0,
+  pendingUpgradeChoices:null,
+  localInput:{mx:0,my:0,dash:false,resume:false},
+  lastInputSentAt:0,
+  hbTimer:null,
+  lastRemoteSnapshotAt:0,
+  roomKey:'',
+  roomWord:'',
+  roomSessionId:'',
+  roomUnsub:null,
+  roomJoinHandled:false,
+  roomAnswerHandled:false,
+};
+function mkBasePlayer(x,y,color='#00ffe7'){
+  return{
+    x,y,size:12,speed:2.8,
+    hp:100,maxHp:100,xp:0,xpNext:80,level:1,
+    fireRate:350,lastFire:0,
+    bulletDmg:18,bulletSize:6,bulletSpeed:6.5,
+    multiShot:0,pierce:0,orbCount:0,orbSize:7,xpRadius:Math.min(W,H)*.14,
+    guardOrbMax:0,guardOrbBroken:0,guardOrbSize:8,
+    explode:false,explodeRadius:55,
+    chain:false,chainCount:2,
+    freeze:false,vamp:0,regen:0,regenTimer:0,
+    hasDash:false,dashCd:0,
+    hitCd:0,
+    triShot:false,critChance:0,critMult:2,slowMult:1,
+    hasShield:false,shieldCd:0,shieldActive:false,
+    turretCount:0,divineTimer:-1,divineActive:false,
+    _color:color,
+  };
+}
 function mkState(){
   return{
     running:false,paused:false,pauseReason:null,awaitInputResume:false,_saveTick:0,
@@ -2517,25 +2695,435 @@ function mkState(){
     coinsRun:0,xpMult:1,coinMult:1,
     stats:{totalDmg:0,crits:0,bossKills:0,killTypes:{}},
     turrets:[],
-    player:{
-      x:W/2,y:H/2,size:12,speed:2.8,
-      hp:100,maxHp:100,xp:0,xpNext:80,level:1,
-      fireRate:350,lastFire:0,
-      bulletDmg:18,bulletSize:6,bulletSpeed:6.5,
-      multiShot:0,pierce:0,orbCount:0,orbSize:7,xpRadius:Math.min(W,H)*.14,
-      guardOrbMax:0,guardOrbBroken:0,guardOrbSize:8,
-      explode:false,explodeRadius:55,
-      chain:false,chainCount:2,
-      freeze:false,vamp:0,regen:0,regenTimer:0,
-      hasDash:false,dashCd:0,
-      hitCd:0,
-      triShot:false,critChance:0,critMult:2,slowMult:1,
-      hasShield:false,shieldCd:0,shieldActive:false,
-      turretCount:0,divineTimer:-1,divineActive:false,
+    player:mkBasePlayer(W/2,H/2,'#00ffe7'),
+    player2:mkBasePlayer(W/2+58,H/2+22,'#ff88cc'),
+    coop:{
+      mode:'solo',
+      hostName:'',
+      guestName:'',
+      connected:false,
+      remoteInput:{mx:0,my:0,dash:false,resume:false},
+      upgradeVote:null,
     },
     bullets:[],enemies:[],particles:[],
     xpGems:[],coinPickups:[],orbs:[],guardOrbs:[],orbAngle:0,guardOrbAngle:0,dmgNums:[],
   };
+}
+function coopIsActive(){return coopSession.enabled&&coopSession.role!=='solo';}
+function coopIsHost(){return coopSession.enabled&&coopSession.role==='host';}
+function coopIsClient(){return coopSession.enabled&&coopSession.role==='client';}
+function setCoopStatus(msg){
+  const el=document.getElementById('coop-status');
+  if(el)el.textContent=msg||'Mode solo actif';
+}
+function encodeSignalCode(payload){
+  try{
+    return 'COOP1:'+btoa(unescape(encodeURIComponent(payload)));
+  }catch(e){
+    return payload;
+  }
+}
+function decodeSignalCode(code){
+  const raw=String(code||'').trim();
+  if(raw.startsWith('COOP1:')){
+    try{
+      return decodeURIComponent(escape(atob(raw.slice(6))));
+    }catch(e){
+      return '';
+    }
+  }
+  return raw;
+}
+async function copyTextById(id,okMsg,errMsg){
+  const el=document.getElementById(id);
+  const txt=(el?.value||'').trim();
+  if(!txt){setCoopStatus(errMsg||'Champ vide');return false;}
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(txt);
+      setCoopStatus(okMsg||'Copié');
+      return true;
+    }
+  }catch(e){}
+  try{
+    el.focus();el.select();
+    const ok=document.execCommand('copy');
+    setCoopStatus(ok?(okMsg||'Copié'):(errMsg||'Copie impossible'));
+    return !!ok;
+  }catch(e){
+    setCoopStatus(errMsg||'Copie impossible');
+    return false;
+  }
+}
+async function pasteTextById(id,okMsg,errMsg){
+  const el=document.getElementById(id);
+  if(!el){setCoopStatus(errMsg||'Champ introuvable');return false;}
+  try{
+    if(navigator.clipboard&&navigator.clipboard.readText){
+      const txt=await navigator.clipboard.readText();
+      if(!txt){setCoopStatus(errMsg||'Presse-papier vide');return false;}
+      el.value=txt.trim();
+      setCoopStatus(okMsg||'Collé');
+      return true;
+    }
+  }catch(e){}
+  setCoopStatus(errMsg||'Collage auto non autorisé');
+  return false;
+}
+function coopCopyInviteCode(){return copyTextById('coop-offer','Code invitation copié','Aucun code invitation à copier');}
+function coopCopyReplyCode(){return copyTextById('coop-answer','Code réponse copié','Aucun code réponse à copier');}
+function coopPasteInviteCode(){return pasteTextById('coop-offer','Code invitation collé','Impossible de coller automatiquement');}
+function toggleCoopPanel(){
+  const p=document.getElementById('coop-panel');
+  if(!p)return;
+  p.style.display=p.style.display==='flex'?'none':'flex';
+}
+function coopCloseLink(){
+  if(coopSession.link){try{coopSession.link.close();}catch(e){}}
+  coopSession.link=null;
+  coopSession.connected=false;
+  if(coopSession.hbTimer){clearInterval(coopSession.hbTimer);coopSession.hbTimer=null;}
+  if(typeof coopSession.roomUnsub==='function'){try{coopSession.roomUnsub();}catch(e){}}
+  coopSession.roomUnsub=null;
+  coopSession.roomJoinHandled=false;
+  coopSession.roomAnswerHandled=false;
+}
+function coopDisconnect(){
+  const wasHost=coopSession.role==='host';
+  const oldRoom=coopSession.roomKey;
+  const oldSession=coopSession.roomSessionId;
+  coopCloseLink();
+  coopSession.enabled=false;
+  coopSession.role='solo';
+  coopSession.hostName='';
+  coopSession.guestName='';
+  coopSession.localInput={mx:0,my:0,dash:false,resume:false};
+  coopSession.roomKey='';
+  coopSession.roomWord='';
+  coopSession.roomSessionId='';
+  if(state&&state.coop){
+    state.coop.mode='solo';
+    state.coop.connected=false;
+    state.coop.upgradeVote=null;
+  }
+  if(wasHost&&oldRoom&&oldSession&&window._coopSignalRemoveSession){window._coopSignalRemoveSession(oldRoom,oldSession).catch(()=>{});}
+  setCoopStatus('Mode solo actif');
+}
+function coopNormalizeRoomWord(word){
+  return String(word||'').trim().toLowerCase().replace(/\s+/g,' ').slice(0,24);
+}
+function coopGetRoomWord(){
+  const inp=document.getElementById('coop-room-word');
+  const val=coopNormalizeRoomWord(inp?.value||'');
+  if(inp)inp.value=val;
+  return val;
+}
+function coopWatchRoom(roomKey,cb){
+  if(typeof coopSession.roomUnsub==='function'){try{coopSession.roomUnsub();}catch(e){}}
+  coopSession.roomUnsub=null;
+  if(!roomKey||!coopSession.roomSessionId||typeof window._coopSignalWatchSession!=='function')return;
+  coopSession.roomUnsub=window._coopSignalWatchSession(roomKey,coopSession.roomSessionId,cb);
+}
+function coopStartClientHeartbeat(){
+  if(coopSession.hbTimer){clearInterval(coopSession.hbTimer);coopSession.hbTimer=null;}
+  coopSession.hbTimer=setInterval(()=>{
+    if(!coopIsClient()||!coopSession.connected)return;
+    const inp=coopSession.localInput||{mx:0,my:0,dash:false,resume:false};
+    coopSend({type:'input',input:inp});
+  },50);
+}
+function coopHandleMessage(msg){
+  if(!msg||typeof msg!=='object')return;
+  if(msg.type==='hello'&&coopIsHost()){
+    coopSession.guestName=String(msg.name||'Guest').slice(0,16)||'Guest';
+    if(state&&state.coop){
+      state.coop.guestName=coopSession.guestName;
+      state.coop.connected=true;
+      state.coop.mode='host';
+      if(state.player2){
+        state.player2.hp=state.player2.maxHp;
+        state.player2.x=state.player.x+58;
+        state.player2.y=state.player.y+22;
+      }
+    }
+    setCoopStatus(`Connecté: ${coopSession.hostName||'Host'} + ${coopSession.guestName}`);
+    return;
+  }
+  if(msg.type==='input'&&coopIsHost()){
+    const ri=msg.input||{};
+    coopSession.remoteInput={
+      mx:Math.max(-1,Math.min(1,Number(ri.mx)||0)),
+      my:Math.max(-1,Math.min(1,Number(ri.my)||0)),
+      dash:!!ri.dash,
+      resume:!!ri.resume,
+    };
+    if(state&&state.coop)state.coop.remoteInput=coopSession.remoteInput;
+    return;
+  }
+  if(msg.type==='upgrade-pick'&&coopIsHost()&&state&&state.coop&&state.coop.upgradeVote){
+    state.coop.upgradeVote.clientChoice=Number(msg.choice);
+    tryResolveCoopUpgradeVote();
+    return;
+  }
+  if(msg.type==='snapshot'&&coopIsClient()){
+    if(!msg.state)return;
+    const prevState=state;
+    const next=msg.state;
+    coopSession.lastRemoteSnapshotAt=performance.now();
+    if(prevState&&prevState.player&&next.player){
+      const dx=next.player.x-prevState.player.x;
+      const dy=next.player.y-prevState.player.y;
+      if(Math.hypot(dx,dy)<220){
+        next.player.x=prevState.player.x+dx*0.55;
+        next.player.y=prevState.player.y+dy*0.55;
+      }
+    }
+    if(prevState&&prevState.player2&&next.player2){
+      const dx2=next.player2.x-prevState.player2.x;
+      const dy2=next.player2.y-prevState.player2.y;
+      if(Math.hypot(dx2,dy2)<220){
+        next.player2.x=prevState.player2.x+dx2*0.42;
+        next.player2.y=prevState.player2.y+dy2*0.42;
+      }
+    }
+    if(state&&state.running){
+      const prevRun=state.running;
+      state=next;
+      state.running=prevRun;
+    }else{
+      state=next;
+    }
+    if(state&&state.coop){
+      state.coop.mode='client';
+      state.coop.connected=true;
+    }
+    const ts=document.getElementById('title-screen');
+    const gs=document.getElementById('game-screen');
+    if(ts&&gs&&state&&state.running){
+      ts.style.display='none';
+      gs.style.display='flex';
+      document.getElementById('stats-screen').classList.remove('show');
+      document.getElementById('upgrade-screen').classList.remove('show');
+    }
+    return;
+  }
+  if(msg.type==='upgrade-options'&&coopIsClient()&&state){
+    state.coop=state.coop||{};
+    state.coop.upgradeVote={options:msg.options||[],hostChoice:null,clientChoice:null};
+    state.paused=true;
+    state.pauseReason='upgrade-coop';
+    showUpgrades(msg.options||[],true);
+    return;
+  }
+}
+function coopWireLink(link){
+  coopSession.link=link;
+  link.onStatus=(status)=>{
+    if(status==='connected'){
+      coopSession.connected=true;
+      if(state&&state.coop){
+        state.coop.connected=true;
+        state.coop.mode=coopSession.role;
+      }
+      setCoopStatus('Session connectée ✅');
+      if(coopIsClient()){
+        const me=(getPrf()?.name||'Guest').slice(0,16);
+        link.send({type:'hello',name:me});
+        coopStartClientHeartbeat();
+      }else if(coopIsHost()&&coopSession.roomKey&&coopSession.roomSessionId&&window._coopSignalRemoveSession){
+        window._coopSignalRemoveSession(coopSession.roomKey,coopSession.roomSessionId).catch(()=>{});
+      }
+    }else if(status==='failed'||status==='closed'||status==='disconnected'){
+      setCoopStatus('Session perdue');
+      coopDisconnect();
+    }
+  };
+  link.onMessage=coopHandleMessage;
+}
+async function coopCreateHost(){
+  try{
+    const roomWord=coopGetRoomWord();
+    if(!roomWord){setCoopStatus('Entre un mot commun pour créer la room');return;}
+    coopCloseLink();
+    const link=new window.CoopLink('host');
+    coopWireLink(link);
+    coopSession.enabled=true;
+    coopSession.role='host';
+    coopSession.hostName=(getPrf()?.name||'Host').slice(0,16);
+    coopSession.roomWord=roomWord;
+    coopSession.roomKey=typeof window._coopSignalRoomKey==='function'?window._coopSignalRoomKey(roomWord):'';
+    coopSession.roomSessionId=typeof window._coopSignalMakeSessionId==='function'?window._coopSignalMakeSessionId():'';
+    const offer=await link.createOffer();
+    const out=document.getElementById('coop-offer');
+    if(out)out.value=encodeSignalCode(offer);
+    if(coopSession.roomKey&&coopSession.roomSessionId&&window._coopSignalWriteSession){
+      await window._coopSignalWriteSession(coopSession.roomKey,coopSession.roomSessionId,{
+        offer,
+        sessionId:coopSession.roomSessionId,
+        roomWord,
+        hostName:coopSession.hostName||'Host',
+        status:'waiting-answer',
+      });
+      coopWatchRoom(coopSession.roomKey,async(data)=>{
+        if(!coopIsHost()||coopSession.roomAnswerHandled)return;
+        if(!data||!data.answer)return;
+        try{
+          await coopSession.link.acceptAnswer(data.answer);
+          coopSession.roomAnswerHandled=true;
+          setCoopStatus(`Lobby "${roomWord}": joueur trouvé, connexion...`);
+        }catch(e){}
+      });
+      setCoopStatus(`Lobby "${roomWord}" créé. En attente d'un joueur...`);
+    }else{
+      setCoopStatus('Code invitation créé: copie et envoie à ton ami');
+    }
+  }catch(e){
+    setCoopStatus('Erreur host WebRTC');
+  }
+}
+async function coopJoinAsClient(){
+  const roomWord=coopGetRoomWord();
+  if(!roomWord){setCoopStatus('Entre le mot exact du host');return;}
+  try{
+    coopCloseLink();
+    const link=new window.CoopLink('client');
+    coopWireLink(link);
+    coopSession.enabled=true;
+    coopSession.role='client';
+    coopSession.roomWord=roomWord;
+    coopSession.roomKey=typeof window._coopSignalRoomKey==='function'?window._coopSignalRoomKey(roomWord):'';
+    const me=(getPrf()?.name||'Guest').slice(0,16);
+    const joinWithOffer=async(rawOffer)=>{
+      if(coopSession.roomJoinHandled||!rawOffer)return;
+      coopSession.roomJoinHandled=true;
+      const answer=await link.acceptOffer(rawOffer);
+      const ansEl=document.getElementById('coop-answer');
+      if(ansEl)ansEl.value=encodeSignalCode(answer);
+      if(coopSession.roomKey&&coopSession.roomSessionId&&window._coopSignalWriteSession){
+        await window._coopSignalWriteSession(coopSession.roomKey,coopSession.roomSessionId,{
+          offer:rawOffer,
+          answer,
+          roomWord,
+          guestName:me,
+          status:'answered',
+        });
+        setCoopStatus(`Lobby "${roomWord}" trouvé. Connexion...`);
+      }else{
+        setCoopStatus('Code réponse créé: renvoie-le au host');
+      }
+    };
+    if(coopSession.roomKey&&window._coopSignalReadBestWaiting){
+      const pickWaiting=async()=>{
+        const best=await window._coopSignalReadBestWaiting(coopSession.roomKey);
+        if(best&&best.data&&best.data.offer){
+          coopSession.roomSessionId=best.sessionId||'';
+          coopSession.hostName=String(best.data.hostName||'Host').slice(0,16);
+          if(coopSession.roomSessionId&&window._coopSignalWriteSession){
+            await window._coopSignalWriteSession(coopSession.roomKey,coopSession.roomSessionId,{
+              ...best.data,
+              status:'joining',
+              guestName:me,
+            });
+          }
+          await joinWithOffer(best.data.offer);
+          return true;
+        }
+        return false;
+      };
+      if(await pickWaiting())return;
+      setCoopStatus(`Recherche d'un host sur "${roomWord}"...`);
+      let attempts=0;
+      const poll=setInterval(async()=>{
+        if(!coopIsClient()||coopSession.connected||coopSession.roomJoinHandled){clearInterval(poll);return;}
+        attempts++;
+        const ok=await pickWaiting();
+        if(ok||attempts>40){clearInterval(poll);}
+      },500);
+      return;
+    }
+    const offerCode=(document.getElementById('coop-offer')?.value||'').trim();
+    if(!offerCode){setCoopStatus("Colle le code d'invitation du host");return;}
+    const offerRaw=decodeSignalCode(offerCode);
+    if(!offerRaw){setCoopStatus("Code d'invitation invalide");return;}
+    await joinWithOffer(offerRaw);
+  }catch(e){
+    setCoopStatus('Impossible de rejoindre la room');
+  }
+}
+async function coopApplyAnswer(){
+  if(!coopIsHost()||!coopSession.link){setCoopStatus('Host requis');return;}
+  const answerCode=(document.getElementById('coop-answer')?.value||'').trim();
+  if(!answerCode){setCoopStatus('Colle le code réponse du client');return;}
+  const answerRaw=decodeSignalCode(answerCode);
+  if(!answerRaw){setCoopStatus('Code réponse invalide');return;}
+  try{
+    await coopSession.link.acceptAnswer(answerRaw);
+    setCoopStatus('Code réponse appliqué, connexion en cours...');
+  }catch(e){
+    setCoopStatus('Réponse invalide');
+  }
+}
+function coopSend(data){
+  if(!coopSession.link||!coopSession.connected)return false;
+  return coopSession.link.send(data);
+}
+function syncPlayer2FromPrimary(){
+  if(!state||!state.player||!state.player2)return;
+  const p=state.player,p2=state.player2;
+  const keep={x:p2.x,y:p2.y,hp:p2.hp,hitCd:p2.hitCd,lastFire:p2.lastFire,dashCd:p2.dashCd,_color:p2._color};
+  const clone=JSON.parse(JSON.stringify(p));
+  Object.assign(p2,clone,keep);
+  p2.maxHp=p.maxHp;
+  p2.hp=Math.min(p2.maxHp,Math.max(1,p2.hp));
+}
+function startCoopUpgradeVote(choices){
+  if(!state)return;
+  state.paused=true;
+  state.pauseReason='upgrade-coop';
+  state.coop.upgradeVote={
+    options:choices,
+    hostChoice:null,
+    clientChoice:null,
+  };
+  if(coopIsHost()){
+    coopSend({type:'upgrade-options',options:choices});
+  }
+}
+function tryResolveCoopUpgradeVote(){
+  if(!state||!state.coop||!state.coop.upgradeVote)return;
+  const vote=state.coop.upgradeVote;
+  if(vote.hostChoice==null||vote.clientChoice==null)return;
+  const c1=vote.options[vote.hostChoice];
+  const c2=vote.options[vote.clientChoice];
+  if(c1&&typeof c1.apply==='function'){
+    c1.apply(state);
+    discoverEntry('upgrades',c1.id);
+    if(typeof checkSynergy==='function')checkSynergy(c1.id);
+  }
+  if(c2&&typeof c2.apply==='function'){
+    c2.apply(state);
+    discoverEntry('upgrades',c2.id);
+    if(typeof checkSynergy==='function')checkSynergy(c2.id);
+  }
+  syncTurrets();
+  if(state.runUpgrades){
+    if(c1)state.runUpgrades.push({id:c1.id,name:c1.name,icon:c1.icon,rarity:c1.rarity,wave:state.wave});
+    if(c2)state.runUpgrades.push({id:c2.id,name:c2.name,icon:c2.icon,rarity:c2.rarity,wave:state.wave});
+  }
+  state.coop.upgradeVote=null;
+  state.awaitInputResume=true;
+  state.player.hitCd=Math.max(state.player.hitCd||0,520);
+  if(state.player2)state.player2.hitCd=Math.max(state.player2.hitCd||0,520);
+  state.paused=false;state.pauseReason=null;
+  showInfoBanner('Touchez/bougez pour reprendre',1800);
+  saveRunState(true);
+}
+function publishHostSnapshot(){
+  if(!coopIsHost()||!state||!state.running)return;
+  const now=performance.now();
+  if(now-(coopSession.lastSnapshotTs||0)<85)return;
+  coopSession.lastSnapshotTs=now;
+  coopSend({type:'snapshot',state});
 }
 
 /* ══════════════════════════════════════════════
@@ -2656,6 +3244,37 @@ const BIOMES=[
   },
   ...getBiomeContentPack().biomes
 ];
+
+function getUnlockedStartBiomes(){
+  const d=getCodexData();
+  const visited=(d&&d.biomes&&typeof d.biomes==='object')?d.biomes:{};
+  return BIOMES.filter(b=>{
+    if(!b||!b.id)return false;
+    if(b.id==='void')return true;
+    return !!(visited[b.id]&&visited[b.id].discovered);
+  });
+}
+function getPreferredStartBiomeId(){
+  const id=localStorage.getItem(KSTART_BIOME)||'';
+  return id;
+}
+function setPreferredStartBiomeId(id){
+  if(!id)localStorage.removeItem(KSTART_BIOME);
+  else localStorage.setItem(KSTART_BIOME,id);
+}
+function renderStartBiomeSelect(){
+  const sel=document.getElementById('start-biome-select');
+  if(!sel)return;
+  const unlocked=getUnlockedStartBiomes();
+  const pref=getPreferredStartBiomeId();
+  let html='<option value="">Biome de départ</option>';
+  for(const b of unlocked){
+    html+=`<option value="${b.id}">${b.icon} ${b.name}</option>`;
+  }
+  sel.innerHTML=html;
+  const useId=(pref&&unlocked.some(b=>b.id===pref))?pref:'';
+  sel.value=useId;
+}
 
 const EVENTS=[
   {
@@ -4306,6 +4925,8 @@ function normalizeLoadedState(s){
   s.guardOrbAngle=Number(s.guardOrbAngle)||0;
   s.stats=s.stats&&typeof s.stats==='object'?s.stats:{kills:0,dmg:0,crits:0,boss:0,big:'-'};
   s.player.hitCd=Number(s.player.hitCd)||0;
+  if(!s.player2)s.player2=mkBasePlayer((s.player.x||W/2)+58,(s.player.y||H/2)+22,'#ff88cc');
+  s.player2.hitCd=Number(s.player2.hitCd)||0;
   s.player.guardOrbMax=Math.max(0,Math.floor(Number(s.player.guardOrbMax)||0));
   s.player.guardOrbBroken=Math.max(0,Math.floor(Number(s.player.guardOrbBroken)||0));
   if(s.player.guardOrbBroken>s.player.guardOrbMax)s.player.guardOrbBroken=s.player.guardOrbMax;
@@ -4314,6 +4935,9 @@ function normalizeLoadedState(s){
   s.player.phoenixCd=Number(s.player.phoenixCd)||0;
   s.pendingReviveType=null;
   s.paused=false;s.pauseReason=null;s.awaitInputResume=false;s.running=true;
+  if(!s.coop||typeof s.coop!=='object'){
+    s.coop={mode:'solo',hostName:'',guestName:'',connected:false,remoteInput:{mx:0,my:0,dash:false,resume:false},upgradeVote:null};
+  }
   if(!s.biome)s.biome=getBiome(s.wave);
   if(!Number.isFinite(s.camX))s.camX=s.player.x-W/2;
   if(!Number.isFinite(s.camY))s.camY=s.player.y-H/2;
@@ -4321,7 +4945,7 @@ function normalizeLoadedState(s){
 }
 function saveRunState(force=false){
   if(!state||!state.running||!state.player)return;
-  if(state.pauseReason==='upgrade')return;
+  if(state.pauseReason==='upgrade'||state.pauseReason==='upgrade-coop')return;
   if(!force&&document.getElementById('stats-screen')?.classList.contains('show'))return;
   try{
     const snap=JSON.parse(JSON.stringify(state));
@@ -4340,7 +4964,7 @@ function loadSavedRun(){
   }catch(e){}
   try{return normalizeLoadedState(JSON.parse(localStorage.getItem(KRUN_BAK)||'null'));}catch(e){return null;}
 }
-function startGame(savedState=null){
+function startGame(savedState=null,forcedBiomeId='',forcedWave=0){
   resizeCanvas();
   document.getElementById('title-screen').style.display='none';
   document.getElementById('game-screen').style.display='flex';
@@ -4355,8 +4979,19 @@ function startGame(savedState=null){
   }else{
     clearRunSave();
     state=mkState();applyShopBonuses(state);
+    if(forcedWave>0)state.wave=Math.max(1,Math.floor(forcedWave));
+    if(forcedBiomeId){
+      const forced=BIOMES.find(b=>b&&b.id===forcedBiomeId);
+      if(forced)state.biome=forced;
+    }
   }
   syncTurrets();
+  state.coop=state.coop||{mode:'solo',hostName:'',guestName:'',connected:false,remoteInput:{mx:0,my:0,dash:false,resume:false},upgradeVote:null};
+  state.coop.mode=coopSession.role||'solo';
+  state.coop.hostName=coopSession.hostName||getPrf()?.name||'Host';
+  state.coop.guestName=coopSession.guestName||'Guest';
+  state.coop.connected=!!coopSession.connected;
+  state.coop.remoteInput=coopSession.remoteInput||{mx:0,my:0,dash:false,resume:false};
   state.running=true;state.paused=false;state.pauseReason=null;state.awaitInputResume=false;
   state.biome=state.biome||getBiome(state.wave||1);
   state.camX=state.camX??(state.player.x-W/2);
@@ -4369,8 +5004,22 @@ function startGame(savedState=null){
 }
 function tryStart(){
   if(!getPrf()?.name){openProfile(true);return;}
+  if(coopIsClient()){showInfoBanner('Le host lance la partie',2200);return;}
   if(!spendE()){openNoEnergy();return;}
   startGame();
+}
+function tryStartSelectedBiome(){
+  if(!getPrf()?.name){openProfile(true);return;}
+  if(coopIsClient()){showInfoBanner('Le host lance la partie',2200);return;}
+  const sel=document.getElementById('start-biome-select');
+  const biomeId=sel?sel.value:'';
+  if(!biomeId){showInfoBanner('Choisis un biome débloqué.',2200);return;}
+  const unlocked=getUnlockedStartBiomes();
+  if(!unlocked.some(b=>b.id===biomeId)){showInfoBanner('Biome verrouillé.',2200);renderStartBiomeSelect();return;}
+  if(!spendEAmount(DIRECT_BIOME_ENERGY_COST)){openNoEnergy();return;}
+  const idx=Math.max(0,BIOMES.findIndex(b=>b&&b.id===biomeId));
+  const forcedWave=Math.max(1,idx*15);
+  startGame(null,biomeId,forcedWave);
 }
 function resumeSavedRun(){
   const saved=loadSavedRun();
@@ -4408,7 +5057,7 @@ function closePause(){
 }
 function togglePause(){
   if(!state||!state.running)return;
-  if(state.pauseReason==='upgrade')return;
+  if(state.pauseReason==='upgrade'||state.pauseReason==='upgrade-coop')return;
   if(state.pauseReason==='manual'){closePause();return;}
   state.paused=true;state.pauseReason='manual';
   document.getElementById('pause-overlay').style.display='flex';
@@ -4418,6 +5067,7 @@ function acknowledgeResumeInput(){
   if(!state||!state.awaitInputResume)return;
   state.awaitInputResume=false;
   if(state.player)state.player.hitCd=Math.max(state.player.hitCd||0,420);
+  if(state.player2)state.player2.hitCd=Math.max(state.player2.hitCd||0,420);
 }
 
 function getAvailableReviveType(p){
@@ -4532,23 +5182,57 @@ function tryPlayerRevives(p){
 
 function update(dt){
   if(!state||!state.player)return;
+  if(coopIsClient()){
+    const p=state.player;
+    const p2=(state.coop&&state.coop.connected&&state.player2)?state.player2:null;
+    if(p2){
+      const li=coopSession.localInput||{mx:0,my:0,dash:false,resume:false};
+      const ll=Math.hypot(li.mx,li.my)||1;
+      if(li.mx||li.my){
+        p2.x+=li.mx/ll*p2.speed;
+        p2.y+=li.my/ll*p2.speed;
+      }
+      if(li.dash&&p2.hasDash&&p2.dashCd<=0){
+        p2.dashCd=5000;
+        p2.x+=li.mx*42;
+        p2.y+=li.my*42;
+        li.dash=false;
+      }
+      if((p2.dashCd||0)>0)p2.dashCd=Math.max(0,p2.dashCd-dt);
+      if((p2.hitCd||0)>0)p2.hitCd=Math.max(0,p2.hitCd-dt);
+      const focusX=(p.x+p2.x)*0.5;
+      const focusY=(p.y+p2.y)*0.5;
+      const tx=focusX-W/2;
+      const ty=focusY-H/2;
+      state.camX=(state.camX??tx)+(tx-(state.camX??tx))*0.18;
+      state.camY=(state.camY??ty)+(ty-(state.camY??ty))*0.18;
+    }
+    updateHUD();
+    return;
+  }
   const p=state.player;
+  const p2=(state.coop&&state.coop.connected&&state.player2)?state.player2:null;
+  if(p2)syncPlayer2FromPrimary();
   if(p.hasDash&&dashBtn.style.display!=='flex')showDashBtn();
   if(!p.hasDash&&dashBtn.style.display!=='none')dashBtn.style.display='none';
   if(state.awaitInputResume){
+    if(p2&&state.coop&&state.coop.remoteInput&&state.coop.remoteInput.resume)state.awaitInputResume=false;
     updateHUD();
     return;
   }
   state._saveTick=(state._saveTick||0)+dt;
   if(state._saveTick>=2500){state._saveTick=0;saveRunState();}
   if((p.hitCd||0)>0){p.hitCd=Math.max(0,p.hitCd-dt);}
+  if(p2&&(p2.hitCd||0)>0){p2.hitCd=Math.max(0,p2.hitCd-dt);}
   if((p.secondLifeCd||0)>0){p.secondLifeCd-=dt;if(p.secondLifeCd<=0){p.secondLifeCd=0;p.secondLife=true;}}
   if((p.phoenixCd||0)>0){p.phoenixCd-=dt;if(p.phoenixCd<=0)p.phoenixCd=0;}
   state.elapsed+=dt;state.waveTimer+=dt;
 
   // Caméra suit le joueur en douceur
-  const targetCamX=p.x-W/2;
-  const targetCamY=p.y-H/2;
+  const focusX=p2?(p.x+p2.x)*0.5:p.x;
+  const focusY=p2?(p.y+p2.y)*0.5:p.y;
+  const targetCamX=focusX-W/2;
+  const targetCamY=focusY-H/2;
   state.camX+=(targetCamX-state.camX)*.12;
   state.camY+=(targetCamY-state.camY)*.12;
 
@@ -4571,6 +5255,7 @@ function update(dt){
     if(!bossStillAlive){
       state.biomeBossAlive=false;
       p.hp=Math.min(playerHealCap(p),p.hp+p.maxHp*.3);pts(p.x,p.y,'#00ff88',1.5,6);
+      if(p2){p2.hp=Math.min(playerHealCap(p2),p2.hp+p2.maxHp*.3);pts(p2.x,p2.y,'#ff88cc',1.2,5);}
       state.waveTimer=20001;
     }
   }
@@ -4584,7 +5269,10 @@ function update(dt){
     }
     showWaveBanner(state.wave);
     spawnWave();
-    if(state.wave%15===0){p.hp=Math.min(playerHealCap(p),p.hp+Math.floor(p.maxHp*.15));pts(p.x,p.y,'#00ff88',1.2,5);}
+    if(state.wave%15===0){
+      p.hp=Math.min(playerHealCap(p),p.hp+Math.floor(p.maxHp*.15));pts(p.x,p.y,'#00ff88',1.2,5);
+      if(p2){p2.hp=Math.min(playerHealCap(p2),p2.hp+Math.floor(p2.maxHp*.15));pts(p2.x,p2.y,'#ff88cc',1.1,4);}
+    }
     if(state.wave%15===14){
       state.biomeBossAlive=false;
       state._biomeBossSpawned=false;
@@ -4767,11 +5455,23 @@ function update(dt){
   if(keys['a']||keys['arrowleft'])mx=-1;if(keys['d']||keys['arrowright'])mx=1;
   const ml=Math.hypot(mx,my)||1;
   if(mx||my){p.x+=mx/ml*p.speed;p.y+=my/ml*p.speed;}
+  if(p2&&state.coop){
+    const ri=state.coop.remoteInput||{mx:0,my:0,dash:false,resume:false};
+    const rl=Math.hypot(ri.mx,ri.my)||1;
+    if(ri.mx||ri.my){p2.x+=ri.mx/rl*p2.speed;p2.y+=ri.my/rl*p2.speed;}
+    if(ri.dash&&p2.hasDash&&p2.dashCd<=0){
+      p2.dashCd=5000;
+      p2.x+=ri.mx*42;
+      p2.y+=ri.my*42;
+      ri.dash=false;
+    }
+  }
   // map infinie — pas de bords
 
   // Dash cooldown
   if(p.dashCd>0){p.dashCd-=dt;if(p.hasDash){dashBtn.classList.remove('ready');dashBtn.classList.add('cooldown');}}
   else if(p.hasDash){dashBtn.classList.add('ready');dashBtn.classList.remove('cooldown');}
+  if(p2&&p2.dashCd>0)p2.dashCd-=dt;
 
   // Shield
   if(p.hasShield){if(p.shieldCd>0)p.shieldCd-=dt;else p.shieldActive=true;}
@@ -4822,7 +5522,8 @@ function update(dt){
 
   // Tir auto
   const now=performance.now();
-  if(now-p.lastFire>p.fireRate){p.lastFire=now;fireBullet();}
+  if(now-p.lastFire>p.fireRate){p.lastFire=now;fireBullet(p,false);}
+  if(p2&&now-(p2.lastFire||0)>p2.fireRate){p2.lastFire=now;fireBullet(p2,true);}
 
   // Orbes
   state.orbAngle+=dt*.003;state.orbs=[];
@@ -4923,6 +5624,16 @@ function update(dt){
         p.hitCd=PLAYER_HIT_IFRAME_MS;
         pts(p.x,p.y,'#ff3c6e',.6,2.5);
         if(p.hp<=0){if(tryPlayerRevives(p))return false;gameOver();return false;}
+        return false;
+      }
+      if(p2&&Math.hypot(b.x-p2.x,b.y-p2.y)<p2.size+b.size){
+        if(p2.divineActive)return false;
+        if((p2.hitCd||0)>0)return false;
+        if(p2.shieldActive){p2.shieldActive=false;p2.shieldCd=p2.shieldCooldownMax||8000;return false;}
+        p2.hp-=Math.max(10,(7+Math.max(1,state.wave||1)*1.08));
+        p2.hitCd=PLAYER_HIT_IFRAME_MS;
+        pts(p2.x,p2.y,'#ff88cc',.6,2.5);
+        if(p2.hp<=0){gameOver();return false;}
         return false;
       }
       return true;
@@ -5403,6 +6114,29 @@ function update(dt){
       state.enemies.splice(i,1);
       if(p.hp<=0){if(tryPlayerRevives(p))continue;gameOver();return;}
     }
+    if(p2&&Math.hypot(p2.x-e.x,p2.y-e.y)<p2.size+e.size){
+      if(p2.divineActive&&!e.isBiomeBoss){killEnemy(i);continue;}
+      if(p2.shieldActive){p2.shieldActive=false;p2.shieldCd=p2.shieldCooldownMax||8000;
+        if(!e.isBiomeBoss){if(e.type==='splitter')splitEnemy(e);state.enemies.splice(i,1);continue;}
+      }
+      if(e.isBiomeBoss){
+        e._bioTouchT2=(e._bioTouchT2||0)+dt;
+        if(e._bioTouchT2>=520){
+          e._bioTouchT2=0;
+          if(!p2.divineActive&&(p2.hitCd||0)<=0){
+            p2.hp-=e.dmg;p2.hitCd=PLAYER_HIT_IFRAME_MS;pts(p2.x,p2.y,'#ff88cc',.8,2.5);
+            if(p2.hp<=0){gameOver();return;}
+          }
+        }
+        continue;
+      }
+      if((p2.hitCd||0)<=0){
+        p2.hp-=e.dmg;p2.hitCd=PLAYER_HIT_IFRAME_MS;pts(p2.x,p2.y,'#ff88cc',.8,2.5);
+        if(e.type==='splitter')splitEnemy(e);
+        state.enemies.splice(i,1);
+        if(p2.hp<=0){gameOver();return;}
+      }
+    }
   }
 
   // Boomerang : retourne à mi-vie
@@ -5420,12 +6154,21 @@ function update(dt){
       else pt.toxic=false;
       if(p.hp<=0){if(tryPlayerRevives(p))return;gameOver();return;}
     }
+    if(p2&&Math.hypot(pt.x-p2.x,pt.y-p2.y)<p2.size+pt.size){
+      if((p2.hitCd||0)<=0){p2.hp-=pt.dmg*.1;p2.hitCd=PLAYER_HIT_IFRAME_MS;pt.toxic=false;}
+      else pt.toxic=false;
+      if(p2.hp<=0){gameOver();return;}
+    }
   });
 
   // Sauvegarder le dernier ennemi tué pour le Nécromant
   state.xpGems=state.xpGems.filter(g=>{
     if(Math.hypot(g.x-p.x,g.y-p.y)<p.xpRadius){const gd=Math.hypot(p.x-g.x,p.y-g.y)||1;g.x+=(p.x-g.x)/gd*5.5;g.y+=(p.y-g.y)/gd*5.5;}
     if(Math.hypot(g.x-p.x,g.y-p.y)<p.size+8){gainXP(g.value);return false;}
+    if(p2){
+      if(Math.hypot(g.x-p2.x,g.y-p2.y)<p2.xpRadius){const gd2=Math.hypot(p2.x-g.x,p2.y-g.y)||1;g.x+=(p2.x-g.x)/gd2*5.5;g.y+=(p2.y-g.y)/gd2*5.5;}
+      if(Math.hypot(g.x-p2.x,g.y-p2.y)<p2.size+8){gainXP(g.value);return false;}
+    }
     return true;
   });
 
@@ -5435,6 +6178,13 @@ function update(dt){
     if(Math.hypot(c.x-p.x,c.y-p.y)<p.size+11){
       const earned=Math.round(c.value*(state.coinMult||1));
       state.coinsRun+=earned;snd('coin');dmgNum(c.x,c.y,'🪙'+earned,'#f4a61d');return false;
+    }
+    if(p2){
+      if(Math.hypot(c.x-p2.x,c.y-p2.y)<p2.xpRadius+25){const cd2=Math.hypot(p2.x-c.x,p2.y-c.y)||1;c.x+=(p2.x-c.x)/cd2*6;c.y+=(p2.y-c.y)/cd2*6;}
+      if(Math.hypot(c.x-p2.x,c.y-p2.y)<p2.size+11){
+        const earned2=Math.round(c.value*(state.coinMult||1));
+        state.coinsRun+=earned2;snd('coin');dmgNum(c.x,c.y,'🪙'+earned2,'#f4a61d');return false;
+      }
     }
     return true;
   });
@@ -5649,13 +6399,15 @@ function update(dt){
   // 💠 FRAGMENTEUR — géré dans fireBullet
   // ⚡ FOUDRE EN CHAÎNE — géré dans killEnemy
 
+  publishHostSnapshot();
   updateHUD();
 }
 
-function fireBullet(){
-  const p=state.player;
+function fireBullet(shooter=null,isSecondary=false){
+  const p=shooter||state.player;
   // Si pas d'ennemis, viser devant le joueur en world coords
-  let tx=p.x+(mouse.x+state.camX-p.x)||p.x+1,ty=p.y+(mouse.y+state.camY-p.y)||p.y;
+  let tx=isSecondary?p.x+1:(p.x+(mouse.x+state.camX-p.x)||p.x+1),
+      ty=isSecondary?p.y:(p.y+(mouse.y+state.camY-p.y)||p.y);
   let bd=Infinity;
   for(const e of state.enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;tx=e.x;ty=e.y;}}
   const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy)||1;
@@ -5954,21 +6706,27 @@ function gainXP(v){
     p.xpNext=Math.floor(p.xpNext*1.32);
     p.level++;
     applyPerLevelBonuses(p);
-    state.paused=true;
-    state.pauseReason='upgrade';
-    showUpgrades();
+    if(state.player2&&state.coop&&state.coop.connected){
+      const choices=pickUpgrades(state.wave,3);
+      startCoopUpgradeVote(choices);
+      showUpgrades(choices,false);
+    }else{
+      state.paused=true;
+      state.pauseReason='upgrade';
+      showUpgrades();
+    }
     snd('levelup');
   }
 }
-function showUpgrades(){
+function showUpgrades(forcedChoices=null,isRemotePicker=false){
   const sc=document.getElementById('upgrade-screen');
   const gr=document.getElementById('upgrades-grid');
   gr.innerHTML='';
-  const choices=pickUpgrades(state.wave,3);
+  const choices=Array.isArray(forcedChoices)&&forcedChoices.length?forcedChoices:pickUpgrades(state.wave,3);
   const maxUnlock=getAvailableUpgrades(state.wave).length;
   document.getElementById('upg-unlock-hint').textContent=`${maxUnlock} upgrades débloquées · Vague ${state.wave}`;
   const codexData=getCodexData();
-  choices.forEach(u=>{
+  choices.forEach((u,idx)=>{
     const known=!!(codexData['upgrades']&&codexData['upgrades'][u.id]);
     const c=document.createElement('div');
     c.className='upg-card'+(known?'':' upg-mystery');
@@ -5988,6 +6746,18 @@ function showUpgrades(){
         <div class="upg-wave" style="color:#8888ff;font-size:.48rem;">✦ INCONNU</div>`;
     }
     const pick=()=>{
+      if(state.coop&&state.coop.upgradeVote){
+        if(isRemotePicker){
+          coopSend({type:'upgrade-pick',choice:idx});
+          sc.classList.remove('show');
+          showInfoBanner('Choix envoyé au host',1500);
+          return;
+        }
+        state.coop.upgradeVote.hostChoice=idx;
+        sc.classList.remove('show');
+        tryResolveCoopUpgradeVote();
+        return;
+      }
       u.apply(state);
       discoverEntry('upgrades',u.id);
       if(!known)showDiscoveryToast(`✦ ${u.name} — ${u.desc}`,4000);
@@ -6120,10 +6890,15 @@ function showDiscoveryToast(msg,duration=4000){
 }
 function updateHUD(){
   const p=state.player;
+  const p2=(state.player2&&state.coop&&state.coop.connected)?state.player2:null;
   const he=document.getElementById('hud-hp');
-  he.textContent=`${Math.max(0,Math.ceil(p.hp))}/${p.maxHp}`;
-  he.className='hud-val'+(p.hp<p.maxHp*.3?' danger':'');
-  document.getElementById('hud-wave').textContent=state.wave;
+  he.textContent=p2
+    ?`H:${Math.max(0,Math.ceil(p.hp))}/${p.maxHp} · C:${Math.max(0,Math.ceil(p2.hp))}/${p2.maxHp}`
+    :`${Math.max(0,Math.ceil(p.hp))}/${p.maxHp}`;
+  he.className='hud-val'+(((p.hp<p.maxHp*.3)||(p2&&p2.hp<p2.maxHp*.3))?' danger':'');
+  document.getElementById('hud-wave').textContent=p2
+    ?`${state.wave} · ${(state.coop.hostName||'Host').slice(0,8)}+${(state.coop.guestName||'Guest').slice(0,8)}`
+    :state.wave;
   document.getElementById('hud-lvl').textContent=p.level;
   document.getElementById('hud-kills').textContent=state.kills;
   const s=Math.floor(state.elapsed/1000);
@@ -6168,7 +6943,8 @@ function drawMiniMap(){
   const mx=mc.getContext('2d');
   if(!mx)return;
   const mw=80,mh=80,RANGE=520;
-  const px=state.player.x,py=state.player.y;
+  const anchor=(state.player2&&state.coop&&state.coop.connected)?{x:(state.player.x+state.player2.x)*.5,y:(state.player.y+state.player2.y)*.5}:state.player;
+  const px=anchor.x,py=anchor.y;
   mx.clearRect(0,0,mw,mh);
   mx.fillStyle='rgba(4,8,15,.95)';mx.fillRect(0,0,mw,mh);
   function toMM(wx,wy){return[mw/2+(wx-px)*(mw/(RANGE*2)),mh/2+(wy-py)*(mh/(RANGE*2))];}
@@ -6183,6 +6959,11 @@ function drawMiniMap(){
   }
   mx.fillStyle='#fff';mx.shadowBlur=5;mx.shadowColor='#00ffe7';
   mx.beginPath();mx.arc(mw/2,mh/2,3,0,Math.PI*2);mx.fill();mx.shadowBlur=0;
+  if(state.player2&&state.coop&&state.coop.connected){
+    const [p2x,p2y]=toMM(state.player2.x,state.player2.y);
+    mx.fillStyle='#ff88cc';
+    mx.beginPath();mx.arc(p2x,p2y,2.3,0,Math.PI*2);mx.fill();
+  }
   const biome=getCurrentBiome();
   mx.strokeStyle=(biome.accent||'#00ffe7')+'66';mx.lineWidth=1.5;mx.strokeRect(.75,.75,mw-1.5,mh-1.5);
 }
@@ -6670,6 +7451,21 @@ function draw(){
   ctx.beginPath();ctx.arc(0,0,p.size+2,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,hpRatio));
   ctx.strokeStyle=hpRatio>.6?'#00ff88':hpRatio>.3?'#ffaa00':'#ff2200';ctx.lineWidth=2;ctx.stroke();
   ctx.restore();
+  if(state.player2&&state.coop&&state.coop.connected){
+    const p2=state.player2;
+    ctx.save();ctx.translate(p2.x,p2.y);
+    ctx.beginPath();ctx.arc(0,0,p2.xpRadius,0,Math.PI*2);ctx.strokeStyle='rgba(255,136,204,.04)';ctx.lineWidth=1;ctx.stroke();
+    let ax=p2.x,ay=p2.y,bd=Infinity;
+    for(const e2 of state.enemies){if(!e2)continue;const d2=Math.hypot(e2.x-p2.x,e2.y-p2.y);if(d2<bd){bd=d2;ax=e2.x;ay=e2.y;}}
+    ctx.rotate(Math.atan2(ay-p2.y,ax-p2.x)+Math.PI/2);
+    ctx.beginPath();ctx.moveTo(0,-p2.size);ctx.lineTo(p2.size*.78,p2.size*.68);ctx.lineTo(0,p2.size*.28);ctx.lineTo(-p2.size*.78,p2.size*.68);ctx.closePath();
+    ctx.fillStyle='#ff88cc';ctx.shadowBlur=16;ctx.shadowColor='#ff88cc';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1.2;ctx.stroke();ctx.shadowBlur=0;
+    const hp2=Math.max(0,p2.hp/Math.max(1,p2.maxHp));
+    ctx.beginPath();ctx.arc(0,0,p2.size+2,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,hp2));
+    ctx.strokeStyle=hp2>.6?'#00ff88':hp2>.3?'#ffaa00':'#ff2200';ctx.lineWidth=2;ctx.stroke();
+    ctx.restore();
+  }
 
   // Balles
   state.bullets.forEach(b=>{
@@ -6819,6 +7615,16 @@ function updateEnergyUI(){
   if(el('title-coins'))el('title-coins').textContent=c.toLocaleString();
   const sb=el('start-btn');
   if(sb){if(e<=0){sb.textContent='▶ JOUER (0 ⚡)';sb.classList.add('disabled');}else{sb.textContent=`▶ JOUER  (-1 ⚡)`;sb.classList.remove('disabled');}}
+  const sbb=el('start-biome-btn');
+  if(sbb){
+    if(e<DIRECT_BIOME_ENERGY_COST){
+      sbb.textContent='🌍 BIOME (0 ⚡)';
+      sbb.classList.add('disabled');
+    }else{
+      sbb.textContent=`🌍 BIOME (-${DIRECT_BIOME_ENERGY_COST} ⚡)`;
+      sbb.classList.remove('disabled');
+    }
+  }
   const rt=el('regen-timer');
   if(rt){if(e<mx){const m=Math.ceil(nextRegen()/60000);rt.textContent=`Prochain ⚡ dans ${m} min`;}else rt.textContent='';}
   const rb=el('stats-play-btn');if(rb)rb.textContent=e>0?'↺ REJOUER (-1 ⚡)':'↺ REJOUER (0 ⚡)';
@@ -6858,6 +7664,7 @@ updateEnergyUI();
 renderLeaderboard();
 renderProfileBadge();
 updateResumeButton();
+setCoopStatus('Mode solo actif');
 window.addEventListener('visibilitychange',()=>{if(document.hidden)saveRunState(true);});
 window.addEventListener('pagehide',()=>saveRunState(true));
 // Si pas de nom → écran de connexion obligatoire

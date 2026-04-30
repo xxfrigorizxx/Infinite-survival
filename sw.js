@@ -1,7 +1,8 @@
-const CACHE = 'survivor-v8.1.3-update-orbes-protectrices-2026-04-29';
+const CACHE = 'survivor-v8.1.4-coop-update-2026-04-29';
 const ASSETS = [
   './',
   './index.html',
+  './coop-webrtc.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
