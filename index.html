@@ -280,7 +280,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v9.2 COOP UPDATE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v9.3 COOP UPDATE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -1466,7 +1466,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v9.2-coop-update'; // Migration boutique non destructive
+const SHOP_VERSION='v9.3-coop-update'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -2818,6 +2818,7 @@ function coopCloseLink(){
   if(coopSession.link){try{coopSession.link.close();}catch(e){}}
   coopSession.link=null;
   coopSession.connected=false;
+  coopSession.pendingUpgradeChoices=null;
   if(coopSession.hbTimer){clearInterval(coopSession.hbTimer);coopSession.hbTimer=null;}
   if(coopSession.reconnectTimer){clearTimeout(coopSession.reconnectTimer);coopSession.reconnectTimer=null;}
   if(typeof coopSession.roomUnsub==='function'){try{coopSession.roomUnsub();}catch(e){}}
@@ -2840,6 +2841,7 @@ function coopDisconnect(){
   coopSession.roomSessionId='';
   coopSession.lastConsumedRemoteResumeSeq=0;
   coopSession.joinToken='';
+  coopSession.pendingUpgradeChoices=null;
   if(state&&state.coop){
     state.coop.mode='solo';
     state.coop.connected=false;
@@ -2941,16 +2943,33 @@ function coopHandleMessage(msg){
     const ts=document.getElementById('title-screen');
     const gs=document.getElementById('game-screen');
     if(ts&&gs&&state&&state.running){
+      const enteringGame=ts.style.display!=='none'||gs.style.display!=='flex';
       ts.style.display='none';
       gs.style.display='flex';
       document.getElementById('stats-screen').classList.remove('show');
-      document.getElementById('upgrade-screen').classList.remove('show');
+      // Ne jamais fermer l'écran d'upgrade pendant un vote coop.
+      if(enteringGame&&state.pauseReason!=='upgrade-coop'){
+        document.getElementById('upgrade-screen').classList.remove('show');
+      }
       resizeCanvas();
       ensureGameLoop();
+      if(Array.isArray(coopSession.pendingUpgradeChoices)&&coopSession.pendingUpgradeChoices.length){
+        const pendingChoices=coopSession.pendingUpgradeChoices;
+        coopSession.pendingUpgradeChoices=null;
+        state.coop=state.coop||{};
+        state.coop.upgradeVote={options:pendingChoices,hostChoice:null,clientChoice:null};
+        state.paused=true;
+        state.pauseReason='upgrade-coop';
+        showUpgrades(pendingChoices,true);
+      }
     }
     return;
   }
-  if(msg.type==='upgrade-options'&&coopIsClient()&&state){
+  if(msg.type==='upgrade-options'&&coopIsClient()){
+    if(!state){
+      coopSession.pendingUpgradeChoices=Array.isArray(msg.options)?msg.options:[];
+      return;
+    }
     state.coop=state.coop||{};
     state.coop.upgradeVote={options:msg.options||[],hostChoice:null,clientChoice:null};
     state.paused=true;
