@@ -1,4 +1,4 @@
-const CACHE = 'survivor-v8.1.4-coop-update-2026-04-29';
+const CACHE = 'survivor-v9-coop-update-2026-04-30';
 const ASSETS = [
   './',
   './index.html',

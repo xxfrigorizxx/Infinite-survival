@@ -84,6 +84,10 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .coop-step{font-size:.52rem;color:#6f8ea2;line-height:1.35;}
 .coop-label{font-size:.52rem;color:#9dc7de;letter-spacing:.03em;}
 .coop-word{width:100%;background:#060d18;border:1px solid rgba(0,255,231,.3);color:#bff6ff;padding:8px 9px;font-size:.7rem;font-family:'Share Tech Mono',monospace;}
+.coop-health{display:flex;align-items:center;gap:6px;font-size:.52rem;color:#89a;}
+.coop-health-dot{width:8px;height:8px;border-radius:50%;background:#666;box-shadow:0 0 6px rgba(255,255,255,.15);}
+.coop-health-dot.ok{background:#58ff8a;box-shadow:0 0 8px rgba(88,255,138,.65);}
+.coop-health-dot.err{background:#ff5a7a;box-shadow:0 0 8px rgba(255,90,122,.65);}
 #regen-timer{font-size:.62rem;color:#567;min-height:12px;}
 #leaderboard{width:100%;max-width:290px;margin:0 auto;}
 #leaderboard h3{font-family:'Orbitron',sans-serif;font-size:.62rem;color:#456;letter-spacing:.13em;margin-bottom:5px;text-align:center;}
@@ -276,7 +280,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ══ TITRE ══ -->
 <div id="title-screen">
   <h1><span class="inf">∞</span>SURVIVOR</h1>
-  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v8.1.4 COOP UPDATE —</p>
+  <p style="font-family:'Orbitron',sans-serif;font-size:clamp(.6rem,2.4vw,.75rem);color:#567;letter-spacing:.22em;margin:2px 0 0;">— v9 COOP UPDATE —</p>
   <p style="color:#7ab;font-size:clamp(.68rem,2.7vw,.84rem);margin:4px 0 6px;">Mourrez avec dignité · ou pas.</p>
   <p style="color:#567;font-size:clamp(.58rem,2.2vw,.72rem);line-height:1.45;margin:0 0 8px;">Survie infinie · +100 ennemis · 62 secteurs · XP qui évolue à chaque monde · Codex &amp; boucle</p>
   <div id="profile-badge" onclick="openProfile()">
@@ -306,7 +310,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     </div>
     <div id="coop-panel">
       <div id="coop-status">Mode solo actif</div>
-      <div class="coop-step">Host: choisis un mot et attends en lobby. Ami: met le même mot et clique rejoindre.</div>
+      <div class="coop-health"><span id="coop-health-dot" class="coop-health-dot"></span><span id="coop-health-text">Lobby: inconnu</span></div>
+      <div class="coop-step"><b>Simple:</b> Host met un mot puis attend. L'ami met le meme mot puis clique rejoindre.</div>
       <input id="coop-room-word" class="coop-word" type="text" maxlength="24" placeholder="Mot commun (ex: dragon123)" autocomplete="off" spellcheck="false"/>
       <div class="coop-row">
         <button class="mbtn" onclick="coopCreateHost()" style="border-color:#6dd5ff;color:#6dd5ff;">Host (attendre)</button>
@@ -316,7 +321,10 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
         <button class="mbtn" onclick="coopDisconnect()" style="border-color:#ff6688;color:#ff6688;">Quitter le lobby</button>
       </div>
       <details style="margin-top:3px;">
-        <summary class="coop-step" style="cursor:pointer;">Options avancées (manuel)</summary>
+        <summary class="coop-step" style="cursor:pointer;"><b>Mode avance (manuel)</b> - si lobby en panne</summary>
+        <div class="coop-step">1) Host cree/copie le code invitation.</div>
+        <div class="coop-step">2) Client colle ce code puis clique Rejoindre manuel.</div>
+        <div class="coop-step">3) Client renvoie le code reponse, host clique Appliquer reponse.</div>
         <div class="coop-label">Code d'invitation</div>
         <textarea id="coop-offer" class="coop-text" placeholder="Code d'invitation (manuel)"></textarea>
         <div class="coop-row">
@@ -327,6 +335,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
         <textarea id="coop-answer" class="coop-text" placeholder="Code de réponse (manuel)"></textarea>
         <div class="coop-row">
           <button class="mbtn" onclick="coopCopyReplyCode()" style="border-color:#8aff88;color:#8aff88;">Copier réponse</button>
+          <button class="mbtn" onclick="coopJoinManualClient()" style="border-color:#8aff88;color:#8aff88;">Rejoindre manuel</button>
           <button class="mbtn" onclick="coopApplyAnswer()" style="border-color:#ffcd66;color:#ffcd66;">Appliquer réponse</button>
         </div>
       </details>
@@ -1450,7 +1459,7 @@ function _renderLBData(lb){window._renderLBData(lb);}
 const KSH='surv_shop';
 const KSH_VER='surv_shop_ver';
 const KSH_BAK='surv_shop_bak';
-const SHOP_VERSION='v8.1.3-update-orbes-protectrices'; // Migration boutique non destructive
+const SHOP_VERSION='v9-coop-update'; // Migration boutique non destructive
 
 // Vérifier la version au chargement — conserver les achats boutique
 (function checkShopVersion(){
@@ -2716,6 +2725,16 @@ function setCoopStatus(msg){
   const el=document.getElementById('coop-status');
   if(el)el.textContent=msg||'Mode solo actif';
 }
+function setCoopHealth(state='idle',label='Lobby: inconnu'){
+  const dot=document.getElementById('coop-health-dot');
+  const txt=document.getElementById('coop-health-text');
+  if(dot){
+    dot.classList.remove('ok','err');
+    if(state==='ok')dot.classList.add('ok');
+    else if(state==='err')dot.classList.add('err');
+  }
+  if(txt)txt.textContent=label;
+}
 function encodeSignalCode(payload){
   try{
     return 'COOP1:'+btoa(unescape(encodeURIComponent(payload)));
@@ -2808,6 +2827,7 @@ function coopDisconnect(){
   }
   if(wasHost&&oldRoom&&oldSession&&window._coopSignalRemoveSession){window._coopSignalRemoveSession(oldRoom,oldSession).catch(()=>{});}
   setCoopStatus('Mode solo actif');
+  setCoopHealth('idle','Lobby: inactif');
 }
 function coopNormalizeRoomWord(word){
   return String(word||'').trim().toLowerCase().replace(/\s+/g,' ').slice(0,24);
@@ -2926,6 +2946,7 @@ function coopWireLink(link){
         state.coop.mode=coopSession.role;
       }
       setCoopStatus('Session connectée ✅');
+      setCoopHealth('ok','P2P connecté');
       if(coopIsClient()){
         const me=(getPrf()?.name||'Guest').slice(0,16);
         link.send({type:'hello',name:me});
@@ -2935,17 +2956,21 @@ function coopWireLink(link){
       }
     }else if(status==='failed'||status==='closed'||status==='disconnected'){
       setCoopStatus('Session perdue');
+      setCoopHealth('err','P2P perdu');
       coopDisconnect();
     }
   };
   link.onMessage=coopHandleMessage;
 }
 async function coopCreateHost(){
+  let link=null;
+  let offer='';
+  let roomWord='';
   try{
-    const roomWord=coopGetRoomWord();
+    roomWord=coopGetRoomWord();
     if(!roomWord){setCoopStatus('Entre un mot commun pour créer la room');return;}
     coopCloseLink();
-    const link=new window.CoopLink('host');
+    link=new window.CoopLink('host');
     coopWireLink(link);
     coopSession.enabled=true;
     coopSession.role='host';
@@ -2953,35 +2978,49 @@ async function coopCreateHost(){
     coopSession.roomWord=roomWord;
     coopSession.roomKey=typeof window._coopSignalRoomKey==='function'?window._coopSignalRoomKey(roomWord):'';
     coopSession.roomSessionId=typeof window._coopSignalMakeSessionId==='function'?window._coopSignalMakeSessionId():'';
-    const offer=await link.createOffer();
+    offer=await link.createOffer();
     const out=document.getElementById('coop-offer');
     if(out)out.value=encodeSignalCode(offer);
     if(coopSession.roomKey&&coopSession.roomSessionId&&window._coopSignalWriteSession){
-      await window._coopSignalWriteSession(coopSession.roomKey,coopSession.roomSessionId,{
-        offer,
-        sessionId:coopSession.roomSessionId,
-        roomWord,
-        hostName:coopSession.hostName||'Host',
-        status:'waiting-answer',
-      });
-      coopWatchRoom(coopSession.roomKey,async(data)=>{
-        if(!coopIsHost()||coopSession.roomAnswerHandled)return;
-        if(!data||!data.answer)return;
-        try{
-          await coopSession.link.acceptAnswer(data.answer);
-          coopSession.roomAnswerHandled=true;
-          setCoopStatus(`Lobby "${roomWord}": joueur trouvé, connexion...`);
-        }catch(e){}
-      });
-      setCoopStatus(`Lobby "${roomWord}" créé. En attente d'un joueur...`);
-    }else{
-      setCoopStatus('Code invitation créé: copie et envoie à ton ami');
+      try{
+        await window._coopSignalWriteSession(coopSession.roomKey,coopSession.roomSessionId,{
+          offer,
+          sessionId:coopSession.roomSessionId,
+          roomWord,
+          hostName:coopSession.hostName||'Host',
+          status:'waiting-answer',
+        });
+        coopWatchRoom(coopSession.roomKey,async(data)=>{
+          if(!coopIsHost()||coopSession.roomAnswerHandled)return;
+          if(!data||!data.answer)return;
+          try{
+            await coopSession.link.acceptAnswer(data.answer);
+            coopSession.roomAnswerHandled=true;
+            setCoopStatus(`Lobby "${roomWord}": joueur trouvé, connexion...`);
+          }catch(e){}
+        });
+        setCoopStatus(`Lobby "${roomWord}" créé. En attente d'un joueur...`);
+        setCoopHealth('ok','Lobby: disponible');
+        return;
+      }catch(sigErr){
+        setCoopStatus(`Host prêt (lobby indisponible). Utilise Mode avance manuel.`);
+        setCoopHealth('err','Lobby: indisponible (manuel)');
+        return;
+      }
     }
+    setCoopStatus('Host prêt en manuel: copie le code invitation.');
+    setCoopHealth('err','Lobby: indisponible (manuel)');
   }catch(e){
-    setCoopStatus('Erreur host WebRTC');
+    const msg=(e&&e.message)?String(e.message):'erreur inconnue';
+    setCoopStatus(`Erreur host WebRTC: ${msg}`);
+    setCoopHealth('err','Erreur host WebRTC');
+    if(link&&offer){
+      const out=document.getElementById('coop-offer');
+      if(out&&!out.value)out.value=encodeSignalCode(offer);
+    }
   }
 }
-async function coopJoinAsClient(){
+async function coopJoinAsClient(forceManual=false){
   const roomWord=coopGetRoomWord();
   if(!roomWord){setCoopStatus('Entre le mot exact du host');return;}
   try{
@@ -3012,7 +3051,7 @@ async function coopJoinAsClient(){
         setCoopStatus('Code réponse créé: renvoie-le au host');
       }
     };
-    if(coopSession.roomKey&&window._coopSignalReadBestWaiting){
+    if(!forceManual&&coopSession.roomKey&&window._coopSignalReadBestWaiting){
       const pickWaiting=async()=>{
         const best=await window._coopSignalReadBestWaiting(coopSession.roomKey);
         if(best&&best.data&&best.data.offer){
@@ -3032,12 +3071,16 @@ async function coopJoinAsClient(){
       };
       if(await pickWaiting())return;
       setCoopStatus(`Recherche d'un host sur "${roomWord}"...`);
+      setCoopHealth('ok','Lobby: recherche en cours');
       let attempts=0;
       const poll=setInterval(async()=>{
         if(!coopIsClient()||coopSession.connected||coopSession.roomJoinHandled){clearInterval(poll);return;}
         attempts++;
         const ok=await pickWaiting();
-        if(ok||attempts>40){clearInterval(poll);}
+        if(ok||attempts>40){
+          if(attempts>40&&!coopSession.roomJoinHandled)setCoopHealth('err','Lobby: aucun host trouvé');
+          clearInterval(poll);
+        }
       },500);
       return;
     }
@@ -3047,8 +3090,13 @@ async function coopJoinAsClient(){
     if(!offerRaw){setCoopStatus("Code d'invitation invalide");return;}
     await joinWithOffer(offerRaw);
   }catch(e){
-    setCoopStatus('Impossible de rejoindre la room');
+    const msg=(e&&e.message)?String(e.message):'erreur inconnue';
+    setCoopStatus(forceManual?`Erreur manuel: ${msg}`:`Impossible de rejoindre la room: ${msg}`);
+    setCoopHealth('err',forceManual?'Mode manuel: erreur':'Lobby: erreur');
   }
+}
+function coopJoinManualClient(){
+  return coopJoinAsClient(true);
 }
 async function coopApplyAnswer(){
   if(!coopIsHost()||!coopSession.link){setCoopStatus('Host requis');return;}
@@ -7665,6 +7713,7 @@ renderLeaderboard();
 renderProfileBadge();
 updateResumeButton();
 setCoopStatus('Mode solo actif');
+setCoopHealth('idle','Lobby: inactif');
 window.addEventListener('visibilitychange',()=>{if(document.hidden)saveRunState(true);});
 window.addEventListener('pagehide',()=>saveRunState(true));
 // Si pas de nom → écran de connexion obligatoire
